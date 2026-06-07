@@ -1,0 +1,402 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Glory Nursing – Healthcare Training School | Oklahoma City{% endblock %}</title>
+<meta name="description" content="{% block meta_desc %}Glory Nursing offers CNA, CMA, HHA, BLS/CPR, Phlebotomy and more in Oklahoma City. Get certified fast with flexible scheduling.{% endblock %}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="{% static 'core/css/main.css' %}">
+{% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="topbar">
+  <div class="container topbar-inner">
+    <div class="topbar-left">
+      <span><i class="fas fa-map-marker-alt"></i> 12032 N. Pennsylvania Ave, Oklahoma City, OK 73120</span>
+      <span><i class="fas fa-envelope"></i> glorynursing@yahoo.com</span>
+    </div>
+    <div class="topbar-right">
+      <span><i class="fas fa-phone"></i> (405) 968-5004</span>
+      <a href="{% url 'apply' %}" class="btn-topbar">Apply Now</a>
+    </div>
+  </div>
+</div>
+
+<!-- Main Navigation -->
+<nav class="navbar" id="navbar">
+  <div class="container navbar-inner">
+
+    <!-- Brand Logo -->
+    <a href="{% url 'home' %}" class="brand">
+      <div class="brand-logo">
+        <span class="brand-cross">✚</span>
+        <div class="brand-text">
+          <span class="brand-name">Glory Nursing</span>
+          <span class="brand-tagline">Healthcare Training School</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- Mobile Toggle -->
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+
+    <!-- Nav Links -->
+    <ul class="nav-links" id="navLinks">
+
+      <!-- Home -->
+      <li>
+        <a href="{% url 'home' %}" class="{% if page == 'home' %}active{% endif %}">Home</a>
+      </li>
+
+      <!-- Training Programs dropdown -->
+      <li class="has-dropdown">
+        <a href="{% url 'programs' %}" class="{% if page == 'programs' %}active{% endif %}">
+          Training Programs <i class="fas fa-chevron-down"></i>
+        </a>
+        <ul class="dropdown dropdown-programs">
+          <li><a href="{% url 'program_detail' 'cna' %}">
+            <span class="dropdown-icon">🏥</span>
+            <span class="dropdown-text">
+              <strong>Certified Nursing Assistant (CNA)</strong>
+              <span>2 weeks · State-approved</span>
+            </span>
+          </a></li>
+          <li><a href="{% url 'program_detail' 'cma' %}">
+            <span class="dropdown-icon">💊</span>
+            <span class="dropdown-text">
+              <strong>Certified Medication Aide (CMA)</strong>
+              <span>2–4 weeks · Requires CNA</span>
+            </span>
+          </a></li>
+          <li><a href="{% url 'program_detail' 'hha' %}">
+            <span class="dropdown-icon">🏠</span>
+            <span class="dropdown-text">
+              <strong>Home Health Aide (HHA)</strong>
+              <span>1–2 weeks · Entry level</span>
+            </span>
+          </a></li>
+          <li><a href="{% url 'program_detail' 'bls-cpr' %}">
+            <span class="dropdown-icon">❤️</span>
+            <span class="dropdown-text">
+              <strong>BLS / CPR Certification</strong>
+              <span>1 day · AHA certified</span>
+            </span>
+          </a></li>
+          <li><a href="{% url 'program_detail' 'phlebotomy' %}">
+            <span class="dropdown-icon">🩸</span>
+            <span class="dropdown-text">
+              <strong>Phlebotomy Technician</strong>
+              <span>6–8 weeks · NHA certified</span>
+            </span>
+          </a></li>
+          <li><a href="{% url 'program_detail' 'ekg' %}">
+            <span class="dropdown-icon">📈</span>
+            <span class="dropdown-text">
+              <strong>EKG Technician</strong>
+              <span>4–6 weeks · NHA certified</span>
+            </span>
+          </a></li>
+          <li><a href="{% url 'program_detail' 'medical-assistant' %}">
+            <span class="dropdown-icon">🩺</span>
+            <span class="dropdown-text">
+              <strong>Clinical Medical Assistant</strong>
+              <span>10–12 weeks · NHA certified</span>
+            </span>
+          </a></li>
+          <li><a href="{% url 'program_detail' 'medical-billing-coding' %}">
+            <span class="dropdown-icon">💻</span>
+            <span class="dropdown-text">
+              <strong>Medical Billing &amp; Coding</strong>
+              <span>12–16 weeks · Online available</span>
+            </span>
+          </a></li>
+          <li class="dropdown-footer">
+            <a href="{% url 'programs' %}">View All Programs <i class="fas fa-arrow-right"></i></a>
+          </li>
+        </ul>
+      </li>
+
+      <!-- Admissions dropdown -->
+      <li class="has-dropdown">
+        <a href="{% url 'admissions' %}" class="{% if page == 'admissions' %}active{% endif %}">
+          Admissions <i class="fas fa-chevron-down"></i>
+        </a>
+        <ul class="dropdown dropdown-admissions">
+          <li><a href="{% url 'admissions' %}">
+            <span class="dropdown-icon">📋</span>
+            <span class="dropdown-text">
+              <strong>How to Apply</strong>
+              <span>Step-by-step enrollment guide</span>
+            </span>
+          </a></li>
+          <li><a href="{% url 'admissions_tuition' %}">
+            <span class="dropdown-icon">💰</span>
+            <span class="dropdown-text">
+              <strong>Tuition &amp; Fees</strong>
+              <span>Program pricing &amp; payment plans</span>
+            </span>
+          </a></li>
+          <li><a href="{% url 'admissions_financial_aid' %}">
+            <span class="dropdown-icon">🤝</span>
+            <span class="dropdown-text">
+              <strong>Financial Aid</strong>
+              <span>Sponsorships &amp; assistance options</span>
+            </span>
+          </a></li>
+          <li><a href="{% url 'admissions_requirements' %}">
+            <span class="dropdown-icon">✅</span>
+            <span class="dropdown-text">
+              <strong>Requirements</strong>
+              <span>Documents &amp; eligibility checklist</span>
+            </span>
+          </a></li>
+          <li><a href="{% url 'admissions_faq' %}">
+            <span class="dropdown-icon">❓</span>
+            <span class="dropdown-text">
+              <strong>FAQs</strong>
+              <span>Common questions answered</span>
+            </span>
+          </a></li>
+          <li class="dropdown-footer">
+            <a href="{% url 'apply' %}">Apply Now <i class="fas fa-arrow-right"></i></a>
+          </li>
+        </ul>
+      </li>
+
+      <!-- About Us dropdown -->
+      <li class="has-dropdown">
+        <a href="{% url 'about' %}" class="{% if page == 'about' %}active{% endif %}">
+          About Us <i class="fas fa-chevron-down"></i>
+        </a>
+        <ul class="dropdown dropdown-about">
+          <li>
+            <a href="{% url 'about' %}">
+              <span class="dropdown-icon">📖</span>
+              <span class="dropdown-text">
+                <strong>Our Story</strong>
+                <span>How Glory Nursing was founded</span>
+              </span>
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'about_mission' %}">
+              <span class="dropdown-icon">🎯</span>
+              <span class="dropdown-text">
+                <strong>Mission &amp; Values</strong>
+                <span>What we stand for</span>
+              </span>
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'about_team' %}">
+              <span class="dropdown-icon">👩‍⚕️</span>
+              <span class="dropdown-text">
+                <strong>Meet the Team</strong>
+                <span>Our instructors &amp; staff</span>
+              </span>
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'about_accreditations' %}">
+              <span class="dropdown-icon">🏅</span>
+              <span class="dropdown-text">
+                <strong>Accreditations</strong>
+                <span>State approvals &amp; licenses</span>
+              </span>
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'about_careers' %}">
+              <span class="dropdown-icon">💼</span>
+              <span class="dropdown-text">
+                <strong>Careers</strong>
+                <span>Join our team</span>
+              </span>
+            </a>
+          </li>
+          <li class="dropdown-footer">
+            <a href="{% url 'contact' %}">Get In Touch <i class="fas fa-arrow-right"></i></a>
+          </li>
+        </ul>
+      </li>
+
+      <!-- Contact -->
+      <li>
+        <a href="{% url 'contact' %}" class="{% if page == 'contact' %}active{% endif %}">Contact</a>
+      </li>
+
+      <!-- Apply CTA -->
+      <li>
+        <a href="{% url 'apply' %}" class="btn-nav">Apply Now</a>
+      </li>
+
+    </ul>
+  </div>
+</nav>
+
+<!-- Messages -->
+{% if messages %}
+<div class="messages-container">
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }}">
+    <i class="fas fa-check-circle"></i> {{ message }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Page Content -->
+{% block content %}{% endblock %}
+
+<!-- Footer -->
+<footer class="footer">
+  <div class="footer-top">
+    <div class="container footer-grid">
+
+      <!-- Brand & About -->
+      <div class="footer-col">
+        <div class="footer-brand">
+          <span class="brand-cross">✚</span>
+          <div>
+            <span class="footer-brand-name">Glory Nursing</span>
+            <span class="footer-brand-sub">Healthcare Training School</span>
+          </div>
+        </div>
+        <p class="footer-about">Empowering future healthcare heroes since 2018. State-approved programs, expert instructors, and a community that cares about your success.</p>
+        <div class="footer-social">
+          <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+          <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+          <a href="#" aria-label="Twitter"><i class="fab fa-x-twitter"></i></a>
+          <a href="#" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+        </div>
+      </div>
+
+      <!-- Programs -->
+      <div class="footer-col">
+        <h4>Our Programs</h4>
+        <ul>
+          <li><a href="{% url 'program_detail' 'cna' %}">Certified Nursing Assistant (CNA)</a></li>
+          <li><a href="{% url 'program_detail' 'cma' %}">Certified Medication Aide (CMA)</a></li>
+          <li><a href="{% url 'program_detail' 'hha' %}">Home Health Aide (HHA)</a></li>
+          <li><a href="{% url 'program_detail' 'bls-cpr' %}">BLS / CPR</a></li>
+          <li><a href="{% url 'program_detail' 'phlebotomy' %}">Phlebotomy Technician</a></li>
+          <li><a href="{% url 'program_detail' 'ekg' %}">EKG Technician</a></li>
+          <li><a href="{% url 'program_detail' 'medical-assistant' %}">Clinical Medical Assistant</a></li>
+          <li><a href="{% url 'program_detail' 'medical-billing-coding' %}">Medical Billing &amp; Coding</a></li>
+        </ul>
+      </div>
+
+      <!-- Quick Links -->
+      <div class="footer-col">
+        <h4>Quick Links</h4>
+        <ul>
+          <li><a href="{% url 'about' %}">About Glory Nursing</a></li>
+          <li><a href="{% url 'admissions' %}">How to Apply</a></li>
+          <li><a href="{% url 'admissions_tuition' %}">Tuition &amp; Fees</a></li>
+          <li><a href="{% url 'admissions_financial_aid' %}">Financial Aid</a></li>
+          <li><a href="{% url 'admissions_requirements' %}">Requirements</a></li>
+          <li><a href="{% url 'admissions_faq' %}">FAQs</a></li>
+          <li><a href="{% url 'apply' %}">Apply Now</a></li>
+          <li><a href="{% url 'contact' %}">Contact Us</a></li>
+        </ul>
+        <h4 style="margin-top:1.5rem">Accreditations</h4>
+        <ul>
+          <li><span style="color:#a8d5a2">✔</span> OBPVS Approved</li>
+          <li><span style="color:#a8d5a2">✔</span> OBN Licensed</li>
+          <li><span style="color:#a8d5a2">✔</span> OSDH-NAR Approved</li>
+        </ul>
+      </div>
+
+      <!-- Contact -->
+      <div class="footer-col">
+        <h4>Contact Us</h4>
+        <ul class="footer-contact-list">
+          <li><i class="fas fa-map-marker-alt"></i> 12032 N. Pennsylvania Ave,<br>Oklahoma City, OK 73120</li>
+          <li><i class="fas fa-phone"></i> (405) 968-5004</li>
+          <li><i class="fas fa-envelope"></i> glorynursing@yahoo.com</li>
+        </ul>
+        <a href="{% url 'apply' %}" class="btn btn-primary" style="margin-top:1.5rem;display:inline-block">Apply Now</a>
+      </div>
+
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div class="container">
+      <p>© 2026 Glory Nursing Healthcare Training School. All Rights Reserved.</p>
+      <p><em>Brighter Futures Begin Here.</em></p>
+    </div>
+  </div>
+</footer>
+
+<!-- Back to Top -->
+<a href="#" class="back-to-top" id="backToTop"><i class="fas fa-chevron-up"></i></a>
+
+<script src="{% static 'core/js/main.js' %}"></script>
+{% block extra_js %}{% endblock %}
+
+<script>
+/* =============================================
+   NAVBAR — scroll shadow + mobile toggle
+   ============================================= */
+(function () {
+  const navbar   = document.getElementById('navbar');
+  const toggle   = document.getElementById('navToggle');
+  const navLinks = document.getElementById('navLinks');
+  const backTop  = document.getElementById('backToTop');
+
+  /* Scroll effects */
+  window.addEventListener('scroll', () => {
+    navbar.classList.toggle('scrolled', window.scrollY > 40);
+    backTop.classList.toggle('visible', window.scrollY > 300);
+  }, { passive: true });
+
+  /* Mobile hamburger */
+  toggle.addEventListener('click', () => {
+    navLinks.classList.toggle('open');
+    toggle.classList.toggle('open');
+  });
+
+  /* Mobile: tap has-dropdown parent to open/close sub-menu */
+  document.querySelectorAll('.has-dropdown > a').forEach(link => {
+    link.addEventListener('click', e => {
+      if (window.innerWidth <= 768) {
+        e.preventDefault();
+        const li = link.closest('.has-dropdown');
+        const wasOpen = li.classList.contains('open');
+        /* Close all open dropdowns first */
+        document.querySelectorAll('.has-dropdown.open').forEach(el => el.classList.remove('open'));
+        if (!wasOpen) li.classList.add('open');
+      }
+    });
+  });
+
+  /* Close mobile menu when a non-parent link is clicked */
+  navLinks.querySelectorAll('a:not(.has-dropdown > a)').forEach(a => {
+    a.addEventListener('click', () => {
+      navLinks.classList.remove('open');
+      toggle.classList.remove('open');
+    });
+  });
+
+  /* Close menu on outside click */
+  document.addEventListener('click', e => {
+    if (!navbar.contains(e.target)) {
+      navLinks.classList.remove('open');
+      toggle.classList.remove('open');
+      document.querySelectorAll('.has-dropdown.open').forEach(el => el.classList.remove('open'));
+    }
+  });
+})();
+</script>
+
+</body>
+</html>

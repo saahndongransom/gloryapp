@@ -1,0 +1,34 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block content %}
+
+<!-- Page Hero -->
+<section class="page-hero">
+  <div class="container">
+    <h1>{% block about_title %}About Us{% endblock %}</h1>
+    <p>{% block about_subtitle %}Learn more about Glory Nursing Healthcare Training School.{% endblock %}</p>
+    <nav class="breadcrumb">
+      <a href="/">Home</a> /
+      <a href="{% url 'about' %}">About Us</a>
+      {% block breadcrumb_extra %}{% endblock %}
+    </nav>
+  </div>
+</section>
+
+<!-- About Sub Navigation -->
+<nav class="about-subnav">
+  <div class="container">
+    <ul class="about-subnav-links">
+      <li><a href="{% url 'about' %}" class="{% if about_page == 'story' %}active{% endif %}"><i class="fas fa-book-open"></i> Our Story</a></li>
+      <li><a href="{% url 'about_mission' %}" class="{% if about_page == 'mission' %}active{% endif %}"><i class="fas fa-bullseye"></i> Mission &amp; Values</a></li>
+      <li><a href="{% url 'about_team' %}" class="{% if about_page == 'team' %}active{% endif %}"><i class="fas fa-users"></i> Meet the Team</a></li>
+      <li><a href="{% url 'about_accreditations' %}" class="{% if about_page == 'accreditations' %}active{% endif %}"><i class="fas fa-award"></i> Accreditations</a></li>
+      <li><a href="{% url 'about_careers' %}" class="{% if about_page == 'careers' %}active{% endif %}"><i class="fas fa-briefcase"></i> Careers</a></li>
+    </ul>
+  </div>
+</nav>
+
+{% block about_content %}{% endblock %}
+
+{% endblock %}

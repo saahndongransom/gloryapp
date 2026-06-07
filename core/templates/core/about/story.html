@@ -1,0 +1,125 @@
+
+
+{% extends 'core/about/base_about.html' %}
+{% load static %}
+
+{% block about_title %}Our Story{% endblock %}
+{% block about_subtitle %}How two passionate healthcare professionals built Glory Nursing from the ground up.{% endblock %}
+{% block breadcrumb_extra %}/ <span>Our Story</span>{% endblock %}
+
+{% block about_content %}
+<section class="section">
+  <div class="container">
+    <div class="welcome-grid">
+      <div class="welcome-text">
+        <div class="section-badge">Founded With Purpose</div>
+        <h2>Built by Healthcare Professionals, <span class="highlight">For Future Heroes</span></h2>
+        <p>Glory Nursing Healthcare Training School was co-founded by <strong>Charles</strong> and <strong>Binui</strong> — a husband-and-wife team with deep roots in healthcare and a burning passion for giving back to their community.</p>
+        <p>The school was born out of a simple but powerful belief: that quality healthcare training should be <strong>accessible, affordable, and personal</strong>. Too many aspiring healthcare workers were falling through the cracks of large institutions. Charles and Binui set out to change that.</p>
+        <p>Today, Glory Nursing is a state-approved vocational institution proudly serving Oklahoma City and beyond — training the next generation of CNAs, CMAs, Phlebotomy Technicians, and allied health professionals.</p>
+        <a href="{% url 'about_mission' %}" class="btn btn-primary">Our Mission & Values</a>
+      </div>
+      <div class="welcome-image">
+        <img src="{% static 'core/images/welcome.jpeg' %}" alt="Glory Nursing Founders" loading="lazy">
+        <div class="image-badge"><i class="fas fa-award"></i><span>Founded with Purpose</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Founders Section -->
+<section class="section" style="background:var(--bg-light)">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-badge">Meet the Founders</div>
+      <h2>The People <span class="highlight">Behind Glory Nursing</span></h2>
+    </div>
+    <div class="founders-grid">
+      <div class="founder-card">
+        <div class="founder-photo-wrap">
+          <img src="{% static 'core/images/founder_charles.jpeg' %}" alt="Charles – Co-Founder" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="founder-photo-placeholder" style="display:none"><i class="fas fa-user-circle"></i></div>
+        </div>
+        <div class="founder-info">
+          <h3>Charles</h3>
+          <span class="founder-title">Co-Founder & Director</span>
+          <p>Originally from <strong>Ghana</strong>, Charles worked in healthcare in Africa before earning his nursing degree in the United States in 2015. He brings years of hands-on experience across home care, senior centers, and hospital settings.</p>
+          <p>His deep commitment to patient care and professional excellence drives the quality standards at Glory Nursing every single day.</p>
+        </div>
+      </div>
+      <div class="founder-card">
+        <div class="founder-photo-wrap">
+          <img src="{% static 'core/images/founder_binui.jpeg' %}" alt="Binui – Co-Founder" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="founder-photo-placeholder" style="display:none"><i class="fas fa-user-circle"></i></div>
+        </div>
+        <div class="founder-info">
+          <h3>Binui</h3>
+          <span class="founder-title">Co-Founder & Lead Instructor</span>
+          <p>Originally from <strong>Cameroon</strong>, Binui moved to Oklahoma in 2011 and began her healthcare journey as a Certified Nursing Assistant. Through hard work and dedication, she earned her Registered Nurse (RN) degree.</p>
+          <p>Her own journey from CNA to RN gives her a unique perspective that inspires and motivates every student at Glory Nursing.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Timeline -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-badge">Our Journey</div>
+      <h2>Glory Nursing <span class="highlight">Through the Years</span></h2>
+    </div>
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-year">2011</div>
+        <div class="timeline-content">
+          <h3>Binui Arrives in Oklahoma</h3>
+          <p>Binui moves to Oklahoma City and begins her healthcare career as a CNA, discovering a passion for patient care and teaching others.</p>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-year">2015</div>
+        <div class="timeline-content">
+          <h3>Charles Earns Nursing Degree</h3>
+          <p>Charles completes his nursing degree in the US after years of healthcare work in Ghana, bringing international experience to the team.</p>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-year">2018</div>
+        <div class="timeline-content">
+          <h3>Glory Nursing is Founded</h3>
+          <p>Charles and Binui open Glory Nursing Healthcare Training School in Oklahoma City with a vision to make quality healthcare training accessible to all.</p>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-year">2020</div>
+        <div class="timeline-content">
+          <h3>State Approval & Expansion</h3>
+          <p>Glory Nursing receives full state approval from OBPVS and OBN, and expands its program offerings to include CMA, Phlebotomy, EKG, and more.</p>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-year">2024</div>
+        <div class="timeline-content">
+          <h3>500+ Graduates & Growing</h3>
+          <p>Over 500 students have graduated from Glory Nursing and gone on to careers in hospitals, nursing homes, home health agencies, and clinics across Oklahoma.</p>
+        </div>
+      </div>
+      <div class="timeline-item timeline-item-last">
+        <div class="timeline-dot timeline-dot-gold"></div>
+        <div class="timeline-year" style="color:var(--gold)">Today</div>
+        <div class="timeline-content">
+          <h3>Brighter Futures Begin Here</h3>
+          <p>Glory Nursing continues to grow, serving more students, adding programs, and fulfilling its mission of empowering healthcare heroes one graduate at a time.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

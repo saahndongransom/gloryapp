@@ -1,0 +1,173 @@
+{% extends 'core/base.html' %}
+{% block title %}Financial Aid – Admissions – Glory Nursing{% endblock %}
+{% block meta_desc %}Explore financial assistance options at Glory Nursing including Oklahoma Workforce, Indian Tribe programs, employer sponsorships, and flexible payment plans.{% endblock %}
+
+{% block content %}
+
+<section class="page-hero">
+  <div class="container">
+    <h1>Financial Aid</h1>
+    <p>We believe cost should never be a barrier to your healthcare career. Let us help.</p>
+    <nav class="breadcrumb"><a href="{% url 'home' %}">Home</a> / <a href="{% url 'admissions' %}">Admissions</a> / <span>Financial Aid</span></nav>
+  </div>
+</section>
+
+<nav class="admissions-subnav">
+  <div class="container">
+    <ul class="admissions-subnav-links">
+      <li><a href="{% url 'admissions' %}">How to Apply</a></li>
+      <li><a href="{% url 'admissions_tuition' %}">Tuition & Fees</a></li>
+      <li><a href="{% url 'admissions_financial_aid' %}" class="active">Financial Aid</a></li>
+      <li><a href="{% url 'admissions_requirements' %}">Requirements</a></li>
+      <li><a href="{% url 'admissions_faq' %}">FAQs</a></li>
+    </ul>
+  </div>
+</nav>
+
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-badge">Funding Your Education</div>
+      <h2>Financial <span class="highlight">Assistance Options</span></h2>
+      <p>Glory Nursing partners with multiple organizations and programs to help you cover tuition costs. Many students attend at little to no out-of-pocket expense.</p>
+    </div>
+
+    <div class="financial-aid-grid">
+      <!-- Oklahoma Workforce -->
+      <div class="aid-card">
+        <div class="aid-card-header">
+          <div class="aid-icon"><i class="fas fa-briefcase"></i></div>
+          <div>
+            <h3>Oklahoma Workforce (OKDHS / OJA)</h3>
+            <span class="badge">Sponsored Funding</span>
+          </div>
+        </div>
+        <p>The Oklahoma Office of Workforce Development and Oklahoma Employment Security Commission provide funding for eligible residents to attend approved vocational training programs — including all Glory Nursing programs.</p>
+        <ul class="check-list" style="margin-top:14px">
+          <li><i class="fas fa-check-circle"></i> May cover full tuition for qualifying students</li>
+          <li><i class="fas fa-check-circle"></i> Available to unemployed or underemployed Oklahomans</li>
+          <li><i class="fas fa-check-circle"></i> Our admissions team can help you apply</li>
+        </ul>
+        <a href="{% url 'contact' %}" class="btn btn-outline" style="margin-top:1.2rem;display:inline-block">Ask If You Qualify</a>
+      </div>
+
+      <!-- Native American / Indian Tribe -->
+      <div class="aid-card">
+        <div class="aid-card-header">
+          <div class="aid-icon"><i class="fas fa-feather-alt"></i></div>
+          <div>
+            <h3>Native American / Indian Tribe Programs</h3>
+            <span class="badge">Tribal Sponsorship</span>
+          </div>
+        </div>
+        <p>Many Oklahoma tribal nations offer educational sponsorship and funding programs for enrolled tribal members pursuing vocational training. Glory Nursing is an approved training provider for several tribal programs.</p>
+        <ul class="check-list" style="margin-top:14px">
+          <li><i class="fas fa-check-circle"></i> Available to enrolled tribal members in Oklahoma</li>
+          <li><i class="fas fa-check-circle"></i> May cover tuition in full</li>
+          <li><i class="fas fa-check-circle"></i> Contact your tribal education office or ask us to help connect you</li>
+        </ul>
+        <a href="{% url 'contact' %}" class="btn btn-outline" style="margin-top:1.2rem;display:inline-block">Ask About Tribal Funding</a>
+      </div>
+
+      <!-- Employer Sponsorship -->
+      <div class="aid-card">
+        <div class="aid-card-header">
+          <div class="aid-icon"><i class="fas fa-hospital-user"></i></div>
+          <div>
+            <h3>Employer Sponsorships</h3>
+            <span class="badge">Employer-Funded</span>
+          </div>
+        </div>
+        <p>Many healthcare employers — hospitals, nursing homes, home health agencies, and clinics — will sponsor employees who want to earn additional certifications. We invoice employers directly and handle the paperwork.</p>
+        <ul class="check-list" style="margin-top:14px">
+          <li><i class="fas fa-check-circle"></i> Employer pays tuition directly to Glory Nursing</li>
+          <li><i class="fas fa-check-circle"></i> We can send a formal proposal to your employer</li>
+          <li><i class="fas fa-check-circle"></i> Works with hospitals, LTCs, home health agencies</li>
+        </ul>
+        <a href="{% url 'contact' %}" class="btn btn-outline" style="margin-top:1.2rem;display:inline-block">Request Employer Letter</a>
+      </div>
+
+      <!-- Payment Plans -->
+      <div class="aid-card">
+        <div class="aid-card-header">
+          <div class="aid-icon"><i class="fas fa-credit-card"></i></div>
+          <div>
+            <h3>Flexible Payment Plans</h3>
+            <span class="badge">Self-Pay Option</span>
+          </div>
+        </div>
+        <p>If you're paying out-of-pocket, we offer flexible installment options so you can start your program without paying everything upfront. Plans vary by program length and tuition amount.</p>
+        <ul class="check-list" style="margin-top:14px">
+          <li><i class="fas fa-check-circle"></i> Split payment: 50% at enrollment, 50% at start</li>
+          <li><i class="fas fa-check-circle"></i> Monthly installments for longer programs</li>
+          <li><i class="fas fa-check-circle"></i> No interest on in-house payment plans</li>
+        </ul>
+        <a href="{% url 'contact' %}" class="btn btn-outline" style="margin-top:1.2rem;display:inline-block">Discuss Payment Plans</a>
+      </div>
+
+      <!-- Student Referral -->
+      <div class="aid-card">
+        <div class="aid-card-header">
+          <div class="aid-icon"><i class="fas fa-users"></i></div>
+          <div>
+            <h3>Student Referral Bonus</h3>
+            <span class="badge">Refer & Save</span>
+          </div>
+        </div>
+        <p>Refer a friend, family member, or colleague to Glory Nursing and receive a discount or bonus credit toward your own tuition or future courses. Investing in someone else's future pays back.</p>
+        <ul class="check-list" style="margin-top:14px">
+          <li><i class="fas fa-check-circle"></i> Earn credit when your referral enrolls</li>
+          <li><i class="fas fa-check-circle"></i> Applicable toward current or future programs</li>
+          <li><i class="fas fa-check-circle"></i> Ask admissions for current referral bonus amount</li>
+        </ul>
+        <a href="{% url 'contact' %}" class="btn btn-outline" style="margin-top:1.2rem;display:inline-block">Learn More</a>
+      </div>
+
+      <!-- Need Help Finding Aid -->
+      <div class="aid-card aid-card-highlight">
+        <div class="aid-card-header">
+          <div class="aid-icon aid-icon-gold"><i class="fas fa-hands-helping"></i></div>
+          <div>
+            <h3>Not Sure What You Qualify For?</h3>
+            <span class="badge badge-gold">We'll Help You</span>
+          </div>
+        </div>
+        <p>Our admissions team will sit down with you — by phone, email, or in person — to identify every funding option available to you. Many students are surprised by how much assistance is available.</p>
+        <ul class="check-list" style="margin-top:14px">
+          <li><i class="fas fa-check-circle" style="color:var(--gold)"></i> Free financial aid consultation</li>
+          <li><i class="fas fa-check-circle" style="color:var(--gold)"></i> We help with paperwork and applications</li>
+          <li><i class="fas fa-check-circle" style="color:var(--gold)"></i> No obligation — just a conversation</li>
+        </ul>
+        <a href="{% url 'contact' %}" class="btn btn-primary" style="margin-top:1.2rem;display:inline-block">Schedule a Free Consultation</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Partner Logos Bar -->
+<section class="accreditations-bar">
+  <div class="container">
+    <p class="accred-label">Financial Aid Partners:</p>
+    <div class="accred-list">
+      <span>Oklahoma Workforce</span>
+      <span>Indian Tribe Programs</span>
+      <span>Employer Sponsors</span>
+      <span>Flexible Plans</span>
+    </div>
+  </div>
+</section>
+
+<section class="cta-banner">
+  <div class="container cta-inner">
+    <div>
+      <h2>Don't Let Cost Stop You</h2>
+      <p>Contact our admissions team today and we'll find a way to make your healthcare training affordable.</p>
+    </div>
+    <div class="cta-actions">
+      <a href="{% url 'contact' %}" class="btn btn-white btn-lg">Contact Admissions</a>
+      <a href="{% url 'apply' %}" class="btn btn-outline-white btn-lg">Apply Now</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

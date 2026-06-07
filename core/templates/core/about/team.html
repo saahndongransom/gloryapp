@@ -1,0 +1,100 @@
+bash
+{% extends 'core/about/base_about.html' %}
+{% load static %}
+
+{% block about_title %}Meet the Team{% endblock %}
+{% block about_subtitle %}The dedicated professionals who make Glory Nursing exceptional.{% endblock %}
+{% block breadcrumb_extra %}/ <span>Meet the Team</span>{% endblock %}
+
+{% block about_content %}
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-badge">Our Team</div>
+      <h2>The People Behind <span class="highlight">Your Success</span></h2>
+      <p>Our instructors and staff are licensed, certified healthcare professionals who bring real-world experience into every classroom.</p>
+    </div>
+
+    <!-- Founders -->
+    <h3 class="team-category-title"><i class="fas fa-crown"></i> Founders & Leadership</h3>
+    <div class="team-grid">
+      <div class="team-card">
+        <div class="team-photo">
+          <img src="{% static 'core/images/founder_charles.jpeg' %}" alt="Charles" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="team-photo-placeholder" style="display:none"><i class="fas fa-user-circle"></i></div>
+        </div>
+        <div class="team-info">
+          <h3>Charles</h3>
+          <span class="team-role">Co-Founder & Director</span>
+          <p>RN with 10+ years of experience in home care, senior centers, and hospital settings. Originally from Ghana.</p>
+          <div class="team-credentials">
+            <span><i class="fas fa-certificate"></i> Registered Nurse</span>
+            <span><i class="fas fa-globe-africa"></i> Ghana</span>
+          </div>
+        </div>
+      </div>
+      <div class="team-card">
+        <div class="team-photo">
+          <img src="{% static 'core/images/founder_binui.jpeg' %}" alt="Binui" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="team-photo-placeholder" style="display:none"><i class="fas fa-user-circle"></i></div>
+        </div>
+        <div class="team-info">
+          <h3>Binui</h3>
+          <span class="team-role">Co-Founder & Lead Instructor</span>
+          <p>Started as a CNA and worked her way to RN. Her journey from student to instructor makes her a uniquely inspiring teacher. Originally from Cameroon.</p>
+          <div class="team-credentials">
+            <span><i class="fas fa-certificate"></i> Registered Nurse</span>
+            <span><i class="fas fa-globe-africa"></i> Cameroon</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Instructors -->
+    <h3 class="team-category-title" style="margin-top:56px"><i class="fas fa-chalkboard-teacher"></i> Instructors</h3>
+    <div class="team-grid">
+      <div class="team-card">
+        <div class="team-photo team-photo-placeholder-default"><i class="fas fa-user-circle"></i></div>
+        <div class="team-info">
+          <h3>CNA Instructor</h3>
+          <span class="team-role">Certified Nurse Aide Instructor</span>
+          <p>Licensed CNA instructor with clinical experience in long-term care and rehabilitation settings.</p>
+          <div class="team-credentials">
+            <span><i class="fas fa-certificate"></i> Licensed CNA Instructor</span>
+          </div>
+        </div>
+      </div>
+      <div class="team-card">
+        <div class="team-photo team-photo-placeholder-default"><i class="fas fa-user-circle"></i></div>
+        <div class="team-info">
+          <h3>BLS/CPR Instructor</h3>
+          <span class="team-role">AHA Certified Instructor</span>
+          <p>AHA-certified BLS and CPR instructor with emergency medicine background.</p>
+          <div class="team-credentials">
+            <span><i class="fas fa-certificate"></i> AHA Certified</span>
+          </div>
+        </div>
+      </div>
+      <div class="team-card">
+        <div class="team-photo team-photo-placeholder-default"><i class="fas fa-user-circle"></i></div>
+        <div class="team-info">
+          <h3>Phlebotomy Instructor</h3>
+          <span class="team-role">Certified Phlebotomy Technician Instructor</span>
+          <p>NHA-certified phlebotomist and instructor with hospital laboratory experience.</p>
+          <div class="team-credentials">
+            <span><i class="fas fa-certificate"></i> NHA Certified</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="team-join-banner">
+      <div>
+        <h3>Are You a Healthcare Professional?</h3>
+        <p>We're always looking for passionate, licensed instructors to join our team.</p>
+      </div>
+      <a href="{% url 'about_careers' %}" class="btn btn-white btn-lg">View Open Positions</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

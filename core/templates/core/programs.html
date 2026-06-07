@@ -1,0 +1,34 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% block title %}Training Programs – Glory Nursing{% endblock %}
+{% block content %}
+<section class="page-hero">
+  <div class="container">
+    <h1>Training Programs</h1>
+    <p>State-approved healthcare training programs designed to get you certified and career-ready.</p>
+    <nav class="breadcrumb"><a href="/">Home</a> / <span>Programs</span></nav>
+  </div>
+</section>
+<section class="section">
+  <div class="container">
+    <div class="programs-grid programs-grid-full">
+      {% for program in programs %}
+      <a href="{% url 'program_detail' program.slug %}" class="program-card">
+        <div class="program-icon">{{ program.icon }}</div>
+        <h3>{{ program.short }}</h3>
+        <p class="program-title-full">{{ program.title }}</p>
+        <div class="program-meta">
+          <span><i class="fas fa-clock"></i> {{ program.duration }}</span>
+          <span><i class="fas fa-book"></i> {{ program.hours }}</span>
+        </div>
+        <p class="program-desc">{{ program.description|truncatechars:120 }}</p>
+        <div class="program-schedules">
+          {% for s in program.schedules %}<span class="badge">{{ s }}</span>{% endfor %}
+        </div>
+        <span class="program-link">Learn More <i class="fas fa-arrow-right"></i></span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,252 @@
+{% extends 'core/base.html' %}
+{% block title %}Admissions – Glory Nursing{% endblock %}
+{% block meta_desc %}Learn how to apply to Glory Nursing, view tuition & fees, explore financial aid options, and read FAQs about our healthcare training programs in Oklahoma City.{% endblock %}
+
+{% block content %}
+
+<!-- Page Hero -->
+<section class="page-hero">
+  <div class="container">
+    <h1>Admissions</h1>
+    <p>Your step-by-step guide to enrolling at Glory Nursing Healthcare Training School.</p>
+    <nav class="breadcrumb"><a href="{% url 'home' %}">Home</a> / <span>Admissions</span></nav>
+  </div>
+</section>
+
+<!-- Admissions Sub Nav -->
+<nav class="admissions-subnav">
+  <div class="container">
+    <ul class="admissions-subnav-links">
+      <li><a href="{% url 'admissions' %}" class="active">How to Apply</a></li>
+      <li><a href="{% url 'admissions_tuition' %}">Tuition & Fees</a></li>
+      <li><a href="{% url 'admissions_financial_aid' %}">Financial Aid</a></li>
+      <li><a href="{% url 'admissions_requirements' %}">Requirements</a></li>
+      <li><a href="{% url 'admissions_faq' %}">FAQs</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- How to Apply -->
+<section class="section">
+  <div class="container admissions-grid">
+    <div>
+      <div class="section-badge">Step by Step</div>
+      <h2 style="margin-top:12px">How to Apply to Glory Nursing</h2>
+      <p style="color:var(--text-light);margin:14px 0 32px">Our enrollment process is simple and straightforward. Most students are contacted within 1–2 business days of applying.</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div>
+            <h3>Choose Your Program</h3>
+            <p>Browse our 8+ state-approved healthcare training programs and select the one that fits your career goals and schedule preferences. Not sure? Contact admissions — we're happy to help you decide.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div>
+            <h3>Submit Your Application</h3>
+            <p>Complete our short online application form. It takes less than 5 minutes. You'll be asked for basic personal information and your program of interest.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div>
+            <h3>Admissions Review</h3>
+            <p>Our admissions team reviews your application and reaches out within 1–2 business days to discuss your enrollment options, schedule, and any questions you may have.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div>
+            <h3>Submit Required Documents</h3>
+            <p>Provide a government-issued ID, high school diploma or GED, immunization records, Social Security card, and any other program-specific documents. Our team will guide you through this.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div>
+            <h3>Enrollment & Payment</h3>
+            <p>Complete your enrollment paperwork and arrange tuition payment. We offer payment plans and work with Oklahoma Workforce, Indian Tribe programs, and employer sponsorships.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">6</div>
+          <div>
+            <h3>Attend Orientation & Start!</h3>
+            <p>Attend your program orientation, receive your materials, and begin your journey toward a rewarding healthcare career. Welcome to the Glory Nursing family!</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Testimonial -->
+      <div class="admissions-testimonial">
+        <div class="stars">★★★★★</div>
+        <p class="testimonial-text">"The admissions process at Glory Nursing was the easiest part of starting my new career. I applied online, got a call the next morning, and was enrolled within two days. They walked me through every step."</p>
+        <div class="testimonial-author">
+          <div class="author-avatar">T</div>
+          <div>
+            <strong>Tanya M.</strong>
+            <span>CNA Graduate, Oklahoma City</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div>
+      <!-- Apply CTA Card -->
+      <div class="sidebar-card sidebar-apply-card">
+        <i class="fas fa-user-graduate sidebar-apply-icon"></i>
+        <h3>Ready to Apply?</h3>
+        <p>Start your application today. It only takes a few minutes and our team will contact you within 1–2 business days.</p>
+        <a href="{% url 'apply' %}" class="btn btn-primary" style="display:block;text-align:center;margin-top:1rem">Apply Now</a>
+        <a href="{% url 'contact' %}" class="btn btn-outline" style="display:block;text-align:center;margin-top:10px">Talk to Admissions</a>
+      </div>
+
+      <!-- Quick Requirements -->
+      <div class="sidebar-card" style="margin-top:1.5rem">
+        <h3>General Requirements</h3>
+        <ul class="check-list">
+          <li><i class="fas fa-check-circle"></i> Must be 18 years or older</li>
+          <li><i class="fas fa-check-circle"></i> High school diploma or GED</li>
+          <li><i class="fas fa-check-circle"></i> Valid government-issued ID</li>
+          <li><i class="fas fa-check-circle"></i> Background check (clinical)</li>
+          <li><i class="fas fa-check-circle"></i> Immunization records</li>
+          <li><i class="fas fa-check-circle"></i> Social Security card / work auth</li>
+        </ul>
+        <a href="{% url 'admissions_requirements' %}" class="btn btn-outline" style="display:block;text-align:center;margin-top:1rem">Full Requirements List</a>
+      </div>
+
+      <!-- Financial Aid Snapshot -->
+      <div class="sidebar-card" style="margin-top:1.5rem;background:var(--gold-light);border-color:#e8c97a">
+        <h3><i class="fas fa-dollar-sign" style="color:var(--gold);margin-right:8px"></i>Financial Assistance</h3>
+        <ul class="check-list">
+          <li><i class="fas fa-check-circle" style="color:var(--gold)"></i> Oklahoma Workforce sponsorship</li>
+          <li><i class="fas fa-check-circle" style="color:var(--gold)"></i> Native American / Indian Tribe programs</li>
+          <li><i class="fas fa-check-circle" style="color:var(--gold)"></i> Employer sponsorships</li>
+          <li><i class="fas fa-check-circle" style="color:var(--gold)"></i> Flexible payment plans</li>
+        </ul>
+        <a href="{% url 'admissions_financial_aid' %}" class="btn btn-outline" style="display:block;text-align:center;margin-top:1rem;border-color:var(--gold);color:var(--gold)">Explore Financial Aid</a>
+      </div>
+
+      <!-- Contact Card -->
+      <div class="sidebar-card" style="margin-top:1.5rem">
+        <h3>Contact Admissions</h3>
+        <div class="info-row">
+          <i class="fas fa-phone"></i>
+          <div><strong>Phone</strong><span>(405) 968-5004</span></div>
+        </div>
+        <div class="info-row">
+          <i class="fas fa-envelope"></i>
+          <div><strong>Email</strong><span>glorynursing@yahoo.com</span></div>
+        </div>
+        <div class="info-row">
+          <i class="fas fa-clock"></i>
+          <div><strong>Office Hours</strong><span>Mon–Fri: 8am–6pm<br>Sat: 9am–2pm</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Start Dates Section -->
+<section class="section" style="background:var(--bg-light);padding-top:60px;padding-bottom:60px">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-badge">Upcoming Classes</div>
+      <h2>Next Available <span class="highlight">Start Dates</span></h2>
+      <p>Classes fill up fast — secure your spot early. New cohorts begin every few weeks.</p>
+    </div>
+    <div class="start-dates-grid">
+      {% for program in programs %}
+      <div class="start-date-card">
+        <div class="start-date-icon">{{ program.icon }}</div>
+        <div class="start-date-info">
+          <h4>{{ program.short }}</h4>
+          <span class="start-date-duration"><i class="fas fa-clock"></i> {{ program.duration }}</span>
+        </div>
+        <a href="{% url 'apply' %}" class="btn btn-primary btn-sm">Enroll</a>
+      </div>
+      {% endfor %}
+    </div>
+    <p style="text-align:center;margin-top:32px;color:var(--text-muted);font-size:0.9rem"><i class="fas fa-info-circle"></i> Contact admissions for specific upcoming start dates and availability.</p>
+  </div>
+</section>
+
+<!-- Document Checklist -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-badge">Be Prepared</div>
+      <h2>Document <span class="highlight">Checklist</span></h2>
+      <p>Gather these documents before or during your admissions process to speed up enrollment.</p>
+    </div>
+    <div class="checklist-grid">
+      <div class="checklist-card">
+        <div class="checklist-header">
+          <i class="fas fa-id-card"></i>
+          <h3>Identity Documents</h3>
+        </div>
+        <ul class="doc-list">
+          <li><i class="fas fa-square-check"></i> Government-issued photo ID (driver's license, state ID, or passport)</li>
+          <li><i class="fas fa-square-check"></i> Social Security card or work authorization document</li>
+          <li><i class="fas fa-square-check"></i> Birth certificate (if applicable)</li>
+        </ul>
+      </div>
+      <div class="checklist-card">
+        <div class="checklist-header">
+          <i class="fas fa-graduation-cap"></i>
+          <h3>Education Records</h3>
+        </div>
+        <ul class="doc-list">
+          <li><i class="fas fa-square-check"></i> High school diploma or GED certificate</li>
+          <li><i class="fas fa-square-check"></i> Official transcripts (if available)</li>
+          <li><i class="fas fa-square-check"></i> Prior healthcare certifications (if applicable)</li>
+        </ul>
+      </div>
+      <div class="checklist-card">
+        <div class="checklist-header">
+          <i class="fas fa-syringe"></i>
+          <h3>Health Records</h3>
+        </div>
+        <ul class="doc-list">
+          <li><i class="fas fa-square-check"></i> Immunization records (MMR, Hepatitis B, Varicella, TB)</li>
+          <li><i class="fas fa-square-check"></i> TB test results (must be within 12 months)</li>
+          <li><i class="fas fa-square-check"></i> Physical exam clearance (for clinical programs)</li>
+        </ul>
+      </div>
+      <div class="checklist-card">
+        <div class="checklist-header">
+          <i class="fas fa-shield-halved"></i>
+          <h3>Background & Clearance</h3>
+        </div>
+        <ul class="doc-list">
+          <li><i class="fas fa-square-check"></i> Background check authorization (we'll guide you)</li>
+          <li><i class="fas fa-square-check"></i> Drug screening consent form</li>
+          <li><i class="fas fa-square-check"></i> CPR certification (if already held)</li>
+        </ul>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:36px">
+      <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:16px">Not sure if you have everything? Our admissions team will help you gather what you need.</p>
+      <a href="{% url 'contact' %}" class="btn btn-outline">Contact Admissions for Help</a>
+    </div>
+  </div>
+</section>
+
+<!-- CTA Banner -->
+<section class="cta-banner">
+  <div class="container cta-inner">
+    <div>
+      <h2>Take the First Step Today</h2>
+      <p>Join hundreds of Glory Nursing graduates who have launched successful healthcare careers across Oklahoma.</p>
+    </div>
+    <div class="cta-actions">
+      <a href="{% url 'apply' %}" class="btn btn-white btn-lg">Apply Now</a>
+      <a href="{% url 'admissions_tuition' %}" class="btn btn-outline-white btn-lg">View Tuition & Fees</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

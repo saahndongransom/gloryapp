@@ -1,0 +1,297 @@
+{% extends 'core/base.html' %}
+{% block title %}FAQs – Admissions – Glory Nursing{% endblock %}
+{% block meta_desc %}Frequently asked questions about enrolling at Glory Nursing, including questions about programs, scheduling, exams, costs, and clinical placements in Oklahoma City.{% endblock %}
+
+{% block content %}
+
+<section class="page-hero">
+  <div class="container">
+    <h1>Frequently Asked Questions</h1>
+    <p>Answers to the most common questions from prospective students.</p>
+    <nav class="breadcrumb"><a href="{% url 'home' %}">Home</a> / <a href="{% url 'admissions' %}">Admissions</a> / <span>FAQs</span></nav>
+  </div>
+</section>
+
+<nav class="admissions-subnav">
+  <div class="container">
+    <ul class="admissions-subnav-links">
+      <li><a href="{% url 'admissions' %}">How to Apply</a></li>
+      <li><a href="{% url 'admissions_tuition' %}">Tuition & Fees</a></li>
+      <li><a href="{% url 'admissions_financial_aid' %}">Financial Aid</a></li>
+      <li><a href="{% url 'admissions_requirements' %}">Requirements</a></li>
+      <li><a href="{% url 'admissions_faq' %}" class="active">FAQs</a></li>
+    </ul>
+  </div>
+</nav>
+
+<section class="section">
+  <div class="container">
+    <div class="faq-layout">
+      <div class="faq-main">
+
+        <!-- Programs & Schedules -->
+        <div class="faq-category">
+          <h2 class="faq-category-title"><i class="fas fa-graduation-cap"></i> Programs & Scheduling</h2>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              How long are the programs at Glory Nursing?
+              <i class="fas fa-chevron-down faq-icon"></i>
+            </button>
+            <div class="faq-answer">
+              <p>Program lengths vary by course. Our CNA program can be completed in as little as 2 weeks. The BLS/CPR certification takes just 1 day. Longer programs like Phlebotomy (6–8 weeks), Clinical Medical Assistant (10–12 weeks), and Medical Billing & Coding (12–16 weeks) take more time due to their scope. Full durations are listed on each program's detail page.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              Can I work while attending classes?
+              <i class="fas fa-chevron-down faq-icon"></i>
+            </button>
+            <div class="faq-answer">
+              <p>Yes — many of our students work full-time or part-time while completing their training. We offer weekday daytime, evening, weekend, and online hybrid options designed specifically for working adults. Contact admissions to discuss which schedule fits your situation best.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              Are classes available online?
+              <i class="fas fa-chevron-down faq-icon"></i>
+            </button>
+            <div class="faq-answer">
+              <p>Some of our programs offer online or hybrid options where theory and lecture content can be completed remotely. However, clinical programs (CNA, CMA, Phlebotomy, EKG, CCMA) require hands-on lab training and clinical hours that must be completed in person at our facility or partner sites. Medical Billing & Coding is our most online-friendly program.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              When do new classes start?
+              <i class="fas fa-chevron-down faq-icon"></i>
+            </button>
+            <div class="faq-answer">
+              <p>New cohorts begin on a rolling basis every few weeks depending on program and enrollment. We don't operate on a fixed semester calendar, which means you can start much sooner than at a traditional college. Contact our admissions office for the next available start date for your program of interest.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              What if I miss a class?
+              <i class="fas fa-chevron-down faq-icon"></i>
+            </button>
+            <div class="faq-answer">
+              <p>We understand life happens. If you need to miss a class, contact your instructor as early as possible. Attendance requirements vary by program and are governed by state licensing rules — particularly for clinical hours. Our instructors and staff will work with you to make up any missed content where possible.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Admissions & Enrollment -->
+        <div class="faq-category">
+          <h2 class="faq-category-title"><i class="fas fa-clipboard-list"></i> Admissions & Enrollment</h2>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              How do I apply to Glory Nursing?
+              <i class="fas fa-chevron-down faq-icon"></i>
+            </button>
+            <div class="faq-answer">
+              <p>You can apply online through our website — it takes just a few minutes. Simply fill out the application form with your program of interest and contact information, and our admissions team will reach out within 1–2 business days to guide you through next steps.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              Is there an entrance exam or interview?
+              <i class="fas fa-chevron-down faq-icon"></i>
+            </button>
+            <div class="faq-answer">
+              <p>No entrance exam is required to apply. Our admissions process is straightforward — we review your application, verify your documents, and have a brief admissions conversation with you to make sure the program is the right fit. There's no academic testing to get in.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              What if I have a criminal background?
+              <i class="fas fa-chevron-down faq-icon"></i>
+            </button>
+            <div class="faq-answer">
+              <p>A criminal background does not automatically disqualify you from enrollment. However, certain criminal histories may affect your eligibility for state certification exams or clinical placements. We encourage you to speak with our admissions team before enrolling so we can advise you honestly on your options. Each situation is reviewed individually.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              How quickly can I start after applying?
+              <i class="fas fa-chevron-down faq-icon"></i>
+            </button>
+            <div class="faq-answer">
+              <p>If all your documents are in order and a class is starting soon, you could potentially begin within 1–2 weeks of applying. We'll let you know the next available start date when you speak with admissions. The fastest programs to enroll in are BLS/CPR and HHA — they have the fewest prerequisite steps.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Costs & Financial Aid -->
+        <div class="faq-category">
+          <h2 class="faq-category-title"><i class="fas fa-dollar-sign"></i> Costs & Financial Aid</h2>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              How much does the CNA program cost?
+              <i class="fas fa-chevron-down faq-icon"></i>
+            </button>
+            <div class="faq-answer">
+              <p>Tuition varies by program. Contact our admissions office directly at (405) 968-5004 or glorynursing@yahoo.com for current tuition rates. We believe in transparency — there are no hidden fees, and our team will give you a full cost breakdown before you commit to anything.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              Does Glory Nursing offer payment plans?
+              <i class="fas fa-chevron-down faq-icon"></i>
+            </button>
+            <div class="faq-answer">
+              <p>Yes. We offer flexible payment options including split payments (50% at enrollment, 50% at course start) and monthly installment plans for longer programs. There is no interest on our in-house payment plans. Contact admissions to set up a plan that fits your budget.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              Can Oklahoma Workforce pay for my training?
+              <i class="fas fa-chevron-down faq-icon"></i>
+            </button>
+            <div class="faq-answer">
+              <p>Yes — Glory Nursing is an approved training provider through Oklahoma Workforce programs. Eligible students may qualify for full or partial tuition coverage. Our admissions team can help you determine eligibility and navigate the application process. This is one of the most common ways our students fund their training.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              Does Glory Nursing accept tribal education funding?
+              <i class="fas fa-chevron-down faq-icon"></i>
+            </button>
+            <div class="faq-answer">
+              <p>Yes. We work with several Oklahoma tribal nations and their education programs to provide training for enrolled members. Contact your tribe's education office or ask our admissions team to help connect you with the right resources.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Certification & Exams -->
+        <div class="faq-category">
+          <h2 class="faq-category-title"><i class="fas fa-certificate"></i> Certification & State Exams</h2>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              Will I be ready to pass the state exam after completing the program?
+              <i class="fas fa-chevron-down faq-icon"></i>
+            </button>
+            <div class="faq-answer">
+              <p>Absolutely. Our programs include structured exam preparation, practice tests, and review sessions specifically designed around the state and national certification exams. Our instructors know the exams well and prepare you thoroughly before your test date.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              What happens if I fail the state exam?
+              <i class="fas fa-chevron-down faq-icon"></i>
+            </button>
+            <div class="faq-answer">
+              <p>If you don't pass on the first attempt, our team is here to help. We'll work with you on additional preparation and review. Most states allow multiple exam attempts within a certain timeframe. We are committed to supporting you until you achieve your certification.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              Are the certifications nationally recognized?
+              <i class="fas fa-chevron-down faq-icon"></i>
+            </button>
+            <div class="faq-answer">
+              <p>Yes. Our programs lead to nationally recognized certifications. CNA certification is state-regulated (Oklahoma Board of Nursing). Programs like Phlebotomy, EKG, CCMA, and Medical Billing & Coding are certified through the National Healthcareer Association (NHA). BLS/CPR certification is issued by the American Heart Association (AHA).</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              Does Glory Nursing help with job placement after graduation?
+              <i class="fas fa-chevron-down faq-icon"></i>
+            </button>
+            <div class="faq-answer">
+              <p>While we do not guarantee job placement, we actively support our graduates through resume assistance, interview preparation, and connections to our network of local healthcare employers. Many of our clinical partner facilities have hired Glory Nursing graduates directly after externship. We celebrate your success and stay invested in your career even after graduation.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- FAQ Sidebar -->
+      <div class="faq-sidebar">
+        <div class="sidebar-card">
+          <h3>Still Have Questions?</h3>
+          <p style="color:var(--text-light);font-size:0.9rem;margin:10px 0 18px">Our admissions team is here to help. Reach out and we'll get back to you quickly.</p>
+          <div class="info-row">
+            <i class="fas fa-phone"></i>
+            <div><strong>Call Us</strong><span>(405) 968-5004</span></div>
+          </div>
+          <div class="info-row">
+            <i class="fas fa-envelope"></i>
+            <div><strong>Email</strong><span>glorynursing@yahoo.com</span></div>
+          </div>
+          <div class="info-row">
+            <i class="fas fa-clock"></i>
+            <div><strong>Hours</strong><span>Mon–Fri 8am–6pm<br>Sat 9am–2pm</span></div>
+          </div>
+          <a href="{% url 'contact' %}" class="btn btn-primary" style="display:block;text-align:center;margin-top:1rem">Contact Admissions</a>
+        </div>
+
+        <div class="sidebar-card" style="margin-top:1.5rem">
+          <h3>Quick Links</h3>
+          <ul class="sidebar-links">
+            <li><a href="{% url 'apply' %}"><i class="fas fa-arrow-right" style="margin-right:6px;font-size:0.75rem"></i>Apply Now</a></li>
+            <li><a href="{% url 'admissions_tuition' %}"><i class="fas fa-arrow-right" style="margin-right:6px;font-size:0.75rem"></i>Tuition & Fees</a></li>
+            <li><a href="{% url 'admissions_financial_aid' %}"><i class="fas fa-arrow-right" style="margin-right:6px;font-size:0.75rem"></i>Financial Aid</a></li>
+            <li><a href="{% url 'admissions_requirements' %}"><i class="fas fa-arrow-right" style="margin-right:6px;font-size:0.75rem"></i>Requirements</a></li>
+            <li><a href="{% url 'programs' %}"><i class="fas fa-arrow-right" style="margin-right:6px;font-size:0.75rem"></i>View All Programs</a></li>
+          </ul>
+        </div>
+
+        <div class="sidebar-card" style="margin-top:1.5rem;background:var(--green-light)">
+          <h3>Ready to Start?</h3>
+          <p style="color:var(--text-light);font-size:0.9rem;margin:10px 0 16px">Applications take just a few minutes. Our team responds within 1–2 business days.</p>
+          <a href="{% url 'apply' %}" class="btn btn-primary" style="display:block;text-align:center">Apply Online</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-banner">
+  <div class="container cta-inner">
+    <div>
+      <h2>Your Questions Answered. Now Take the Next Step.</h2>
+      <p>Join hundreds of Glory Nursing graduates who are now building rewarding healthcare careers.</p>
+    </div>
+    <div class="cta-actions">
+      <a href="{% url 'apply' %}" class="btn btn-white btn-lg">Apply Now</a>
+      <a href="{% url 'contact' %}" class="btn btn-outline-white btn-lg">Contact Us</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.faq-question').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const item = btn.closest('.faq-item');
+    const isOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item.open').forEach(i => {
+      i.classList.remove('open');
+      i.querySelector('.faq-question').setAttribute('aria-expanded', 'false');
+    });
+    if (!isOpen) {
+      item.classList.add('open');
+      btn.setAttribute('aria-expanded', 'true');
+    }
+  });
+});
+</script>
+{% endblock %}

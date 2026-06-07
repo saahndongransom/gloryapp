@@ -1,0 +1,57 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% block title %}{{ program.title }} – Glory Nursing{% endblock %}
+{% block content %}
+<section class="page-hero">
+  <div class="container">
+    <h1>{{ program.title }}</h1>
+    <nav class="breadcrumb"><a href="/">Home</a> / <a href="/programs/">Programs</a> / <span>{{ program.short }}</span></nav>
+  </div>
+</section>
+<section class="section">
+  <div class="container program-detail-grid">
+    <div class="program-detail-main">
+      <div class="program-detail-icon">{{ program.icon }}</div>
+      <h2>{{ program.title }}</h2>
+      <p class="lead">{{ program.description }}</p>
+      <h3>Program Highlights</h3>
+      <ul class="check-list">
+        <li><i class="fas fa-check-circle"></i> Duration: {{ program.duration }}</li>
+        <li><i class="fas fa-check-circle"></i> Total Hours: {{ program.hours }}</li>
+        <li><i class="fas fa-check-circle"></i> State-approved and licensed program</li>
+        <li><i class="fas fa-check-circle"></i> Hands-on clinical training included</li>
+        <li><i class="fas fa-check-circle"></i> Expert-led instruction by certified professionals</li>
+        <li><i class="fas fa-check-circle"></i> Career placement assistance upon graduation</li>
+      </ul>
+      <h3>Available Schedules</h3>
+      <div class="schedules-list">
+        {% for s in program.schedules %}
+        <div class="schedule-item"><i class="fas fa-calendar-check"></i> {{ s }}</div>
+        {% endfor %}
+      </div>
+      <a href="/apply/" class="btn btn-primary btn-lg" style="margin-top:2rem">Apply for This Program</a>
+    </div>
+    <div class="program-detail-sidebar">
+      <div class="sidebar-card">
+        <h3>Quick Info</h3>
+        <div class="info-row"><i class="fas fa-clock"></i><div><strong>Duration</strong><span>{{ program.duration }}</span></div></div>
+        <div class="info-row"><i class="fas fa-book-open"></i><div><strong>Clock Hours</strong><span>{{ program.hours }}</span></div></div>
+        <div class="info-row"><i class="fas fa-award"></i><div><strong>Certification</strong><span>State & National Eligible</span></div></div>
+        <a href="/apply/" class="btn btn-primary" style="width:100%;text-align:center;margin-top:1.5rem">Apply Now</a>
+        <a href="/contact/" class="btn btn-outline" style="width:100%;text-align:center;margin-top:.75rem">Ask a Question</a>
+      </div>
+      <div class="sidebar-card" style="margin-top:1.5rem">
+        <h3>Other Programs</h3>
+        <ul class="sidebar-links">
+          <li><a href="/programs/cna/">CNA – Certified Nursing Assistant</a></li>
+          <li><a href="/programs/cma/">CMA – Certified Medication Aide</a></li>
+          <li><a href="/programs/hha/">HHA – Home Health Aide</a></li>
+          <li><a href="/programs/bls-cpr/">BLS / CPR</a></li>
+          <li><a href="/programs/phlebotomy/">Phlebotomy Technician</a></li>
+          <li><a href="/programs/ekg/">EKG Technician</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

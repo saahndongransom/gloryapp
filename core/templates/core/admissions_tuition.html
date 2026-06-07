@@ -1,0 +1,282 @@
+{% extends 'core/base.html' %}
+{% block title %}Tuition & Fees – Admissions – Glory Nursing{% endblock %}
+{% block meta_desc %}View tuition and fees for all Glory Nursing programs in Oklahoma City, including CNA, CMA, HHA, BLS/CPR, Phlebotomy, EKG, Medical Assistant, and Billing & Coding.{% endblock %}
+
+{% block content %}
+
+<section class="page-hero">
+  <div class="container">
+    <h1>Tuition & Fees</h1>
+    <p>Transparent pricing for every program we offer — no hidden fees, no surprises.</p>
+    <nav class="breadcrumb"><a href="{% url 'home' %}">Home</a> / <a href="{% url 'admissions' %}">Admissions</a> / <span>Tuition & Fees</span></nav>
+  </div>
+</section>
+
+<!-- Admissions Sub Nav -->
+<nav class="admissions-subnav">
+  <div class="container">
+    <ul class="admissions-subnav-links">
+      <li><a href="{% url 'admissions' %}">How to Apply</a></li>
+      <li><a href="{% url 'admissions_tuition' %}" class="active">Tuition & Fees</a></li>
+      <li><a href="{% url 'admissions_financial_aid' %}">Financial Aid</a></li>
+      <li><a href="{% url 'admissions_requirements' %}">Requirements</a></li>
+      <li><a href="{% url 'admissions_faq' %}">FAQs</a></li>
+    </ul>
+  </div>
+</nav>
+
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-badge">Program Pricing</div>
+      <h2>Program <span class="highlight">Tuition & Fees</span></h2>
+      <p>All prices below are per student. Contact admissions for group rates or employer sponsorship details.</p>
+    </div>
+
+    <div class="tuition-table-wrap">
+      <table class="tuition-table">
+        <thead>
+          <tr>
+            <th>Program</th>
+            <th>Duration</th>
+            <th>Hours</th>
+            <th>Tuition</th>
+            <th>Includes</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div class="tuition-program-name">
+                <span class="tuition-icon">🏥</span>
+                <div>
+                  <strong>Certified Nursing Assistant (CNA)</strong>
+                  <span>Most Popular</span>
+                </div>
+              </div>
+            </td>
+            <td>2 Weeks</td>
+            <td>75 hrs</td>
+            <td class="tuition-price">Contact Us</td>
+            <td>Textbook, uniform, state exam prep</td>
+            <td><a href="{% url 'apply' %}" class="btn btn-primary btn-sm">Enroll</a></td>
+          </tr>
+          <tr>
+            <td>
+              <div class="tuition-program-name">
+                <span class="tuition-icon">💊</span>
+                <div>
+                  <strong>Certified Medication Aide (CMA)</strong>
+                  <span>CNA Required</span>
+                </div>
+              </div>
+            </td>
+            <td>2–4 Weeks</td>
+            <td>80 hrs</td>
+            <td class="tuition-price">Contact Us</td>
+            <td>Course materials, exam prep</td>
+            <td><a href="{% url 'apply' %}" class="btn btn-primary btn-sm">Enroll</a></td>
+          </tr>
+          <tr>
+            <td>
+              <div class="tuition-program-name">
+                <span class="tuition-icon">🏠</span>
+                <div>
+                  <strong>Home Health Aide (HHA)</strong>
+                  <span></span>
+                </div>
+              </div>
+            </td>
+            <td>1–2 Weeks</td>
+            <td>40 hrs</td>
+            <td class="tuition-price">Contact Us</td>
+            <td>Course materials, clinical hours</td>
+            <td><a href="{% url 'apply' %}" class="btn btn-primary btn-sm">Enroll</a></td>
+          </tr>
+          <tr>
+            <td>
+              <div class="tuition-program-name">
+                <span class="tuition-icon">❤️</span>
+                <div>
+                  <strong>BLS / CPR Certification</strong>
+                  <span>AHA Certified</span>
+                </div>
+              </div>
+            </td>
+            <td>1 Day</td>
+            <td>4–8 hrs</td>
+            <td class="tuition-price">Contact Us</td>
+            <td>AHA card, mannequin practice</td>
+            <td><a href="{% url 'apply' %}" class="btn btn-primary btn-sm">Enroll</a></td>
+          </tr>
+          <tr>
+            <td>
+              <div class="tuition-program-name">
+                <span class="tuition-icon">🩸</span>
+                <div>
+                  <strong>Phlebotomy Technician</strong>
+                  <span>NHA Certified</span>
+                </div>
+              </div>
+            </td>
+            <td>6–8 Weeks</td>
+            <td>120 hrs</td>
+            <td class="tuition-price">Contact Us</td>
+            <td>Lab kit, externship, exam prep</td>
+            <td><a href="{% url 'apply' %}" class="btn btn-primary btn-sm">Enroll</a></td>
+          </tr>
+          <tr>
+            <td>
+              <div class="tuition-program-name">
+                <span class="tuition-icon">📈</span>
+                <div>
+                  <strong>EKG Technician</strong>
+                  <span>NHA Certified</span>
+                </div>
+              </div>
+            </td>
+            <td>4–6 Weeks</td>
+            <td>80 hrs</td>
+            <td class="tuition-price">Contact Us</td>
+            <td>Course materials, exam prep</td>
+            <td><a href="{% url 'apply' %}" class="btn btn-primary btn-sm">Enroll</a></td>
+          </tr>
+          <tr>
+            <td>
+              <div class="tuition-program-name">
+                <span class="tuition-icon">🩺</span>
+                <div>
+                  <strong>Clinical Medical Assistant (CCMA)</strong>
+                  <span>NHA Certified</span>
+                </div>
+              </div>
+            </td>
+            <td>10–12 Weeks</td>
+            <td>160 hrs</td>
+            <td class="tuition-price">Contact Us</td>
+            <td>Textbook, clinical extern, exam prep</td>
+            <td><a href="{% url 'apply' %}" class="btn btn-primary btn-sm">Enroll</a></td>
+          </tr>
+          <tr>
+            <td>
+              <div class="tuition-program-name">
+                <span class="tuition-icon">💻</span>
+                <div>
+                  <strong>Medical Billing & Coding</strong>
+                  <span>Online Available</span>
+                </div>
+              </div>
+            </td>
+            <td>12–16 Weeks</td>
+            <td>180 hrs</td>
+            <td class="tuition-price">Contact Us</td>
+            <td>Software access, exam prep</td>
+            <td><a href="{% url 'apply' %}" class="btn btn-primary btn-sm">Enroll</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="tuition-note">
+      <i class="fas fa-info-circle"></i>
+      <p>Tuition rates are subject to change. Contact our admissions office at <a href="tel:4059685004">(405) 968-5004</a> or <a href="mailto:glorynursing@yahoo.com">glorynursing@yahoo.com</a> for current pricing and payment plan options.</p>
+    </div>
+  </div>
+</section>
+
+<!-- What's Included -->
+<section class="section" style="background:var(--bg-light);padding-top:60px;padding-bottom:60px">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-badge">Included in Your Tuition</div>
+      <h2>What's <span class="highlight">Included</span> in Your Program</h2>
+      <p>We believe in value. Here's what most programs include in the listed tuition.</p>
+    </div>
+    <div class="why-grid">
+      <div class="why-card">
+        <div class="why-icon"><i class="fas fa-book-open"></i></div>
+        <h3>Course Materials</h3>
+        <p>Textbooks and handouts are included in most programs so you don't pay extra for learning materials.</p>
+      </div>
+      <div class="why-card">
+        <div class="why-icon"><i class="fas fa-flask"></i></div>
+        <h3>Lab & Equipment Use</h3>
+        <p>Full access to our simulation labs and clinical training equipment throughout your program.</p>
+      </div>
+      <div class="why-card">
+        <div class="why-icon"><i class="fas fa-file-alt"></i></div>
+        <h3>State Exam Preparation</h3>
+        <p>Structured exam prep and practice tests to help you pass your certification exam on the first attempt.</p>
+      </div>
+      <div class="why-card">
+        <div class="why-icon"><i class="fas fa-hospital"></i></div>
+        <h3>Clinical Placement Support</h3>
+        <p>We coordinate your clinical externship placement with our partner healthcare facilities at no extra cost.</p>
+      </div>
+      <div class="why-card">
+        <div class="why-icon"><i class="fas fa-chalkboard-teacher"></i></div>
+        <h3>Expert Instruction</h3>
+        <p>All classes are taught by licensed, certified healthcare professionals with real-world experience.</p>
+      </div>
+      <div class="why-card">
+        <div class="why-icon"><i class="fas fa-headset"></i></div>
+        <h3>Admissions Support</h3>
+        <p>Our team assists with document collection, financial aid applications, and any enrollment questions.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Payment Plans -->
+<section class="section">
+  <div class="container">
+    <div class="payment-plans-grid">
+      <div>
+        <div class="section-badge">Flexible Options</div>
+        <h2 style="margin-top:12px">Payment <span class="highlight">Plans Available</span></h2>
+        <p style="color:var(--text-light);margin:14px 0 28px">We understand that upfront tuition isn't always possible. That's why we offer multiple payment options to make your education accessible.</p>
+        <ul class="check-list">
+          <li><i class="fas fa-check-circle"></i> Pay tuition in full upfront (no additional fees)</li>
+          <li><i class="fas fa-check-circle"></i> Split payment — 50% at enrollment, 50% at course start</li>
+          <li><i class="fas fa-check-circle"></i> Monthly installment plans available for longer programs</li>
+          <li><i class="fas fa-check-circle"></i> Employer billing accepted — we invoice your employer directly</li>
+          <li><i class="fas fa-check-circle"></i> Oklahoma Workforce & tribal sponsorships accepted</li>
+        </ul>
+        <a href="{% url 'contact' %}" class="btn btn-primary" style="margin-top:1.5rem;display:inline-block">Ask About Payment Plans</a>
+      </div>
+      <div class="sidebar-card" style="align-self:center">
+        <h3>Have Questions About Tuition?</h3>
+        <p style="color:var(--text-light);font-size:0.95rem;margin:10px 0 20px">Our admissions team is happy to walk you through pricing, payment options, and sponsorship opportunities.</p>
+        <div class="info-row">
+          <i class="fas fa-phone"></i>
+          <div><strong>Call Us</strong><span>(405) 968-5004</span></div>
+        </div>
+        <div class="info-row">
+          <i class="fas fa-envelope"></i>
+          <div><strong>Email Us</strong><span>glorynursing@yahoo.com</span></div>
+        </div>
+        <div class="info-row">
+          <i class="fas fa-map-marker-alt"></i>
+          <div><strong>Visit Us</strong><span>12032 N. Pennsylvania Ave<br>Oklahoma City, OK 73120</span></div>
+        </div>
+        <a href="{% url 'admissions_financial_aid' %}" class="btn btn-outline" style="display:block;text-align:center;margin-top:1rem">Explore Financial Aid</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-banner">
+  <div class="container cta-inner">
+    <div>
+      <h2>Affordable Training. Life-Changing Results.</h2>
+      <p>We partner with employers and workforce programs to help you fund your education. Don't let cost be a barrier.</p>
+    </div>
+    <div class="cta-actions">
+      <a href="{% url 'apply' %}" class="btn btn-white btn-lg">Apply Now</a>
+      <a href="{% url 'admissions_financial_aid' %}" class="btn btn-outline-white btn-lg">Financial Aid Options</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

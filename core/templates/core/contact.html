@@ -1,0 +1,55 @@
+{% extends 'core/base.html' %}
+{% block title %}Contact Us – Glory Nursing{% endblock %}
+{% block content %}
+<section class="page-hero">
+  <div class="container">
+    <h1>Contact Us</h1>
+    <p>We'd love to hear from you. Reach out with any questions about our programs.</p>
+    <nav class="breadcrumb"><a href="/">Home</a> / <span>Contact</span></nav>
+  </div>
+</section>
+<section class="section">
+  <div class="container contact-grid">
+    <div>
+      <h2>Send Us a Message</h2>
+      <form method="post" class="contact-form">
+        {% csrf_token %}
+        <div class="form-row">
+          <div class="form-group"><label>First Name *</label><input type="text" name="first_name" required placeholder="Your first name"></div>
+          <div class="form-group"><label>Last Name *</label><input type="text" name="last_name" required placeholder="Your last name"></div>
+        </div>
+        <div class="form-group"><label>Email *</label><input type="email" name="email" required placeholder="your@email.com"></div>
+        <div class="form-group"><label>Phone</label><input type="tel" name="phone" placeholder="(405) xxx-xxxx"></div>
+        <div class="form-group"><label>Program of Interest</label>
+          <select name="program">
+            <option value="">-- Select a Program --</option>
+            <option>CNA – Certified Nursing Assistant</option>
+            <option>CMA – Certified Medication Aide</option>
+            <option>HHA – Home Health Aide</option>
+            <option>BLS / CPR</option>
+            <option>Phlebotomy Technician</option>
+            <option>EKG Technician</option>
+            <option>Clinical Medical Assistant</option>
+            <option>Medical Billing & Coding</option>
+            <option>Other / General Inquiry</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Message *</label><textarea name="message" rows="5" required placeholder="How can we help you?"></textarea></div>
+        <button type="submit" class="btn btn-primary btn-lg">Send Message</button>
+      </form>
+    </div>
+    <div>
+      <h2>Get In Touch</h2>
+      <div class="contact-info-cards">
+        <div class="contact-info-card"><i class="fas fa-map-marker-alt"></i><div><strong>Address</strong><p>12032 N. Pennsylvania Ave<br>Oklahoma City, OK 73120</p></div></div>
+        <div class="contact-info-card"><i class="fas fa-phone"></i><div><strong>Phone</strong><p>(405) 968-5004</p></div></div>
+        <div class="contact-info-card"><i class="fas fa-envelope"></i><div><strong>Email</strong><p>glorynursing@yahoo.com</p></div></div>
+        <div class="contact-info-card"><i class="fas fa-clock"></i><div><strong>Office Hours</strong><p>Mon–Fri: 8:00 AM – 6:00 PM<br>Sat: 9:00 AM – 2:00 PM</p></div></div>
+      </div>
+      <div class="map-placeholder">
+        <iframe src="https://maps.google.com/maps?q=12032+N+Pennsylvania+Ave,+Oklahoma+City,+OK+73120&output=embed" width="100%" height="280" style="border:0;border-radius:12px" allowfullscreen="" loading="lazy"></iframe>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

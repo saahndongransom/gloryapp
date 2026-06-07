@@ -1,0 +1,101 @@
+
+{% extends 'core/about/base_about.html' %}
+
+{% block about_title %}Careers at Glory Nursing{% endblock %}
+{% block about_subtitle %}Join our team of dedicated healthcare educators and help shape the next generation.{% endblock %}
+{% block breadcrumb_extra %}/ <span>Careers</span>{% endblock %}
+
+{% block about_content %}
+<section class="section">
+  <div class="container">
+    <div class="welcome-grid">
+      <div class="welcome-text">
+        <div class="section-badge">Join Our Team</div>
+        <h2>Work Where Your <span class="highlight">Work Matters</span></h2>
+        <p>At Glory Nursing, we believe our staff and instructors are our most valuable asset. We're always looking for passionate, qualified healthcare professionals who want to make a real difference by educating future caregivers.</p>
+        <p>Whether you're a licensed nurse, certified instructor, or healthcare administrator — if you love teaching and believe in our mission, we want to hear from you.</p>
+        <ul class="check-list">
+          <li><i class="fas fa-check-circle"></i> Competitive compensation</li>
+          <li><i class="fas fa-check-circle"></i> Flexible teaching schedules</li>
+          <li><i class="fas fa-check-circle"></i> Supportive, mission-driven team</li>
+          <li><i class="fas fa-check-circle"></i> Opportunity to grow with us</li>
+          <li><i class="fas fa-check-circle"></i> Make a lasting impact every day</li>
+        </ul>
+      </div>
+      <div>
+        <!-- Open Positions -->
+        <div class="sidebar-card">
+          <h3><i class="fas fa-briefcase" style="color:var(--green-primary);margin-right:8px"></i> Open Positions</h3>
+          <div class="job-list">
+            <div class="job-item">
+              <div class="job-header">
+                <strong>CNA Instructor</strong>
+                <span class="job-badge">Full-Time</span>
+              </div>
+              <p>Licensed CNA instructor needed for weekday and weekend classes. OBN instructor approval required.</p>
+            </div>
+            <div class="job-item">
+              <div class="job-header">
+                <strong>BLS/CPR Instructor</strong>
+                <span class="job-badge job-badge-gold">Part-Time</span>
+              </div>
+              <p>AHA-certified BLS/CPR instructor for ongoing certification classes.</p>
+            </div>
+            <div class="job-item">
+              <div class="job-header">
+                <strong>Admissions Coordinator</strong>
+                <span class="job-badge">Full-Time</span>
+              </div>
+              <p>Help students navigate their enrollment journey. Strong communication skills required.</p>
+            </div>
+            <div class="job-item">
+              <div class="job-header">
+                <strong>Phlebotomy Instructor</strong>
+                <span class="job-badge job-badge-gold">Part-Time</span>
+              </div>
+              <p>NHA-certified phlebotomist to teach our phlebotomy certification course.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Application Form -->
+<section class="section" style="background:var(--bg-light)">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-badge">Apply Today</div>
+      <h2>Send Us Your <span class="highlight">Application</span></h2>
+      <p>Don't see the right position? Send us your resume anyway — we're always growing.</p>
+    </div>
+    <div class="careers-form-wrap">
+      <form method="post" class="contact-form" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-row">
+          <div class="form-group"><label>First Name *</label><input type="text" name="first_name" required placeholder="First name"></div>
+          <div class="form-group"><label>Last Name *</label><input type="text" name="last_name" required placeholder="Last name"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Email *</label><input type="email" name="email" required placeholder="your@email.com"></div>
+          <div class="form-group"><label>Phone *</label><input type="tel" name="phone" required placeholder="(405) xxx-xxxx"></div>
+        </div>
+        <div class="form-group">
+          <label>Position of Interest *</label>
+          <select name="position" required>
+            <option value="">-- Select Position --</option>
+            <option>CNA Instructor</option>
+            <option>BLS/CPR Instructor</option>
+            <option>Phlebotomy Instructor</option>
+            <option>Admissions Coordinator</option>
+            <option>Other / General Application</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Your Credentials & Experience *</label><textarea name="experience" rows="5" required placeholder="Tell us about your healthcare experience, certifications, and why you want to join Glory Nursing..."></textarea></div>
+        <button type="submit" class="btn btn-primary btn-lg">Submit Application</button>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

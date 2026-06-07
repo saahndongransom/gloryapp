@@ -1,0 +1,171 @@
+{% extends 'core/base.html' %}
+{% block title %}Requirements – Admissions – Glory Nursing{% endblock %}
+{% block meta_desc %}View admissions requirements for Glory Nursing healthcare training programs including CNA, CMA, HHA, Phlebotomy, EKG, and more in Oklahoma City.{% endblock %}
+
+{% block content %}
+
+<section class="page-hero">
+  <div class="container">
+    <h1>Admissions Requirements</h1>
+    <p>Everything you need to qualify and enroll in a Glory Nursing training program.</p>
+    <nav class="breadcrumb"><a href="{% url 'home' %}">Home</a> / <a href="{% url 'admissions' %}">Admissions</a> / <span>Requirements</span></nav>
+  </div>
+</section>
+
+<nav class="admissions-subnav">
+  <div class="container">
+    <ul class="admissions-subnav-links">
+      <li><a href="{% url 'admissions' %}">How to Apply</a></li>
+      <li><a href="{% url 'admissions_tuition' %}">Tuition & Fees</a></li>
+      <li><a href="{% url 'admissions_financial_aid' %}">Financial Aid</a></li>
+      <li><a href="{% url 'admissions_requirements' %}" class="active">Requirements</a></li>
+      <li><a href="{% url 'admissions_faq' %}">FAQs</a></li>
+    </ul>
+  </div>
+</nav>
+
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-badge">Eligibility</div>
+      <h2>General <span class="highlight">Admissions Requirements</span></h2>
+      <p>The following requirements apply to most Glory Nursing programs. Program-specific requirements are listed below.</p>
+    </div>
+
+    <div class="requirements-grid">
+      <!-- General Requirements -->
+      <div>
+        <div class="req-section">
+          <h3><i class="fas fa-user-check"></i> General Requirements (All Programs)</h3>
+          <div class="req-list">
+            <div class="req-item">
+              <div class="req-check"><i class="fas fa-check"></i></div>
+              <div>
+                <strong>Age: 18 or older</strong>
+                <p>All applicants must be at least 18 years of age at the time of enrollment.</p>
+              </div>
+            </div>
+            <div class="req-item">
+              <div class="req-check"><i class="fas fa-check"></i></div>
+              <div>
+                <strong>High School Diploma or GED</strong>
+                <p>A copy of your diploma or GED certificate is required at enrollment. Foreign diplomas may require a translation.</p>
+              </div>
+            </div>
+            <div class="req-item">
+              <div class="req-check"><i class="fas fa-check"></i></div>
+              <div>
+                <strong>Government-Issued Photo ID</strong>
+                <p>A valid driver's license, state ID, or passport is required. ID must be current and not expired.</p>
+              </div>
+            </div>
+            <div class="req-item">
+              <div class="req-check"><i class="fas fa-check"></i></div>
+              <div>
+                <strong>Social Security Card or Work Authorization</strong>
+                <p>Required for enrollment and state exam registration. Non-citizens must provide valid work authorization documents.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="req-section" style="margin-top:40px">
+          <h3><i class="fas fa-heartbeat"></i> Health & Clinical Requirements</h3>
+          <div class="req-list">
+            <div class="req-item">
+              <div class="req-check"><i class="fas fa-check"></i></div>
+              <div>
+                <strong>Immunization Records</strong>
+                <p>Required for all clinical programs: MMR (2 doses), Varicella (2 doses or titer), Hepatitis B series, and annual influenza vaccine. TB test results must be within the past 12 months.</p>
+              </div>
+            </div>
+            <div class="req-item">
+              <div class="req-check"><i class="fas fa-check"></i></div>
+              <div>
+                <strong>Physical Exam Clearance</strong>
+                <p>Required for CNA, CMA, HHA, Phlebotomy, EKG, and CCMA programs. A physician must verify you are physically capable of performing clinical duties.</p>
+              </div>
+            </div>
+            <div class="req-item">
+              <div class="req-check"><i class="fas fa-check"></i></div>
+              <div>
+                <strong>Background Check</strong>
+                <p>A criminal background check is required before clinical placement. Certain criminal histories may affect eligibility for state certification exams. Our team can advise you on this before enrollment.</p>
+              </div>
+            </div>
+            <div class="req-item">
+              <div class="req-check"><i class="fas fa-check"></i></div>
+              <div>
+                <strong>Drug Screening</strong>
+                <p>Required for clinical externship placement. Partners may require a 10-panel drug screen prior to placement.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Program Specific -->
+      <div>
+        <div class="sidebar-card">
+          <h3>Program-Specific Requirements</h3>
+          <div style="display:flex;flex-direction:column;gap:16px;margin-top:12px">
+            <div class="program-req-item">
+              <div class="program-req-name">🏥 CNA</div>
+              <p>No prior experience required. General requirements only.</p>
+            </div>
+            <div class="program-req-item">
+              <div class="program-req-name">💊 CMA</div>
+              <p>Must hold a current, active Oklahoma CNA certification before enrolling.</p>
+            </div>
+            <div class="program-req-item">
+              <div class="program-req-name">🏠 HHA</div>
+              <p>No prior experience required. General requirements only.</p>
+            </div>
+            <div class="program-req-item">
+              <div class="program-req-name">❤️ BLS / CPR</div>
+              <p>No prerequisites. Open to healthcare workers and general public. Renewal and initial options available.</p>
+            </div>
+            <div class="program-req-item">
+              <div class="program-req-name">🩸 Phlebotomy</div>
+              <p>No prior experience required. Must complete physical exam clearance before externship.</p>
+            </div>
+            <div class="program-req-item">
+              <div class="program-req-name">📈 EKG Technician</div>
+              <p>No prior experience required. Basic science knowledge helpful but not required.</p>
+            </div>
+            <div class="program-req-item">
+              <div class="program-req-name">🩺 CCMA</div>
+              <p>No prior experience required. Full health clearance required before externship.</p>
+            </div>
+            <div class="program-req-item">
+              <div class="program-req-name">💻 Billing & Coding</div>
+              <p>Basic computer literacy required. No clinical health clearance needed (no clinical hours).</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-card" style="margin-top:1.5rem;background:var(--green-light)">
+          <h3>Not Sure If You Qualify?</h3>
+          <p style="color:var(--text-light);font-size:0.92rem;margin:10px 0 16px">Contact our admissions team and we'll review your situation personally. We work with many students who have questions about background checks, prior education, or work history.</p>
+          <a href="{% url 'contact' %}" class="btn btn-primary" style="display:block;text-align:center">Talk to Admissions</a>
+          <a href="tel:4059685004" class="btn btn-outline" style="display:block;text-align:center;margin-top:10px">Call (405) 968-5004</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-banner">
+  <div class="container cta-inner">
+    <div>
+      <h2>Ready? Let's Get You Started.</h2>
+      <p>Most students find that meeting the requirements is easier than they expected. Apply today and our team will walk you through everything.</p>
+    </div>
+    <div class="cta-actions">
+      <a href="{% url 'apply' %}" class="btn btn-white btn-lg">Apply Now</a>
+      <a href="{% url 'admissions_faq' %}" class="btn btn-outline-white btn-lg">Read FAQs</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

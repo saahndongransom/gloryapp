@@ -1,0 +1,757 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block content %}
+
+<!-- Hero Section with Auto Slider -->
+<section class="hero" id="hero">
+  <div class="hero-slider">
+
+    <!-- Slide 1 -->
+    <div class="hero-slide active" style="background-image: url('https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=1600');">
+      <div class="hero-overlay"></div>
+      <div class="container hero-content">
+        <div class="hero-badge animate-in">⭐ State-Approved &amp; Licensed</div>
+        <h1 class="animate-in">Launch Your <span class="highlight">Healthcare Career</span> Today</h1>
+        <p class="animate-in">Glory Nursing offers certified, flexible, and affordable healthcare training programs in Oklahoma City — from CNA to Phlebotomy and beyond.</p>
+        <div class="hero-actions animate-in">
+          <a href="{% url 'apply' %}" class="btn btn-primary btn-lg">Apply Now</a>
+          <a href="{% url 'programs' %}" class="btn btn-outline-white btn-lg">View Programs</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 2 -->
+    <div class="hero-slide" style="background-image: url('https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?w=1600');">
+      <div class="hero-overlay"></div>
+      <div class="container hero-content">
+        <div class="hero-badge animate-in">🏥 CNA Program</div>
+        <h1 class="animate-in">Become a <span class="highlight">Certified Nursing</span> Assistant in 2 Weeks</h1>
+        <p class="animate-in">Our fast-track CNA program gets you certified and job-ready in as little as 2 weeks. Flexible schedules — weekday, evening, weekend &amp; online.</p>
+        <div class="hero-actions animate-in">
+          <a href="{% url 'program_detail' 'cna' %}" class="btn btn-primary btn-lg">CNA Program Details</a>
+          <a href="{% url 'apply' %}" class="btn btn-outline-white btn-lg">Apply Now</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 3 -->
+    <div class="hero-slide" style="background-image: url('https://images.unsplash.com/photo-1584467735867-4297ae2ebcee?w=1600');">
+      <div class="hero-overlay"></div>
+      <div class="container hero-content">
+        <div class="hero-badge animate-in">💊 CMA Program</div>
+        <h1 class="animate-in">Train to Become a <span class="highlight">Medication Aide</span></h1>
+        <p class="animate-in">Our Certified Medication Aide program prepares you to administer medications safely under licensed nurse supervision. Start your next step today.</p>
+        <div class="hero-actions animate-in">
+          <a href="{% url 'program_detail' 'cma' %}" class="btn btn-primary btn-lg">CMA Program Details</a>
+          <a href="{% url 'apply' %}" class="btn btn-outline-white btn-lg">Apply Now</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 4 -->
+    <div class="hero-slide" style="background-image: url('https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=1600');">
+      <div class="hero-overlay"></div>
+      <div class="container hero-content">
+        <div class="hero-badge animate-in">❤️ BLS / CPR</div>
+        <h1 class="animate-in">Get <span class="highlight">AHA-Certified</span> in BLS &amp; CPR</h1>
+        <p class="animate-in">Complete your AHA Basic Life Support certification in just one day. Initial and renewal options available for all healthcare professionals.</p>
+        <div class="hero-actions animate-in">
+          <a href="{% url 'program_detail' 'bls-cpr' %}" class="btn btn-primary btn-lg">BLS/CPR Details</a>
+          <a href="{% url 'apply' %}" class="btn btn-outline-white btn-lg">Enroll Today</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 5 -->
+    <div class="hero-slide" style="background-image: url('https://images.unsplash.com/photo-1551190822-a9333d879b1f?w=1600');">
+      <div class="hero-overlay"></div>
+      <div class="container hero-content">
+        <div class="hero-badge animate-in">🩸 Allied Health</div>
+        <h1 class="animate-in">Phlebotomy, EKG &amp; <span class="highlight">More Allied Health</span> Programs</h1>
+        <p class="animate-in">Expand your healthcare career with our nationally recognized Phlebotomy, EKG Technician, Medical Assistant, and Billing &amp; Coding programs.</p>
+        <div class="hero-actions animate-in">
+          <a href="{% url 'programs' %}" class="btn btn-primary btn-lg">Explore All Programs</a>
+          <a href="{% url 'contact' %}" class="btn btn-outline-white btn-lg">Talk to Admissions</a>
+        </div>
+      </div>
+    </div>
+<!-- Slide 6 -->
+    <div class="hero-slide" style="background-image: url('{% static 'core/images/slide6.jpeg' %}');">
+      <div class="hero-overlay"></div>
+      <div class="container hero-content">
+        <div class="hero-badge animate-in">🏥 Our Facility</div>
+        <h1 class="animate-in">World-Class <span class="highlight">Training Facility</span> in Oklahoma City</h1>
+        <p class="animate-in">Our modern campus is equipped with simulation labs and hands-on training equipment to prepare you for a real healthcare environment.</p>
+        <div class="hero-actions animate-in">
+          <a href="{% url 'about' %}" class="btn btn-primary btn-lg">About Us</a>
+          <a href="{% url 'contact' %}" class="btn btn-outline-white btn-lg">Visit Us</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 7 -->
+    <div class="hero-slide" style="background-image: url('{% static 'core/images/slide7.jpeg' %}');">
+      <div class="hero-overlay"></div>
+      <div class="container hero-content">
+        <div class="hero-badge animate-in">👩‍⚕️ Our Students</div>
+        <h1 class="animate-in">Join a <span class="highlight">Community</span> of Future Healthcare Heroes</h1>
+        <p class="animate-in">Hundreds of Glory Nursing graduates are now working in hospitals, clinics, nursing homes, and home health agencies across Oklahoma.</p>
+        <div class="hero-actions animate-in">
+          <a href="{% url 'apply' %}" class="btn btn-primary btn-lg">Apply Now</a>
+          <a href="{% url 'programs' %}" class="btn btn-outline-white btn-lg">View Programs</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 8 -->
+    <div class="hero-slide" style="background-image: url('{% static 'core/images/slide8.jpeg' %}');">
+      <div class="hero-overlay"></div>
+      <div class="container hero-content">
+        <div class="hero-badge animate-in">📋 Admissions</div>
+        <h1 class="animate-in">Simple <span class="highlight">Enrollment Process</span> — Start Today</h1>
+        <p class="animate-in">Applying is easy. Complete our short online form and our admissions team will contact you within 1–2 business days to get you started.</p>
+        <div class="hero-actions animate-in">
+          <a href="{% url 'apply' %}" class="btn btn-primary btn-lg">Apply Now</a>
+          <a href="{% url 'admissions' %}" class="btn btn-outline-white btn-lg">Admissions Info</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 9 -->
+    <div class="hero-slide" style="background-image: url('{% static 'core/images/slide9.jpeg' %}');">
+      <div class="hero-overlay"></div>
+      <div class="container hero-content">
+        <div class="hero-badge animate-in">💰 Financial Aid</div>
+        <h1 class="animate-in">Affordable Training with <span class="highlight">Financial Support</span> Available</h1>
+        <p class="animate-in">We partner with Oklahoma Workforce, Indian Tribe programs, and employers to help cover your tuition. Ask us about sponsorship options.</p>
+        <div class="hero-actions animate-in">
+          <a href="{% url 'admissions' %}" class="btn btn-primary btn-lg">Financial Aid Info</a>
+          <a href="{% url 'contact' %}" class="btn btn-outline-white btn-lg">Ask Us</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 10 -->
+    <div class="hero-slide" style="background-image: url('{% static 'core/images/slide10.jpeg' %}');">
+      <div class="hero-overlay"></div>
+      <div class="container hero-content">
+        <div class="hero-badge animate-in">🎓 Graduation</div>
+        <h1 class="animate-in">Your <span class="highlight">Success Story</span> Starts at Glory Nursing</h1>
+        <p class="animate-in">Our graduates leave with nationally recognized certifications and the confidence to make a real difference in patients' lives every single day.</p>
+        <div class="hero-actions animate-in">
+          <a href="{% url 'programs' %}" class="btn btn-primary btn-lg">Explore Programs</a>
+          <a href="{% url 'apply' %}" class="btn btn-outline-white btn-lg">Get Started</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 11 -->
+    <div class="hero-slide" style="background-image: url('{% static 'core/images/slide11.jpeg' %}');">
+      <div class="hero-overlay"></div>
+      <div class="container hero-content">
+        <div class="hero-badge animate-in">🩺 Clinical Medical Assistant</div>
+        <h1 class="animate-in">Become a <span class="highlight">Certified Clinical</span> Medical Assistant</h1>
+        <p class="animate-in">Our CCMA program prepares you for a versatile career in clinics and hospitals. Nationally certified through NHA in just 10–12 weeks.</p>
+        <div class="hero-actions animate-in">
+          <a href="{% url 'program_detail' 'medical-assistant' %}" class="btn btn-primary btn-lg">CCMA Program Details</a>
+          <a href="{% url 'apply' %}" class="btn btn-outline-white btn-lg">Apply Now</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 12 -->
+    <div class="hero-slide" style="background-image: url('{% static 'core/images/slide12.jpeg' %}');">
+      <div class="hero-overlay"></div>
+      <div class="container hero-content">
+        <div class="hero-badge animate-in">💻 Online Options</div>
+        <h1 class="animate-in">Study <span class="highlight">Online or In-Person</span> — Your Choice</h1>
+        <p class="animate-in">Busy schedule? No problem. Our online hybrid and self-paced programs let you earn your certification from the comfort of your home.</p>
+        <div class="hero-actions animate-in">
+          <a href="{% url 'programs' %}" class="btn btn-primary btn-lg">View Online Programs</a>
+          <a href="{% url 'apply' %}" class="btn btn-outline-white btn-lg">Enroll Today</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 13 -->
+    <div class="hero-slide" style="background-image: url('{% static 'core/images/slide13.jpeg' %}');">
+      <div class="hero-overlay"></div>
+      <div class="container hero-content">
+        <div class="hero-badge animate-in">🤝 Our Founders</div>
+        <h1 class="animate-in">Built by <span class="highlight">Healthcare Professionals</span> Who Care</h1>
+        <p class="animate-in">Founded by Charles and Binui — a husband-and-wife team from Ghana and Cameroon — Glory Nursing was born from a passion for people and healthcare.</p>
+        <div class="hero-actions animate-in">
+          <a href="{% url 'about' %}" class="btn btn-primary btn-lg">Our Story</a>
+          <a href="{% url 'contact' %}" class="btn btn-outline-white btn-lg">Contact Us</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 14 -->
+    <div class="hero-slide" style="background-image: url('{% static 'core/images/slide14.jpeg' %}');">
+      <div class="hero-overlay"></div>
+      <div class="container hero-content">
+        <div class="hero-badge animate-in">⭐ Brighter Futures</div>
+        <h1 class="animate-in">Brighter Futures <span class="highlight">Begin Here</span></h1>
+        <p class="animate-in">At Glory Nursing, we don't just train you — we invest in your future. Join our family and take the first step toward a career that changes lives.</p>
+        <div class="hero-actions animate-in">
+          <a href="{% url 'apply' %}" class="btn btn-primary btn-lg">Apply Now</a>
+          <a href="{% url 'programs' %}" class="btn btn-outline-white btn-lg">Explore Programs</a>
+        </div>
+      </div>
+    </div>
+  </div><!-- /.hero-slider -->
+
+  <!-- Stats Bar -->
+  <div class="hero-stats-bar">
+    <div class="container hero-stats">
+      <div class="stat"><strong>500+</strong><span>Graduates</span></div>
+      <div class="stat"><strong>8+</strong><span>Programs</span></div>
+      <div class="stat"><strong>2 Weeks</strong><span>CNA Program</span></div>
+      <div class="stat"><strong>100%</strong><span>Committed</span></div>
+    </div>
+  </div>
+
+  <!-- Slider Controls -->
+  <button class="slider-btn slider-prev" id="sliderPrev" aria-label="Previous slide">
+    <i class="fas fa-chevron-left"></i>
+  </button>
+  <button class="slider-btn slider-next" id="sliderNext" aria-label="Next slide">
+    <i class="fas fa-chevron-right"></i>
+  </button>
+
+  <!-- Slider Dots -->
+<div class="slider-dots" id="sliderDots">
+    <button class="dot active" data-index="0"></button>
+    <button class="dot" data-index="1"></button>
+    <button class="dot" data-index="2"></button>
+    <button class="dot" data-index="3"></button>
+    <button class="dot" data-index="4"></button>
+    <button class="dot" data-index="5"></button>
+    <button class="dot" data-index="6"></button>
+    <button class="dot" data-index="7"></button>
+    <button class="dot" data-index="8"></button>
+    <button class="dot" data-index="9"></button>
+    <button class="dot" data-index="10"></button>
+    <button class="dot" data-index="11"></button>
+    <button class="dot" data-index="12"></button>
+    <button class="dot" data-index="13"></button>
+  </div>
+
+</section>
+
+<!-- Quick Action Cards -->
+<section class="quick-actions">
+  <div class="container quick-grid">
+    <a href="{% url 'apply' %}" class="quick-card">
+      <i class="fas fa-user-graduate"></i>
+      <h3>Apply Online</h3>
+      <p>Start your application today and get a response within 1–2 days.</p>
+    </a>
+    <a href="{% url 'contact' %}" class="quick-card">
+      <i class="fas fa-calendar-check"></i>
+      <h3>Book Appointment</h3>
+      <p>Schedule a campus visit or admissions consultation.</p>
+    </a>
+    <a href="{% url 'admissions' %}" class="quick-card">
+      <i class="fas fa-dollar-sign"></i>
+      <h3>Financial Aid</h3>
+      <p>Explore scholarships, payment plans, and sponsorship options.</p>
+    </a>
+  </div>
+</section>
+
+<!-- Welcome Section -->
+<section class="section welcome-section">
+  <div class="container welcome-grid">
+    <div class="welcome-text">
+      <div class="section-badge">Welcome to Glory Nursing</div>
+      <h2>Your Path to a Rewarding <span class="highlight">Healthcare Career</span></h2>
+      <p>Glory Nursing Healthcare Training School in Oklahoma City is a state-approved vocational institution dedicated to empowering students with the knowledge, skills, and certifications needed to thrive in healthcare.</p>
+      <p>Founded by Charles and Binui — both experienced healthcare professionals originally from Ghana and Cameroon — Glory Nursing brings a personal, mission-driven approach to every program we offer. You're not just a student here; you're family.</p>
+      <ul class="check-list">
+        <li><i class="fas fa-check-circle"></i> Programs completable in as few as 2 weeks</li>
+        <li><i class="fas fa-check-circle"></i> Flexible: weekday, evening, weekend &amp; online options</li>
+        <li><i class="fas fa-check-circle"></i> Expert, licensed &amp; certified instructors</li>
+        <li><i class="fas fa-check-circle"></i> State-of-the-art simulation labs</li>
+        <li><i class="fas fa-check-circle"></i> Clinical placements through local partnerships</li>
+      </ul>
+      <a href="{% url 'about' %}" class="btn btn-primary">Learn More About Us</a>
+    </div>
+    <div class="welcome-image">
+      <img src="{% static 'core/images/welcome.jpeg' %}" alt="Healthcare training at Glory Nursing" loading="lazy">
+      <div class="image-badge">
+        <i class="fas fa-award"></i>
+        <span>State Approved &amp; Licensed</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Accreditations -->
+<section class="accreditations-bar">
+  <div class="container">
+    <p class="accred-label">Approved &amp; Licensed By:</p>
+    <div class="accred-list">
+      <span>OBPVS</span>
+      <span>OBN</span>
+      <span>OSDH-NAR</span>
+      <span>AHA (BLS/CPR)</span>
+    </div>
+  </div>
+</section>
+
+<!-- Programs Section -->
+<section class="section programs-section" id="programs">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-badge">Our Programs</div>
+      <h2>Training Programs at <span class="highlight">Glory Nursing</span></h2>
+      <p>Choose from our wide range of state-approved healthcare training programs designed to get you certified and career-ready fast.</p>
+    </div>
+    <div class="programs-grid">
+      {% for program in programs %}
+      <a href="{% url 'program_detail' program.slug %}" class="program-card">
+        {% if use_db and program.image %}
+        <div class="program-card-image">
+          <img src="{{ program.image.url }}" alt="{{ program.title }}">
+          <div class="program-card-icon">{{ program.icon }}</div>
+        </div>
+        {% else %}
+        <div class="program-icon">{{ program.icon }}</div>
+        {% endif %}
+        <h3>{{ program.short }}</h3>
+        <p class="program-title-full">{{ program.title }}</p>
+        <div class="program-meta">
+          <span><i class="fas fa-clock"></i> {{ program.duration }}</span>
+          <span><i class="fas fa-book"></i> {{ program.hours }}</span>
+        </div>
+        <p class="program-desc">{{ program.description|truncatechars:110 }}</p>
+        <span class="program-link">Learn More <i class="fas fa-arrow-right"></i></span>
+      </a>
+      {% endfor %}
+    </div>
+    <div class="section-cta">
+      <a href="{% url 'programs' %}" class="btn btn-primary">View All Programs</a>
+    </div>
+  </div>
+</section>
+ 
+
+<!-- Why Glory Nursing -->
+<section class="section why-section">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-badge">Why Choose Us</div>
+      <h2>Why Glory Nursing is the <span class="highlight">Right Choice</span></h2>
+    </div>
+    <div class="why-grid">
+      <div class="why-card">
+        <div class="why-icon"><i class="fas fa-bolt"></i></div>
+        <h3>Fast-Track Certification</h3>
+        <p>Complete your CNA certification in as little as 2 weeks. Our programs are designed for efficiency without sacrificing quality.</p>
+      </div>
+      <div class="why-card">
+        <div class="why-icon"><i class="fas fa-calendar-alt"></i></div>
+        <h3>Flexible Scheduling</h3>
+        <p>Weekday, evening, weekend, and online hybrid options so your education fits your life — not the other way around.</p>
+      </div>
+      <div class="why-card">
+        <div class="why-icon"><i class="fas fa-chalkboard-teacher"></i></div>
+        <h3>Expert Instructors</h3>
+        <p>All instructors are licensed or certified healthcare professionals who bring real-world experience into the classroom.</p>
+      </div>
+      <div class="why-card">
+        <div class="why-icon"><i class="fas fa-flask"></i></div>
+        <h3>Simulation Labs</h3>
+        <p>State-of-the-art simulation labs give you hands-on practice so you feel confident before your clinical placement.</p>
+      </div>
+      <div class="why-card">
+        <div class="why-icon"><i class="fas fa-handshake"></i></div>
+        <h3>Clinical Partnerships</h3>
+        <p>We have partnerships with local healthcare facilities to ensure you get quality clinical externship placements.</p>
+      </div>
+      <div class="why-card">
+        <div class="why-icon"><i class="fas fa-heart"></i></div>
+        <h3>A Family Atmosphere</h3>
+        <p>At Glory Nursing, you're not just a student — you're part of our family. We're invested in your success every step of the way.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- Gallery Section -->
+<section class="section gallery-section">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-badge">Our Campus</div>
+      <h2>Life at <span class="highlight">Glory Nursing</span></h2>
+      <p>A glimpse into our classrooms, simulation labs, clinical training, and the amazing students who make Glory Nursing special.</p>
+    </div>
+  </div>
+
+  <div class="gallery-grid">
+    <div class="gallery-item gallery-large">
+      <img src="{% static 'core/images/gallery1.jpeg' %}" alt="Glory Nursing Campus">
+      <div class="gallery-overlay"><span>Our Facility</span></div>
+    </div>
+    <div class="gallery-item">
+      <img src="{% static 'core/images/gallery2.jpeg' %}" alt="Simulation Lab">
+      <div class="gallery-overlay"><span>Simulation Lab</span></div>
+    </div>
+    <div class="gallery-item">
+      <img src="{% static 'core/images/gallery3.jpeg' %}" alt="CNA Training">
+      <div class="gallery-overlay"><span>CNA Training</span></div>
+    </div>
+    <div class="gallery-item gallery-wide">
+      <img src="{% static 'core/images/gallery4.jpeg' %}" alt="Students in Class">
+      <div class="gallery-overlay"><span>Classroom Training</span></div>
+    </div>
+    <div class="gallery-item">
+      <img src="{% static 'core/images/gallery5.jpeg' %}" alt="Clinical Practice">
+      <div class="gallery-overlay"><span>Clinical Practice</span></div>
+    </div>
+    <div class="gallery-item">
+      <img src="{% static 'core/images/gallery6.jpeg' %}" alt="BLS CPR Training">
+      <div class="gallery-overlay"><span>BLS/CPR Training</span></div>
+    </div>
+    <div class="gallery-item">
+      <img src="{% static 'core/images/gallery7.jpeg' %}" alt="Phlebotomy Lab">
+      <div class="gallery-overlay"><span>Phlebotomy Lab</span></div>
+    </div>
+    <div class="gallery-item gallery-large">
+      <img src="{% static 'core/images/gallery8.jpeg' %}" alt="Graduation">
+      <div class="gallery-overlay"><span>Graduation Day</span></div>
+    </div>
+    <div class="gallery-item">
+      <img src="{% static 'core/images/gallery9.jpeg' %}" alt="Our Students">
+      <div class="gallery-overlay"><span>Our Students</span></div>
+    </div>
+    
+  </div>
+</section>
+
+
+
+<!-- Video Section -->
+<section class="section video-section">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-badge">Watch & Learn</div>
+      <h2>Graduation & <span class="highlight">Training Videos</span></h2>
+      <p>Watch our students in action — from hands-on clinical training to their proud graduation day moments.</p>
+    </div>
+
+    <div class="video-grid">
+
+      <!-- Main Featured Video -->
+      <div class="video-card video-featured">
+        <div class="video-thumb" data-video="YOUR_YOUTUBE_ID_1">
+          <img src="{% static 'core/images/video_thumb1.jpeg' %}" alt="Graduation Ceremony">
+          <div class="video-play-btn">
+            <i class="fas fa-play"></i>
+          </div>
+          <div class="video-label">
+            <i class="fas fa-graduation-cap"></i> Graduation Ceremony 2024
+          </div>
+        </div>
+        <div class="video-info">
+          <h3>Graduation Ceremony 2024</h3>
+          <p>Celebrate with our latest graduating class as they receive their certifications and take the next step in their healthcare careers.</p>
+        </div>
+      </div>
+
+      <!-- Video 2 -->
+      <div class="video-card">
+        <div class="video-thumb" data-video="YOUR_YOUTUBE_ID_2">
+          <img src="{% static 'core/images/video_thumb2.jpeg' %}" alt="CNA Training">
+          <div class="video-play-btn">
+            <i class="fas fa-play"></i>
+          </div>
+          <div class="video-label">
+            <i class="fas fa-hospital"></i> CNA Training
+          </div>
+        </div>
+        <div class="video-info">
+          <h3>CNA Hands-On Training</h3>
+          <p>See how our CNA students practice real clinical skills in our simulation lab before going to clinical placement.</p>
+        </div>
+      </div>
+
+      <!-- Video 3 -->
+      <div class="video-card">
+        <div class="video-thumb" data-video="YOUR_YOUTUBE_ID_3">
+          <img src="{% static 'core/images/video_thumb3.jpeg' %}" alt="BLS CPR Training">
+          <div class="video-play-btn">
+            <i class="fas fa-play"></i>
+          </div>
+          <div class="video-label">
+            <i class="fas fa-heartbeat"></i> BLS/CPR Training
+          </div>
+        </div>
+        <div class="video-info">
+          <h3>BLS & CPR Certification</h3>
+          <p>Watch our AHA-certified BLS/CPR class in action — fast, thorough, and life-saving skills taught in just one day.</p>
+        </div>
+      </div>
+
+      <!-- Video 4 -->
+      <div class="video-card">
+        <div class="video-thumb" data-video="YOUR_YOUTUBE_ID_4">
+          <img src="{% static 'core/images/video_thumb4.jpeg' %}" alt="Phlebotomy Training">
+          <div class="video-play-btn">
+            <i class="fas fa-play"></i>
+          </div>
+          <div class="video-label">
+            <i class="fas fa-tint"></i> Phlebotomy Training
+          </div>
+        </div>
+        <div class="video-info">
+          <h3>Phlebotomy Lab Session</h3>
+          <p>A behind-the-scenes look at our phlebotomy students mastering venipuncture techniques in our fully equipped lab.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Video Modal -->
+<div class="video-modal" id="videoModal">
+  <div class="video-modal-inner">
+    <button class="video-modal-close" id="videoModalClose">&times;</button>
+    <div class="video-modal-body">
+      <iframe id="videoIframe" src="" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+    </div>
+  </div>
+</div>
+
+<!-- Testimonials -->
+<section class="section testimonials-section">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-badge">Student Reviews</div>
+      <h2>What Our <span class="highlight">Students Say</span></h2>
+    </div>
+    <div class="testimonials-grid">
+      {% for t in testimonials %}
+      <div class="testimonial-card">
+        <div class="stars">★★★★★</div>
+        <p class="testimonial-text">"{{ t.text }}"</p>
+        <div class="testimonial-author">
+          <div class="author-avatar">{{ t.name|first }}</div>
+          <div>
+            <strong>{{ t.name }}</strong>
+            <span>{{ t.program }}</span>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+
+<!-- Latest Posts & Upcoming Events -->
+<section class="section posts-events-section">
+  <div class="container">
+    <div class="posts-events-grid">
+
+      <!-- Latest Posts -->
+      <div class="posts-col">
+        <h2 class="col-title">Latest <span class="highlight">Posts</span></h2>
+
+        {% if latest_posts %}
+          {% for post in latest_posts %}
+          <div class="post-card">
+            <div class="post-thumb">
+              {% if post.image %}
+              <img src="{{ post.image.url }}" alt="{{ post.title }}">
+              {% else %}
+              <div class="post-thumb-placeholder">
+                <i class="fas fa-image"></i>
+                <span>No Preview Available</span>
+              </div>
+              {% endif %}
+            </div>
+            <div class="post-body">
+              <h3><a href="#">{{ post.title }}</a></h3>
+              <span class="post-date">
+                <i class="fas fa-calendar-alt"></i>
+                {{ post.published_date|date:"F j, Y" }}
+              </span>
+              <p>{{ post.excerpt|truncatechars:100 }}</p>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="post-card">
+            <div class="post-thumb">
+              <div class="post-thumb-placeholder">
+                <i class="fas fa-image"></i>
+                <span>No Preview Available</span>
+              </div>
+            </div>
+            <div class="post-body">
+              <h3><a href="#">Welcome to Glory Nursing!</a></h3>
+              <span class="post-date"><i class="fas fa-calendar-alt"></i> June 1, 2026</span>
+              <p>We are excited to launch our new website. Stay tuned for updates, news, and healthcare tips from our team.</p>
+            </div>
+          </div>
+        {% endif %}
+
+        <div style="text-align:center; margin-top: 28px;">
+          <a href="#" class="btn btn-primary">View All</a>
+        </div>
+      </div>
+
+      <!-- Upcoming Events -->
+      <div class="events-col">
+        <h2 class="col-title">Upcoming <span class="highlight">Events</span></h2>
+
+        {% if upcoming_events %}
+          {% for event in upcoming_events %}
+          <div class="event-card">
+            <div class="event-date-box">
+              <div class="event-dots">
+                <span></span><span></span>
+              </div>
+              <div class="event-day">{{ event.event_date|date:"j" }}</div>
+              <div class="event-month">{{ event.event_date|date:"M" }}</div>
+              <div class="event-year">{{ event.event_date|date:"Y" }}</div>
+            </div>
+            <div class="event-body">
+              <h3>{{ event.title }}</h3>
+              <p>{{ event.description|truncatechars:160 }}</p>
+              <div class="event-meta">
+                <span class="event-time">
+                  <i class="fas fa-clock"></i>
+                  {{ event.start_time|time:"H:i" }}
+                  {% if event.end_time %} – {{ event.end_time|time:"H:i" }}{% endif %}
+                </span>
+                {% if event.location %}
+                <span class="event-location">
+                  <i class="fas fa-map-marker-alt"></i>
+                  {{ event.location }}
+                </span>
+                {% endif %}
+                {% if event.registration_open %}
+                <span class="event-reg-open">
+                  <i class="fas fa-check-circle"></i> Registration Open
+                </span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="event-card">
+            <div class="event-date-box">
+              <div class="event-dots"><span></span><span></span></div>
+              <div class="event-day">21</div>
+              <div class="event-month">Oct</div>
+              <div class="event-year">2026</div>
+            </div>
+            <div class="event-body">
+              <h3>CNA Orientation & Enrollment Day</h3>
+              <p>Join us for our upcoming CNA program orientation. Meet instructors, tour the facility, and complete your enrollment in person.</p>
+              <div class="event-meta">
+                <span class="event-time"><i class="fas fa-clock"></i> 10:00 – 13:00</span>
+                <span class="event-location"><i class="fas fa-map-marker-alt"></i> 12032 N. Pennsylvania Ave, OKC</span>
+                <span class="event-reg-open"><i class="fas fa-check-circle"></i> Registration Open</span>
+              </div>
+            </div>
+          </div>
+        {% endif %}
+
+        <div style="text-align:center; margin-top: 28px;">
+          <a href="#" class="btn btn-primary">All Events</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- CTA Banner -->
+<section class="cta-banner">
+  <div class="container cta-inner">
+    <div>
+      <h2>Ready to Start Your Healthcare Career?</h2>
+      <p>Join hundreds of Glory Nursing graduates who are now working in hospitals, clinics, nursing homes, and home health agencies across Oklahoma.</p>
+    </div>
+    <div class="cta-actions">
+      <a href="{% url 'apply' %}" class="btn btn-white btn-lg">Apply Now</a>
+      <a href="{% url 'contact' %}" class="btn btn-outline-white btn-lg">Contact Us</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+  const slides = document.querySelectorAll('.hero-slide');
+  const dots = document.querySelectorAll('.dot');
+  let current = 0;
+  let timer = null;
+  const DURATION = 5000;
+
+  function goTo(index) {
+    // Mark current as leaving
+    slides[current].classList.add('leaving');
+    slides[current].classList.remove('active');
+    dots[current].classList.remove('active');
+
+    current = (index + slides.length) % slides.length;
+
+    // Activate new slide
+    slides[current].classList.add('active');
+    slides[current].classList.remove('leaving');
+    dots[current].classList.add('active');
+
+    // Re-trigger content animations
+    slides[current].querySelectorAll('.animate-in').forEach(el => {
+      el.classList.remove('animated');
+      void el.offsetWidth;
+      el.classList.add('animated');
+    });
+
+    // Clean up leaving class after transition
+    setTimeout(() => {
+      slides.forEach(s => s.classList.remove('leaving'));
+    }, 950);
+
+    resetTimer();
+  }
+
+  function next() { goTo(current + 1); }
+  function prev() { goTo(current - 1); }
+
+  function resetTimer() {
+    clearInterval(timer);
+    timer = setInterval(next, DURATION);
+  }
+
+  document.getElementById('sliderNext').addEventListener('click', next);
+  document.getElementById('sliderPrev').addEventListener('click', prev);
+
+  dots.forEach(dot => {
+    dot.addEventListener('click', () => goTo(parseInt(dot.dataset.index)));
+  });
+
+  // Trigger animation on first slide
+  slides[0].querySelectorAll('.animate-in').forEach(el => el.classList.add('animated'));
+
+  // Pause on hover
+  const hero = document.getElementById('hero');
+  hero.addEventListener('mouseenter', () => clearInterval(timer));
+  hero.addEventListener('mouseleave', resetTimer);
+
+  resetTimer();
+})();
+</script>
+{% endblock %}
