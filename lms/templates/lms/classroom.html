@@ -1,0 +1,291 @@
+{% extends 'lms/lms_base.html' %}
+{% load static %}
+
+{% block title %}{{ course.title }} | Classroom{% endblock %}
+
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --blue:     #1a56db;
+  --blue-lt:  #e8f0fe;
+  --green:    #059669;
+  --green-lt: #d1fae5;
+  --amber:    #d97706;
+  --surface:  #ffffff;
+  --bg:       #f9fafb;
+  --border:   rgba(0,0,0,0.08);
+  --text:     #111827;
+  --muted:    #6b7280;
+  --radius:   10px;
+  --sidebar:  300px;
+}
+
+body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); }
+
+/* ── Classroom Layout ──────────────────────── */
+.classroom-shell { display: grid; grid-template-rows: 60px 1fr; min-height: 100vh; }
+
+/* ── Topbar ──────────────────────────────── */
+.classroom-topbar {
+  background: #fff; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 24px; gap: 16px;
+  position: sticky; top: 0; z-index: 100;
+}
+.topbar-back {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 500; color: var(--muted);
+  text-decoration: none; padding: 6px 0;
+  transition: color .15s;
+}
+.topbar-back:hover { color: var(--blue); }
+.topbar-divider { height: 18px; width: 1px; background: var(--border); }
+.crumb { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.crumb strong { color: var(--text); font-weight: 600; }
+
+.topbar-progress { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.topbar-progress .pct { font-size: 12px; font-weight: 700; color: var(--blue); }
+.prog-rail { width: 120px; height: 5px; background: #e5e7eb; border-radius: 3px; overflow: hidden; }
+.prog-fill { height: 100%; border-radius: 3px; background: var(--blue); }
+.lesson-counter { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+/* ── Inner Grid ──────────────────────────── */
+.classroom-grid {
+  display: grid;
+  grid-template-columns: var(--sidebar) 1fr;
+  height: calc(100vh - 60px);
+  overflow: hidden;
+}
+
+/* ── Module Sidebar ──────────────────────── */
+.module-sidebar { 
+  background: #fff; border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-head {
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sidebar-head .course-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.sidebar-head .course-sub { font-size: 12px; color: var(--muted); }
+.sidebar-head .overall-prog { margin-top: 12px; }
+.sidebar-head .prog-label { display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 5px; }
+.sidebar-head .prog-label span:last-child { color: var(--blue); }
+.sidebar-scroll { overflow-y: auto; flex: 1; padding: 8px 0 20px; }
+
+.module-group { margin-bottom: 4px; }
+.module-heading {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px 6px;
+  font-size: 10.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .07em;
+  color: var(--muted);
+}
+.module-heading::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+.lesson-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 16px; margin: 1px 8px;
+  border-radius: 8px;
+  font-size: 13px; font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  transition: background .15s, color .15s;
+  cursor: pointer;
+}
+.lesson-item:hover { background: var(--bg); color: var(--text); }
+.lesson-item.active { background: var(--blue-lt); color: var(--blue); font-weight: 600; }
+.lesson-item.done { color: var(--green); }
+.lesson-item.locked { opacity: .45; pointer-events: none; }
+
+.lesson-icon {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 10px;
+}
+.lesson-item.done .lesson-icon { background: var(--green); border-color: var(--green); color: #fff; }
+.lesson-item.active .lesson-icon { border-color: var(--blue); }
+
+/* ── Main Content ────────────────────────── */
+.lesson-main {
+  display: flex; flex-direction: column;
+  height: 100%; overflow-y: auto;
+  background: var(--bg);
+}
+
+/* Empty state */
+.welcome-state {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  flex: 1; text-align: center; padding: 60px 24px;
+}
+.welcome-icon {
+  width: 80px; height: 80px;
+  border-radius: 50%; background: var(--blue-lt);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px; margin-bottom: 20px;
+}
+.welcome-state h2 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+.welcome-state p { font-size: 14px; color: var(--muted); max-width: 360px; line-height: 1.7; margin-bottom: 24px; }
+.btn-start {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--blue); color: #fff;
+  padding: 11px 24px; border-radius: 9px;
+  font-size: 14px; font-weight: 700;
+  text-decoration: none; border: none; cursor: pointer;
+}
+
+/* Progress summary */
+.prog-summary {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 18px 20px; margin: 20px; flex-shrink: 0;
+}
+.prog-summary .label { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 8px; }
+.prog-summary .prog-bar-lg { height: 10px; background: #e5e7eb; border-radius: 5px; overflow: hidden; }
+.prog-summary .fill { height: 100%; border-radius: 5px; background: linear-gradient(90deg,var(--blue),#60a5fa); }
+.prog-summary .meta { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--muted); }
+
+/* Quick stats in welcome state */
+.course-stats {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  margin: 20px; flex-shrink: 0;
+}
+.cs-item {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px; text-align: center;
+}
+.cs-value { font-size: 22px; font-weight: 800; color: var(--text); }
+.cs-label { font-size: 11px; color: var(--muted); font-weight: 500; margin-top: 2px; }
+
+@media (max-width: 800px) {
+  .classroom-grid { grid-template-columns: 1fr; }
+  .module-sidebar { display: none; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="classroom-shell">
+
+  {# ── Topbar ── #}
+  <div class="classroom-topbar">
+    <a href="{% url 'lms_dashboard' %}" class="topbar-back">
+      <i class="fas fa-arrow-left"></i> Dashboard
+    </a>
+    <div class="topbar-divider"></div>
+    <div class="crumb">
+      {{ course.title }} <strong>/ Classroom</strong>
+    </div>
+    <div class="topbar-progress">
+      <span class="lesson-counter">{{ enrollment.progress_percentage }}% complete</span>
+      <div class="prog-rail"><div class="prog-fill" style="width:{{ enrollment.progress_percentage }}%"></div></div>
+    </div>
+  </div>
+
+  {# ── Inner Grid ── #}
+  <div class="classroom-grid">
+
+    {# ── Module Sidebar ── #}
+    <aside class="module-sidebar">
+      <div class="sidebar-head">
+        <div class="course-name">{{ course.title }}</div>
+        <div class="course-sub">{{ modules|length }} module{{ modules|length|pluralize }}</div>
+        <div class="overall-prog">
+          <div class="prog-label">
+            <span>Your progress</span>
+            <span>{{ enrollment.progress_percentage }}%</span>
+          </div>
+          <div class="prog-rail" style="height:7px"><div class="prog-fill" style="height:100%;width:{{ enrollment.progress_percentage }}%;border-radius:4px"></div></div>
+        </div>
+      </div>
+
+      <div class="sidebar-scroll">
+        {% for module in modules %}
+          <div class="module-group">
+            <div class="module-heading">Module {{ forloop.counter }}: {{ module.title }}</div>
+            {% for lesson in module.lessons.all %}
+              <a href="{% url 'lesson_view' lesson.id %}" class="lesson-item">
+                <div class="lesson-icon">
+                  <i class="fas fa-play" style="font-size:8px;margin-left:1px"></i>
+                </div>
+                {{ lesson.title }}
+              </a>
+            {% empty %}
+              <div style="padding:8px 16px;font-size:12px;color:var(--muted);font-style:italic">No lessons yet</div>
+            {% endfor %}
+          </div>
+        {% empty %}
+          <div style="padding:20px;font-size:13px;color:var(--muted);text-align:center">No content added yet.</div>
+        {% endfor %}
+      </div>
+    </aside>
+
+    {# ── Main Content ── #}
+    <div class="lesson-main">
+
+      <div class="welcome-state">
+        <div class="welcome-icon">🏥</div>
+        <h2>{{ course.title }}</h2>
+        <p>{{ modules|length }} module{{ modules|length|pluralize }} · 
+          {% with total=0 %}
+            {% for module in modules %}{{ module.lessons.count }}{% endfor %}
+          {% endwith %}
+          lessons · Select a lesson from the left to begin
+        </p>
+        {% with module=modules.first %}
+          {% if module %}
+            {% with lesson=module.lessons.first %}
+              {% if lesson %}
+                <a href="{% url 'lesson_view' lesson.id %}" class="btn-start">
+                  <i class="fas fa-play"></i>
+                  {% if enrollment.progress_percentage == 0 %}Start First Lesson{% else %}Resume Where You Left Off{% endif %}
+                </a>
+              {% endif %}
+            {% endwith %}
+          {% endif %}
+        {% endwith %}
+      </div>
+
+      <div class="prog-summary" style="margin-top:0">
+        <div class="label">Course Progress</div>
+        <div class="prog-bar-lg"><div class="fill" style="width:{{ enrollment.progress_percentage }}%"></div></div>
+        <div class="meta">
+          <span>{{ enrollment.progress_percentage }}% complete</span>
+          {% if enrollment.progress_percentage == 100 %}
+            <span style="color:var(--green);font-weight:700">✓ Course complete!</span>
+          {% elif enrollment.progress_percentage >= 50 %}
+            <span>More than halfway there!</span>
+          {% else %}
+            <span>Keep going — you're building momentum</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="course-stats">
+        <div class="cs-item">
+          <div class="cs-value">{{ modules|length }}</div>
+          <div class="cs-label">Modules</div>
+        </div>
+        <div class="cs-item">
+          <div class="cs-value">
+            {% with total=0 %}{{ modules|length }}{% endwith %}
+          </div>
+          <div class="cs-label">Total Lessons</div>
+        </div>
+        <div class="cs-item">
+          <div class="cs-value">{{ enrollment.progress_percentage }}<span style="font-size:14px;color:var(--muted)">%</span></div>
+          <div class="cs-label">Completed</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

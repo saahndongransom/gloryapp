@@ -1,0 +1,1380 @@
+{% extends 'lms/lms_base.html' %}
+{% load static %}
+
+{% block title %}{{ lesson.title }} | GloryLMS{% endblock %}
+
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --blue:    #1a56db;
+  --blue-lt: #e8f0fe;
+  --green:   #059669;
+  --surface: #ffffff;
+  --bg:      #f9fafb;
+  --border:  rgba(0,0,0,0.08);
+  --text:    #111827;
+  --muted:   #6b7280;
+}
+
+/* Prevent all selection and right-click globally */
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+}
+
+/* ── Page shell ── */
+.lesson-page { display: flex; flex-direction: column; min-height: 100vh; }
+
+.topbar {
+  background: #fff; border-bottom: 1px solid var(--border);
+  height: 60px; padding: 0 24px;
+  display: flex; align-items: center; gap: 14px;
+  position: sticky; top: 0; z-index: 100; flex-shrink: 0;
+}
+.topbar-back { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 500; color: var(--muted); text-decoration: none; }
+.topbar-back:hover { color: var(--blue); }
+.divider { height: 18px; width: 1px; background: var(--border); }
+.crumb { font-size: 13px; color: var(--muted); }
+.crumb strong { color: var(--text); font-weight: 600; }
+.complete-btn {
+  margin-left: auto; background: var(--green); color: #fff;
+  border: none; padding: 8px 18px; border-radius: 8px;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; gap: 7px;
+  transition: all .2s;
+}
+.complete-btn:hover { background: #047857; }
+.complete-btn.done { background: #6b7280; cursor: default; }
+.complete-btn.locked { background: #9ca3af; cursor: not-allowed; opacity: .7; }
+
+/* ── Layout ── */
+.lesson-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr 260px;
+  flex: 1;
+  min-height: calc(100vh - 60px);
+}
+
+/* ── Left nav ── */
+.module-nav {
+  background: #fff; border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.nav-head { padding: 18px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.nav-head h4 { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+.nav-head p { font-size: 11px; color: var(--muted); }
+.prog-rail { height: 5px; background: #e5e7eb; border-radius: 3px; overflow: hidden; margin-top: 10px; }
+.prog-fill { height: 100%; border-radius: 3px; background: var(--blue); }
+.nav-scroll { overflow-y: auto; flex: 1; padding: 8px 0; }
+.mod-label { padding: 10px 14px 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.l-item { display: flex; align-items: center; gap: 9px; padding: 8px 10px; margin: 1px 6px; border-radius: 7px; font-size: 12.5px; font-weight: 500; color: var(--muted); text-decoration: none; transition: all .15s; }
+.l-item:hover { background: var(--bg); color: var(--text); }
+.l-item.active { background: var(--blue-lt); color: var(--blue); font-weight: 600; }
+.l-item.done { color: var(--green); }
+.l-check { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid currentColor; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 9px; }
+.l-item.done .l-check { background: var(--green); border-color: var(--green); color: #fff; }
+
+/* ── Content area ── */
+.content-area { display: flex; flex-direction: column; overflow: hidden; background: #0f172a; }
+
+/* ══ VIDEO PLAYER ══ */
+.video-wrapper {
+  position: relative;
+  background: #000;
+  width: 100%;
+}
+.video-wrapper video {
+  width: 100%;
+  display: block;
+  pointer-events: none; /* disables right-click save */
+}
+.video-overlay {
+  position: absolute; inset: 0;
+  cursor: pointer;
+  z-index: 5;
+}
+.video-controls {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(transparent, rgba(0,0,0,0.85));
+  padding: 32px 16px 14px;
+  z-index: 10;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.progress-bar-container {
+  width: 100%; height: 4px; background: rgba(255,255,255,0.2);
+  border-radius: 2px; cursor: pointer; position: relative;
+}
+.progress-bar-fill { height: 100%; background: var(--blue); border-radius: 2px; pointer-events: none; }
+.controls-row { display: flex; align-items: center; gap: 12px; }
+.ctrl-btn { background: none; border: none; color: #fff; cursor: pointer; font-size: 16px; padding: 4px; opacity: .85; }
+.ctrl-btn:hover { opacity: 1; }
+.time-display { font-size: 12px; color: rgba(255,255,255,.75); font-family: monospace; }
+.volume-slider { width: 70px; accent-color: var(--blue); cursor: pointer; }
+.quality-badge { margin-left: auto; font-size: 10px; background: rgba(255,255,255,.15); color: #fff; padding: 2px 8px; border-radius: 4px; }
+
+/* ══ PDF VIEWER ══ */
+.pdf-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #525659;
+  overflow: hidden;
+}
+.pdf-toolbar {
+  background: #3c3f41; padding: 8px 16px;
+  display: flex; align-items: center; gap: 12px;
+  flex-shrink: 0;
+}
+.pdf-toolbar span { font-size: 12px; color: rgba(255,255,255,.7); }
+.pdf-nav-btn {
+  background: rgba(255,255,255,.1); border: none; color: #fff;
+  padding: 5px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;
+}
+.pdf-nav-btn:hover { background: rgba(255,255,255,.2); }
+.pdf-nav-btn:disabled { opacity: .3; cursor: default; }
+.pdf-canvas-container { flex: 1; overflow: auto; display: flex; justify-content: center; padding: 16px; }
+.pdf-canvas-container canvas { box-shadow: 0 4px 20px rgba(0,0,0,.4); max-width: 100%; }
+
+/* ══ SLIDE VIEWER ══ */
+.slide-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #1e293b;
+}
+.slide-stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.slide-stage img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.5);
+  pointer-events: none;
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+.slide-controls {
+  background: #0f172a; padding: 14px 20px;
+  display: flex; align-items: center; gap: 12px;
+  flex-shrink: 0;
+}
+.slide-btn {
+  background: rgba(255,255,255,.1); border: none; color: #fff;
+  padding: 8px 20px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  cursor: pointer; display: flex; align-items: center; gap: 7px;
+}
+.slide-btn:hover { background: rgba(255,255,255,.2); }
+.slide-btn:disabled { opacity: .3; cursor: default; }
+.slide-counter { color: rgba(255,255,255,.6); font-size: 13px; }
+.slide-progress-track {
+  flex: 1; height: 4px; background: rgba(255,255,255,.15); border-radius: 2px;
+}
+.slide-progress-fill { height: 100%; background: var(--blue); border-radius: 2px; transition: width .3s ease; }
+.slide-thumbnails {
+  background: #0f172a; padding: 10px 16px;
+  display: flex; gap: 8px; overflow-x: auto;
+  border-top: 1px solid rgba(255,255,255,.06);
+}
+.slide-thumb {
+  width: 80px; height: 50px; border-radius: 5px; overflow: hidden;
+  border: 2px solid transparent; cursor: pointer; flex-shrink: 0;
+  transition: border-color .15s;
+}
+.slide-thumb img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.slide-thumb.active { border-color: var(--blue); }
+
+/* ══ YOUTUBE EMBED ══ */
+.youtube-wrapper {
+  position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;
+}
+.youtube-wrapper iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
+
+/* ── Lesson info below content ── */
+.lesson-info { background: #fff; padding: 24px 28px; flex-shrink: 0; }
+.lesson-info h2 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+.lesson-info p { font-size: 13px; color: var(--muted); line-height: 1.7; }
+
+/* ── Right panel ── */
+.right-panel {
+  background: #fff; border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.panel-tabs { display: flex; border-bottom: 1px solid var(--border); }
+.panel-tab {
+  flex: 1; padding: 12px; text-align: center;
+  font-size: 12px; font-weight: 600; color: var(--muted);
+  cursor: pointer; border-bottom: 2px solid transparent;
+  transition: all .15s;
+}
+.panel-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+.panel-body { flex: 1; overflow-y: auto; }
+
+.resource-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; border-bottom: 1px solid #f3f4f6;
+  cursor: pointer; transition: background .15s;
+  text-decoration: none; color: var(--text);
+}
+.resource-item:hover { background: var(--bg); }
+.res-icon { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+.res-name { font-size: 13px; font-weight: 500; }
+.res-type { font-size: 11px; color: var(--muted); }
+
+.note-area { padding: 14px; }
+.note-area textarea {
+  width: 100%; height: 200px; padding: 10px;
+  border: 1px solid var(--border); border-radius: 8px;
+  font-size: 13px; font-family: inherit; resize: none; outline: none;
+  -webkit-user-select: text; user-select: text; /* allow typing in notes */
+}
+.note-save-btn { margin-top: 8px; width: 100%; background: var(--blue); color: #fff; border: none; padding: 9px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+/* ── Bottom action bar ── */
+.action-bar {
+  background: #fff; border-top: 1px solid var(--border);
+  padding: 14px 24px; display: flex; align-items: center; gap: 12px;
+  grid-column: 1 / -1;
+}
+.prev-btn, .next-btn { display: flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: #fff; color: var(--text); text-decoration: none; }
+.next-btn { background: var(--blue); color: #fff; border-color: var(--blue); }
+.mark-done-btn { margin-left: auto; background: var(--green); color: #fff; border: none; padding: 9px 20px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 7px; transition: all .2s; }
+.mark-done-btn.done { background: #6b7280; }
+.mark-done-btn.locked { background: #9ca3af; cursor: not-allowed; opacity: .7; }
+
+.nav-toggle {
+  display: none; position: fixed; bottom: 80px; left: 16px;
+  z-index: 200; background: var(--blue); color: #fff;
+  border: none; padding: 10px 14px; border-radius: 10px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  box-shadow: 0 4px 14px rgba(26,86,219,.4);
+  align-items: center; gap: 7px;
+}
+.module-nav-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5); z-index: 198;
+}
+.module-nav-overlay.open { display: block; }
+
+@media (max-width: 1100px) {
+  .lesson-grid { grid-template-columns: 260px 1fr; }
+  .right-panel { display: none; }
+}
+@media (max-width: 700px) {
+  .lesson-grid { grid-template-columns: 1fr; }
+  .module-nav {
+    position: fixed; left: -300px; top: 0; height: 100vh;
+    z-index: 199; transition: left .25s; width: 288px;
+  }
+  .module-nav.open { left: 0; }
+  .nav-toggle { display: flex; }
+  .topbar { padding: 0 14px; }
+  .crumb { display: none; }
+  .action-bar { padding: 10px 14px; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Disable right-click everywhere -->
+<div class="lesson-page" oncontextmenu="return false">
+  <div class="module-nav-overlay" id="navOverlay" onclick="closeNav()"></div>
+  <button class="nav-toggle" id="navToggle" onclick="toggleNav()">
+    <i class="fas fa-list"></i> Lessons
+  </button>
+
+  {% if messages %}
+    {% for msg in messages %}
+    <div style="background:#fffbeb;border-left:4px solid #f59e0b;padding:12px 20px;font-size:13px;color:#78350f;display:flex;align-items:center;gap:10px">
+      <i class="fas fa-lock" style="flex-shrink:0"></i>
+      <div>{{ msg }}</div>
+    </div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="topbar">
+    <a href="{% url 'course_classroom' lesson.module.course.id %}" class="topbar-back">
+      <i class="fas fa-arrow-left"></i> Classroom
+    </a>
+    <div class="divider"></div>
+    <div class="crumb">
+      {{ lesson.module.course.program }}
+      <i class="fas fa-chevron-right" style="font-size:9px;margin:0 4px;color:var(--muted)"></i>
+      {{ lesson.module.title|truncatechars:22 }}
+      <i class="fas fa-chevron-right" style="font-size:9px;margin:0 4px;color:var(--muted)"></i>
+      <strong>{{ lesson.title }}</strong>
+    </div>
+    <button class="complete-btn locked" id="completeBtn" onclick="markComplete()">
+      <i class="fas fa-lock"></i> <span id="completeBtnText">Complete locked</span>
+    </button>
+  </div>
+
+  <div class="lesson-grid">
+
+    <!-- Left: Module nav -->
+    <aside class="module-nav">
+      <div class="nav-head">
+        <h4>{{ lesson.module.course.title }}</h4>
+        <p>{{ lesson.module.title }}</p>
+        <div class="prog-rail"><div class="prog-fill" id="overallProg" style="width:0%"></div></div>
+      </div>
+      <div class="nav-scroll">
+        {% for module in lesson.module.course.modules.all %}
+          <div class="mod-label">{{ module.title|truncatechars:24 }}</div>
+          {% for l in module.lessons.all %}
+            <a href="{% url 'lesson_view' l.id %}" class="l-item {% if l.id == lesson.id %}active{% elif l.id in completed_ids %}done{% endif %}">
+              <div class="l-check">
+                {% if l.id in completed_ids %}
+                  <i class="fas fa-check" style="font-size:8px"></i>
+                {% elif l.id == lesson.id %}
+                  <i class="fas fa-play" style="font-size:7px;margin-left:1px"></i>
+                {% endif %}
+              </div>
+              {{ l.title|truncatechars:26 }}
+            </a>
+          {% endfor %}
+        {% endfor %}
+      </div>
+    </aside>
+
+    <!-- Center: Content viewer -->
+    <div class="content-area" id="contentArea">
+
+      {% for item in content_payloads %}
+
+        {# ══ VIDEO PLAYER ══ #}
+        {% if item.content_type == 'video' %}
+        <div class="video-wrapper" id="videoWrapper_{{ item.id }}">
+          <video id="vid_{{ item.id }}" preload="metadata"
+            controlsList="nodownload nofullscreen noremoteplayback"
+            disablePictureInPicture
+            oncontextmenu="return false">
+            <source src="{% url 'serve_content' item.id %}" type="video/mp4">
+          </video>
+          <div class="video-overlay" id="overlay_{{ item.id }}" onclick="togglePlay('{{ item.id }}')"></div>
+          <div class="video-controls" id="controls_{{ item.id }}">
+            <div class="progress-bar-container" id="pbar_{{ item.id }}" onclick="seekVideo(event, '{{ item.id }}')">
+              <div class="progress-bar-fill" id="pfill_{{ item.id }}" style="width:0%"></div>
+            </div>
+            <div class="controls-row">
+              <button class="ctrl-btn" onclick="togglePlay('{{ item.id }}')"><i class="fas fa-play" id="playIcon_{{ item.id }}"></i></button>
+              <button class="ctrl-btn" onclick="skip('{{ item.id }}', -10)"><i class="fas fa-backward"></i></button>
+              <button class="ctrl-btn" onclick="skip('{{ item.id }}', 10)"><i class="fas fa-forward"></i></button>
+              <span class="time-display" id="time_{{ item.id }}">0:00 / 0:00</span>
+              <input type="range" class="volume-slider" min="0" max="1" step="0.05" value="1" oninput="setVolume('{{ item.id }}', this.value)">
+              <button class="ctrl-btn" onclick="toggleMute('{{ item.id }}')"><i class="fas fa-volume-up" id="muteIcon_{{ item.id }}"></i></button>
+              <span class="quality-badge">HD</span>
+            </div>
+          </div>
+        </div>
+
+        {# ══ YOUTUBE EMBED ══ #}
+        {% elif item.content_type == 'youtube' %}
+        <div class="youtube-wrapper">
+          <iframe
+            src="{{ item.video_url }}"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerpolicy="strict-origin-when-cross-origin"
+            allowfullscreen>
+          </iframe>
+        </div>
+
+        {# ══ PDF VIEWER ══ #}
+        {% elif item.content_type == 'pdf' %}
+        <div class="pdf-wrapper" id="pdfWrapper_{{ item.id }}">
+          <div class="pdf-toolbar">
+            <button class="pdf-nav-btn" id="pdfPrev_{{ item.id }}" onclick="changePdfPage('{{ item.id }}', -1)" disabled>◀ Prev</button>
+            <span id="pdfPageInfo_{{ item.id }}">Page 1 of 1</span>
+            <button class="pdf-nav-btn" id="pdfNext_{{ item.id }}" onclick="changePdfPage('{{ item.id }}', 1)">Next ▶</button>
+            <span style="margin-left:auto;font-size:11px;color:rgba(255,255,255,.4)">🔒 Protected — view only</span>
+          </div>
+          <div class="pdf-canvas-container">
+            <canvas id="pdfCanvas_{{ item.id }}"></canvas>
+          </div>
+        </div>
+
+        {# ══ SLIDE VIEWER (PPT) ══ #}
+        {% elif item.content_type == 'ppt' %}
+        <div class="slide-wrapper" id="slideWrapper_{{ item.id }}">
+          <div class="slide-stage">
+            <img id="slideImg_{{ item.id }}" src="{% url 'serve_slide' item.id 0 %}" alt="Slide 1" draggable="false">
+          </div>
+          <div class="slide-controls">
+            <button class="slide-btn" id="slidePrev_{{ item.id }}" onclick="changeSlide('{{ item.id }}', -1)" disabled>
+              <i class="fas fa-chevron-left"></i> Previous
+            </button>
+            <div class="slide-progress-track">
+              <div class="slide-progress-fill" id="slideProg_{{ item.id }}" style="width:0%"></div>
+            </div>
+            <span class="slide-counter" id="slideCounter_{{ item.id }}">1 / ?</span>
+            <button class="slide-btn" id="slideNext_{{ item.id }}" onclick="changeSlide('{{ item.id }}', 1)">
+              Next <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+          <div class="slide-thumbnails" id="slideThumbs_{{ item.id }}"></div>
+        </div>
+
+        {# ══ TEXT CONTENT ══ #}
+        {% elif item.content_type == 'text' %}
+        <div style="flex:1;overflow:auto;padding:32px;background:#fff">
+          <div style="max-width:800px;margin:0 auto;font-size:15px;line-height:1.8;color:#1e293b">
+            <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;color:#0f172a;padding-bottom:10px;border-bottom:2px solid #f1f5f9">{{ item.title }}</h3>
+            {{ item.text_content|safe }}
+          </div>
+        </div>
+
+        {# ══ WORD / IMAGE — rendered inline ══ #}
+        {% elif item.content_type == 'word' or item.content_type == 'image' %}
+        <div style="flex:1;overflow:auto;padding:24px;background:#fff">
+          {% if item.content_type == 'image' %}
+            <img src="{% url 'serve_content' item.id %}" style="max-width:100%;border-radius:8px;pointer-events:none;" draggable="false" oncontextmenu="return false">
+          {% else %}
+            <div style="max-width:800px;margin:0 auto;font-size:14px;line-height:1.8;color:#1e293b">
+              <p style="color:var(--muted)">Document: <strong>{{ item.title }}</strong></p>
+              <iframe src="{% url 'serve_content' item.id %}" style="width:100%;height:600px;border:1px solid var(--border);border-radius:8px;" sandbox="allow-same-origin"></iframe>
+            </div>
+          {% endif %}
+        </div>
+        {% endif %}
+
+      {% empty %}
+        <div style="display:flex;align-items:center;justify-content:center;flex:1;color:rgba(255,255,255,.4);flex-direction:column;gap:12px">
+          <i class="fas fa-file-circle-xmark" style="font-size:40px"></i>
+          <p>No content added to this lesson yet.</p>
+        </div>
+      {% endfor %}
+
+      <!-- ══ INTERACTIVE ELEMENTS ══ -->
+      {% for elem in interactive_elements %}
+      <div class="interactive-block" id="interactive_{{ elem.id }}" data-points="{{ elem.points }}" style="background:#fff;padding:24px 28px;border-top:1px solid #e5e7eb">
+
+        {% if elem.element_type == 'flashcards' %}
+        <div class="flashcard-deck">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <h3 style="font-size:15px;font-weight:700">🗂️ {{ elem.title }}</h3>
+            <span style="font-size:12px;color:var(--muted)" id="fc_counter_{{ elem.id }}">Card 1 of {{ elem.data.cards|length }}</span>
+          </div>
+          <div class="fc-card" id="fc_card_{{ elem.id }}" onclick="flipCard('{{ elem.id }}')"
+            style="background:linear-gradient(135deg,#1a56db,#7c3aed);color:#fff;border-radius:14px;padding:40px 28px;min-height:160px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:17px;font-weight:600;cursor:pointer;position:relative;transition:transform .3s">
+            <div id="fc_text_{{ elem.id }}">{{ elem.data.cards.0.front }}</div>
+            <div style="position:absolute;bottom:10px;right:14px;font-size:11px;opacity:.6">Click to flip</div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:14px">
+            <button onclick="fcNav('{{ elem.id }}', -1)" class="fc-nav-btn" style="flex:1;background:var(--bg);border:1px solid var(--border);padding:10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+              <i class="fas fa-chevron-left"></i> Previous
+            </button>
+            <button onclick="fcNav('{{ elem.id }}', 1)" class="fc-nav-btn" style="flex:1;background:var(--blue);color:#fff;border:none;padding:10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+              Next <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+          <script type="application/json" id="fc_data_{{ elem.id }}">{{ elem.data_json|safe }}</script>
+        </div>
+
+        {% elif elem.element_type == 'knowledge_check' %}
+        <div class="kc-block" id="kc_{{ elem.id }}" data-explanation="{{ elem.data.explanation|escapejs }}">
+          <h3 style="font-size:15px;font-weight:700;margin-bottom:12px">💡 Quick Check: {{ elem.title }}</h3>
+          <div style="background:var(--bg);border-radius:10px;padding:18px;border:1px solid var(--border)">
+            <p style="font-size:14px;font-weight:600;margin-bottom:14px">{{ elem.data.question }}</p>
+            <div style="display:flex;flex-direction:column;gap:8px" id="kc_options_{{ elem.id }}">
+              {% for opt in elem.data.options %}
+              <button class="kc-option" onclick="selectKC('{{ elem.id }}', {{ forloop.counter0 }}, {{ elem.data.correct }})"
+                data-idx="{{ forloop.counter0 }}"
+                style="text-align:left;padding:12px 14px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-size:13px;cursor:pointer;transition:all .15s">
+                {{ opt }}
+              </button>
+              {% endfor %}
+            </div>
+            <div id="kc_feedback_{{ elem.id }}" style="display:none;margin-top:12px;padding:12px;border-radius:8px;font-size:13px;line-height:1.5"></div>
+          </div>
+        </div>
+
+        {% elif elem.element_type == 'scenario' %}
+        <div class="scenario-block" id="scenario_{{ elem.id }}">
+          <h3 style="font-size:15px;font-weight:700;margin-bottom:12px">🏥 Clinical Scenario: {{ elem.title }}</h3>
+          <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:10px;padding:18px;margin-bottom:14px">
+            <p style="font-size:13px;color:#78350f;line-height:1.6">{{ elem.data.situation }}</p>
+          </div>
+          <p style="font-size:13px;font-weight:600;margin-bottom:10px">What would you do?</p>
+          <div style="display:flex;flex-direction:column;gap:8px" id="scenario_options_{{ elem.id }}">
+            {% for choice in elem.data.choices %}
+            <button class="scenario-option" onclick="selectScenario('{{ elem.id }}', {{ forloop.counter0 }})"
+              data-idx="{{ forloop.counter0 }}" data-outcome="{{ choice.outcome|escapejs }}" data-best="{{ choice.is_best|yesno:'true,false' }}"
+              style="text-align:left;padding:12px 14px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-size:13px;cursor:pointer;transition:all .15s">
+              {{ choice.text }}
+            </button>
+            {% endfor %}
+          </div>
+          <div id="scenario_feedback_{{ elem.id }}" style="display:none;margin-top:12px;padding:14px;border-radius:8px;font-size:13px;line-height:1.6"></div>
+        </div>
+
+        {% elif elem.element_type == 'drag_drop' %}
+        <div class="dragdrop-block" id="dragdrop_{{ elem.id }}">
+          <h3 style="font-size:15px;font-weight:700;margin-bottom:12px">🎯 {{ elem.title }}</h3>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Drag each label to the correct position on the image.</p>
+          <div style="position:relative;display:inline-block;max-width:100%" id="dd_container_{{ elem.id }}">
+            <img src="{{ elem.data.image_url }}" style="max-width:100%;border-radius:8px;display:block" draggable="false">
+            <div id="dd_targets_{{ elem.id }}"></div>
+          </div>
+          <div id="dd_labels_{{ elem.id }}" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"></div>
+          <div id="dd_feedback_{{ elem.id }}" style="display:none;margin-top:12px;padding:12px;border-radius:8px;font-size:13px"></div>
+          <script type="application/json" id="dd_data_{{ elem.id }}">{{ elem.data_json|safe }}</script>
+        </div>
+        {% endif %}
+
+        <div id="completion_badge_{{ elem.id }}" style="margin-top:14px;{% if elem.id in completed_element_ids %}display:flex{% else %}display:none{% endif %};align-items:center;gap:8px;color:var(--green);font-size:13px;font-weight:600">
+          <i class="fas fa-check-circle"></i> Completed! +{{ elem.points }} XP earned
+        </div>
+      </div>
+      {% endfor %}
+
+      <!-- Lesson info -->
+      <div class="lesson-info">
+        <h2>{{ lesson.title }}</h2>
+        <p>Work through the materials above. Mark the lesson complete when you're done to track your progress.</p>
+
+        {% for quiz in quizzes %}
+        <div style="background:linear-gradient(135deg,#1e3a5f,var(--blue));color:#fff;border-radius:10px;padding:18px 22px;margin-top:16px;display:flex;align-items:center;justify-content:space-between;gap:16px">
+          <div>
+            <div style="font-size:14px;font-weight:700;margin-bottom:3px">{{ quiz.title }}</div>
+            <div style="font-size:12px;opacity:.7">Passing score: {{ quiz.passing_score }}%</div>
+          </div>
+          <a href="{% url 'quiz_view' quiz.id %}" style="background:#fff;color:var(--blue);padding:9px 18px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Take Quiz →</a>
+        </div>
+        {% endfor %}
+      </div>
+
+    </div>
+
+    <!-- Right: Notes & Resources -->
+    <aside class="right-panel">
+      <div class="panel-tabs">
+        <div class="panel-tab active" onclick="switchPanel('resources', this)">Resources</div>
+        <div class="panel-tab" onclick="switchPanel('notes', this)">My Notes</div>
+        <div class="panel-tab" onclick="switchPanel('discussion', this)">Q&A</div>
+      </div>
+
+      <div class="panel-body" id="panel-resources">
+        {% for item in content_payloads %}
+          <div class="resource-item">
+            <div class="res-icon" style="background:
+              {% if item.content_type == 'pdf' %}#fee2e2
+              {% elif item.content_type == 'ppt' %}#fff7ed
+              {% elif item.content_type == 'video' or item.content_type == 'youtube' %}#e8f0fe
+              {% else %}#f3e8ff{% endif %}">
+              {% if item.content_type == 'pdf' %}📄
+              {% elif item.content_type == 'ppt' %}📊
+              {% elif item.content_type == 'video' or item.content_type == 'youtube' %}🎬
+              {% elif item.content_type == 'image' %}🖼️
+              {% else %}📝{% endif %}
+            </div>
+            <div>
+              <div class="res-name">{{ item.title|truncatechars:28 }}</div>
+              <div class="res-type">{{ item.get_content_type_display }}</div>
+            </div>
+          </div>
+        {% empty %}
+          <div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">No resources yet</div>
+        {% endfor %}
+      </div>
+
+      <div class="panel-body" id="panel-notes" style="display:none">
+        <div class="note-area">
+          <textarea placeholder="Take notes as you go through this lesson…" id="lessonNotes"></textarea>
+          <button class="note-save-btn" onclick="saveNotes()">Save Notes</button>
+        </div>
+      </div>
+
+      <div class="panel-body" id="panel-discussion" style="display:none;flex-direction:column;height:100%">
+        <div style="flex:1;overflow-y:auto;padding:12px" id="discussionList">
+          {% for disc in discussions %}
+          <div style="margin-bottom:14px">
+            <div style="display:flex;align-items:flex-start;gap:8px">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">{{ disc.user.username|slice:":2"|upper }}</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:11px;font-weight:700;color:var(--text)">{{ disc.user.username }} {% if disc.user.is_staff %}<span style="background:#e8f0fe;color:var(--blue);font-size:9px;padding:1px 6px;border-radius:4px;font-weight:700">Instructor</span>{% endif %}</div>
+                <div style="font-size:12px;color:var(--muted);margin-bottom:4px">{{ disc.created_at|timesince }} ago</div>
+                <div style="font-size:13px;line-height:1.5;background:var(--bg);padding:8px 10px;border-radius:8px">{{ disc.message }}</div>
+                <button onclick="showReply('{{ disc.id }}')" style="font-size:11px;color:var(--blue);background:none;border:none;cursor:pointer;margin-top:4px;padding:0">Reply</button>
+                <div id="replyBox_{{ disc.id }}" style="display:none;margin-top:8px">
+                  <form method="POST" action="{% url 'lesson_discussion' lesson.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="parent_id" value="{{ disc.id }}">
+                    <textarea name="message" rows="2" placeholder="Write a reply…" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;font-family:inherit;resize:none;outline:none"></textarea>
+                    <button type="submit" style="background:var(--blue);color:#fff;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;margin-top:4px">Post Reply</button>
+                  </form>
+                </div>
+                {% for reply in disc.replies.all %}
+                <div style="display:flex;align-items:flex-start;gap:7px;margin-top:8px;padding-left:8px;border-left:2px solid #e5e7eb">
+                  <div style="width:22px;height:22px;border-radius:50%;background:{% if reply.user.is_staff %}var(--green){% else %}#7c3aed{% endif %};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;flex-shrink:0">{{ reply.user.username|slice:":2"|upper }}</div>
+                  <div>
+                    <div style="font-size:11px;font-weight:700">{{ reply.user.username }} {% if reply.user.is_staff %}<span style="background:#d1fae5;color:#065f46;font-size:9px;padding:1px 6px;border-radius:4px;font-weight:700">Instructor</span>{% endif %}</div>
+                    <div style="font-size:12px;line-height:1.5;margin-top:3px">{{ reply.message }}</div>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+          {% empty %}
+          <div style="text-align:center;padding:24px;color:var(--muted);font-size:12px">
+            <i class="fas fa-comments" style="font-size:24px;display:block;margin-bottom:8px;opacity:.3"></i>
+            No questions yet. Be the first to ask!
+          </div>
+          {% endfor %}
+        </div>
+        <div style="padding:12px;border-top:1px solid var(--border);flex-shrink:0">
+          <form method="POST" action="{% url 'lesson_discussion' lesson.id %}">
+            {% csrf_token %}
+            <textarea name="message" rows="2" placeholder="Ask a question or share a thought…" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;resize:none;outline:none;-webkit-user-select:text;user-select:text"></textarea>
+            <button type="submit" style="width:100%;background:var(--blue);color:#fff;border:none;padding:8px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-top:6px">Post Question</button>
+          </form>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- Bottom action bar -->
+  <div class="action-bar">
+    {% if prev_lesson %}
+      <a href="{% url 'lesson_view' prev_lesson.id %}" class="prev-btn"><i class="fas fa-chevron-left"></i> Previous</a>
+    {% else %}
+      <span class="prev-btn" style="opacity:.3;cursor:default"><i class="fas fa-chevron-left"></i> Previous</span>
+    {% endif %}
+    <span style="font-size:12px;color:var(--muted)">{{ lesson_number }} of {{ total_lessons }}</span>
+    <button class="mark-done-btn locked" id="markDoneBtn" onclick="markComplete()">
+      <i class="fas fa-lock" id="markDoneIcon"></i> <span id="markDoneBtnText">Complete locked</span>
+    </button>
+    {% if next_lesson %}
+      <a href="{% url 'lesson_view' next_lesson.id %}" class="next-btn" id="nextBtn">Next <i class="fas fa-chevron-right"></i></a>
+    {% else %}
+      <a href="{% url 'course_classroom' lesson.module.course.id %}" class="next-btn" style="background:var(--green)">Finish Course <i class="fas fa-check"></i></a>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- ══ ATTACHED INTERACTIVE POPUPS ══ -->
+{% for elem in attached_elements %}
+<div class="interactive-popup-overlay" id="popup_overlay_{{ elem.id }}" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9000;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:16px;padding:28px;max-width:520px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 25px 60px rgba(0,0,0,0.3)">
+
+    <div class="interactive-block" id="interactive_{{ elem.id }}" data-points="{{ elem.points }}">
+
+      {% if elem.element_type == 'flashcards' %}
+      <div class="flashcard-deck">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <h3 style="font-size:15px;font-weight:700">🗂️ {{ elem.title }}</h3>
+          <span style="font-size:12px;color:var(--muted)" id="fc_counter_{{ elem.id }}">Card 1 of {{ elem.data.cards|length }}</span>
+        </div>
+        <div class="fc-card" id="fc_card_{{ elem.id }}" onclick="flipCard('{{ elem.id }}')"
+          style="background:linear-gradient(135deg,#1a56db,#7c3aed);color:#fff;border-radius:14px;padding:40px 28px;min-height:160px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:17px;font-weight:600;cursor:pointer;position:relative">
+          <div id="fc_text_{{ elem.id }}">{{ elem.data.cards.0.front }}</div>
+          <div style="position:absolute;bottom:10px;right:14px;font-size:11px;opacity:.6">Click to flip</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px">
+          <button onclick="fcNav('{{ elem.id }}', -1)" style="flex:1;background:var(--bg);border:1px solid var(--border);padding:10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+            <i class="fas fa-chevron-left"></i> Previous
+          </button>
+          <button onclick="fcNav('{{ elem.id }}', 1)" style="flex:1;background:var(--blue);color:#fff;border:none;padding:10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+            Next <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+        <script type="application/json" id="fc_data_{{ elem.id }}">{{ elem.data_json|safe }}</script>
+      </div>
+
+      {% elif elem.element_type == 'knowledge_check' %}
+      <div class="kc-block" id="kc_{{ elem.id }}" data-explanation="{{ elem.data.explanation|escapejs }}">
+        <h3 style="font-size:15px;font-weight:700;margin-bottom:12px">💡 Quick Check: {{ elem.title }}</h3>
+        <div style="background:var(--bg);border-radius:10px;padding:18px;border:1px solid var(--border)">
+          <p style="font-size:14px;font-weight:600;margin-bottom:14px">{{ elem.data.question }}</p>
+          <div style="display:flex;flex-direction:column;gap:8px" id="kc_options_{{ elem.id }}">
+            {% for opt in elem.data.options %}
+            <button class="kc-option" onclick="selectKC('{{ elem.id }}', {{ forloop.counter0 }}, {{ elem.data.correct }})"
+              data-idx="{{ forloop.counter0 }}"
+              style="text-align:left;padding:12px 14px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-size:13px;cursor:pointer">
+              {{ opt }}
+            </button>
+            {% endfor %}
+          </div>
+          <div id="kc_feedback_{{ elem.id }}" style="display:none;margin-top:12px;padding:12px;border-radius:8px;font-size:13px;line-height:1.5"></div>
+        </div>
+      </div>
+
+      {% elif elem.element_type == 'scenario' %}
+      <div class="scenario-block" id="scenario_{{ elem.id }}">
+        <h3 style="font-size:15px;font-weight:700;margin-bottom:12px">🏥 Clinical Scenario: {{ elem.title }}</h3>
+        <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:10px;padding:18px;margin-bottom:14px">
+          <p style="font-size:13px;color:#78350f;line-height:1.6">{{ elem.data.situation }}</p>
+        </div>
+        <p style="font-size:13px;font-weight:600;margin-bottom:10px">What would you do?</p>
+        <div style="display:flex;flex-direction:column;gap:8px" id="scenario_options_{{ elem.id }}">
+          {% for choice in elem.data.choices %}
+          <button class="scenario-option" onclick="selectScenario('{{ elem.id }}', {{ forloop.counter0 }})"
+            data-idx="{{ forloop.counter0 }}" data-outcome="{{ choice.outcome|escapejs }}" data-best="{{ choice.is_best|yesno:'true,false' }}"
+            style="text-align:left;padding:12px 14px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-size:13px;cursor:pointer">
+            {{ choice.text }}
+          </button>
+          {% endfor %}
+        </div>
+        <div id="scenario_feedback_{{ elem.id }}" style="display:none;margin-top:12px;padding:14px;border-radius:8px;font-size:13px;line-height:1.6"></div>
+      </div>
+
+      {% elif elem.element_type == 'drag_drop' %}
+      <div class="dragdrop-block" id="dragdrop_{{ elem.id }}">
+        <h3 style="font-size:15px;font-weight:700;margin-bottom:12px">🎯 {{ elem.title }}</h3>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Drag each label to the correct position on the image.</p>
+        <div style="position:relative;display:inline-block;max-width:100%" id="dd_container_{{ elem.id }}">
+          <img src="{{ elem.data.image_url }}" style="max-width:100%;border-radius:8px;display:block" draggable="false">
+          <div id="dd_targets_{{ elem.id }}"></div>
+        </div>
+        <div id="dd_labels_{{ elem.id }}" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"></div>
+        <div id="dd_feedback_{{ elem.id }}" style="display:none;margin-top:12px;padding:12px;border-radius:8px;font-size:13px"></div>
+        <script type="application/json" id="dd_data_{{ elem.id }}">{{ elem.data_json|safe }}</script>
+      </div>
+      {% endif %}
+
+      <div id="completion_badge_{{ elem.id }}" style="margin-top:14px;{% if elem.id in completed_element_ids %}display:flex{% else %}display:none{% endif %};align-items:center;gap:8px;color:var(--green);font-size:13px;font-weight:600">
+        <i class="fas fa-check-circle"></i> Completed! +{{ elem.points }} XP earned
+      </div>
+    </div>
+
+    <button onclick="closePopup('{{ elem.id }}')" style="width:100%;margin-top:18px;background:var(--bg);border:1px solid var(--border);padding:10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+      Close
+    </button>
+  </div>
+</div>
+{% endfor %}
+
+<!-- PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+// ── Disable all download shortcuts ──────────────────────────────
+document.addEventListener('keydown', function(e) {
+  // Block Ctrl+S, Ctrl+U, Ctrl+P, F12, Ctrl+Shift+I
+  if ((e.ctrlKey || e.metaKey) && ['s','u','p'].includes(e.key.toLowerCase())) {
+    e.preventDefault(); return false;
+  }
+  if (e.key === 'F12') { e.preventDefault(); return false; }
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && ['i','j','c'].includes(e.key.toLowerCase())) {
+    e.preventDefault(); return false;
+  }
+});
+
+// ── VIDEO PLAYER ────────────────────────────────────────────────
+function getVid(id) { return document.getElementById('vid_' + id); }
+
+function togglePlay(id) {
+  const v = getVid(id);
+  const icon = document.getElementById('playIcon_' + id);
+  if (v.paused) {
+    v.play();
+    icon.className = 'fas fa-pause';
+  } else {
+    v.pause();
+    icon.className = 'fas fa-play';
+  }
+}
+
+function skip(id, secs) {
+  const v = getVid(id);
+  v.currentTime = Math.max(0, Math.min(v.duration, v.currentTime + secs));
+}
+
+function setVolume(id, val) {
+  getVid(id).volume = val;
+}
+
+function toggleMute(id) {
+  const v = getVid(id);
+  const icon = document.getElementById('muteIcon_' + id);
+  v.muted = !v.muted;
+  icon.className = v.muted ? 'fas fa-volume-mute' : 'fas fa-volume-up';
+}
+
+function seekVideo(event, id) {
+  const v = getVid(id);
+  const bar = document.getElementById('pbar_' + id);
+  const rect = bar.getBoundingClientRect();
+  const ratio = (event.clientX - rect.left) / rect.width;
+  v.currentTime = ratio * v.duration;
+}
+
+function formatTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return m + ':' + (sec < 10 ? '0' : '') + sec;
+}
+
+// Attach time update listeners to all videos
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('video').forEach(v => {
+    const id = v.id.replace('vid_', '');
+    v.addEventListener('timeupdate', () => {
+      const pct = v.duration ? (v.currentTime / v.duration * 100) : 0;
+      const fill = document.getElementById('pfill_' + id);
+      const time = document.getElementById('time_' + id);
+      if (fill) fill.style.width = pct + '%';
+      if (time) time.textContent = formatTime(v.currentTime) + ' / ' + formatTime(v.duration || 0);
+      // Unlock at 80%
+      if (pct >= 80 && reqsMet['video'] === false) {
+        unlockContent('video', id);
+      }
+    });
+    v.addEventListener('ended', () => {
+      const icon = document.getElementById('playIcon_' + id);
+      if (icon) icon.className = 'fas fa-play';
+    });
+  });
+});
+
+// ── PDF VIEWER ───────────────────────────────────────────────────
+const pdfState = {};
+
+async function loadPdf(contentId) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  const url = '/lms/content/' + contentId + '/serve/';
+  const pdf = await pdfjsLib.getDocument(url).promise;
+  pdfState[contentId] = { pdf, currentPage: 1, totalPages: pdf.numPages };
+  renderPdfPage(contentId, 1);
+  document.getElementById('pdfNext_' + contentId).disabled = pdf.numPages <= 1;
+}
+
+async function renderPdfPage(contentId, pageNum) {
+  const state = pdfState[contentId];
+  const page = await state.pdf.getPage(pageNum);
+  const canvas = document.getElementById('pdfCanvas_' + contentId);
+  const ctx = canvas.getContext('2d');
+
+  const viewport = page.getViewport({ scale: 1.5 });
+  canvas.height = viewport.height;
+  canvas.width = viewport.width;
+
+  await page.render({ canvasContext: ctx, viewport }).promise;
+
+  document.getElementById('pdfPageInfo_' + contentId).textContent =
+    'Page ' + pageNum + ' of ' + state.totalPages;
+  document.getElementById('pdfPrev_' + contentId).disabled = pageNum <= 1;
+  document.getElementById('pdfNext_' + contentId).disabled = pageNum >= state.totalPages;
+  // Unlock when last page reached
+  if (pageNum >= state.totalPages) unlockContent('pdf', contentId);
+}
+
+function changePdfPage(contentId, delta) {
+  const state = pdfState[contentId];
+  if (!state) return;
+  const newPage = state.currentPage + delta;
+  if (newPage < 1 || newPage > state.totalPages) return;
+  state.currentPage = newPage;
+  renderPdfPage(contentId, newPage);
+}
+
+// ── SLIDE VIEWER ─────────────────────────────────────────────────
+const slideState = {};
+
+async function initSlides(contentId) {
+  const res = await fetch('/lms/content/' + contentId + '/slide-count/');
+  const data = await res.json();
+  const count = data.count || 1;
+  slideState[contentId] = { current: 0, total: count };
+
+  // Update counter
+  document.getElementById('slideCounter_' + contentId).textContent = '1 / ' + count;
+  document.getElementById('slideNext_' + contentId).disabled = count <= 1;
+
+  // Build thumbnails
+  const thumbContainer = document.getElementById('slideThumbs_' + contentId);
+  thumbContainer.innerHTML = '';
+  for (let i = 0; i < count; i++) {
+    const thumb = document.createElement('div');
+    thumb.className = 'slide-thumb' + (i === 0 ? ' active' : '');
+    thumb.onclick = () => goToSlide(contentId, i);
+    const img = document.createElement('img');
+    img.src = '/lms/content/' + contentId + '/slide/' + i + '/';
+    img.draggable = false;
+    thumb.appendChild(img);
+    thumbContainer.appendChild(thumb);
+  }
+
+  // Progress
+  updateSlideProgress(contentId);
+}
+
+function changeSlide(contentId, delta) {
+  const state = slideState[contentId];
+  if (!state) return;
+  goToSlide(contentId, state.current + delta);
+}
+
+function goToSlide(contentId, index) {
+  const state = slideState[contentId];
+  if (!state || index < 0 || index >= state.total) return;
+  state.current = index;
+
+  // Update image
+  document.getElementById('slideImg_' + contentId).src =
+    '/lms/content/' + contentId + '/slide/' + index + '/';
+
+  // Update counter
+  document.getElementById('slideCounter_' + contentId).textContent =
+    (index + 1) + ' / ' + state.total;
+
+  // Update buttons
+  document.getElementById('slidePrev_' + contentId).disabled = index === 0;
+  document.getElementById('slideNext_' + contentId).disabled = index === state.total - 1;
+  // Unlock when last slide reached
+  if (index === state.total - 1) unlockContent('ppt', contentId);
+
+  // Update thumbnails
+  document.querySelectorAll('#slideThumbs_' + contentId + ' .slide-thumb').forEach((t, i) => {
+    t.classList.toggle('active', i === index);
+  });
+
+  updateSlideProgress(contentId);
+
+  // Scroll active thumb into view
+  const thumbs = document.getElementById('slideThumbs_' + contentId);
+  const activeThumb = thumbs.children[index];
+  if (activeThumb) activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+}
+
+function updateSlideProgress(contentId) {
+  const state = slideState[contentId];
+  if (!state || state.total <= 1) return;
+  const pct = (state.current / (state.total - 1)) * 100;
+  document.getElementById('slideProg_' + contentId).style.width = pct + '%';
+}
+
+// ── Right panel tabs ──────────────────────────────────────────────
+function switchPanel(name, tab) {
+  document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  document.getElementById('panel-resources').style.display = name === 'resources' ? 'block' : 'none';
+  document.getElementById('panel-notes').style.display = name === 'notes' ? 'block' : 'none';
+  const disc = document.getElementById('panel-discussion');
+  if (disc) disc.style.display = name === 'discussion' ? 'flex' : 'none';
+}
+
+function showReply(id) {
+  const box = document.getElementById('replyBox_' + id);
+  if (box) box.style.display = box.style.display === 'none' ? 'block' : 'none';
+}
+
+// ── Notes ────────────────────────────────────────────────────────
+function saveNotes() {
+  const notes = document.getElementById('lessonNotes').value;
+  localStorage.setItem('notes_{{ lesson.id }}', notes);
+  alert('Notes saved!');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('notes_{{ lesson.id }}');
+  if (saved) document.getElementById('lessonNotes').value = saved;
+});
+
+// ── Mark complete ────────────────────────────────────────────────
+// ── Completion lock system ────────────────────────────────────
+const completionReqs = {
+  video: false,   // must watch 80%
+  ppt: false,     // must reach last slide
+  pdf: false,     // must reach last page
+  youtube: false, // must watch 80%
+  text: true,     // auto-complete
+  word: true,
+  image: true,
+};
+
+// Determine what content types this lesson has
+const contentTypes = [{% for item in content_payloads %}'{{ item.content_type }}',{% endfor %}];
+const hasQuiz = {{ quizzes|length }} > 0;
+const quizPassed = {% if quizzes %}false{% else %}true{% endif %}; // updated by quiz check
+
+// Track which requirements are met
+const reqsMet = {};
+let quizPassedState = !hasQuiz; // if no quiz, quiz requirement is auto-met
+
+contentTypes.forEach(t => {
+  if (t === 'text' || t === 'word' || t === 'image') {
+    reqsMet[t] = true;
+  } else {
+    reqsMet[t] = false;
+  }
+});
+
+// If no content at all, unlock immediately
+if (contentTypes.length === 0) {
+  contentTypes.push('text');
+  reqsMet['text'] = true;
+}
+
+function checkAllComplete() {
+  const allContentDone = contentTypes.every(t => reqsMet[t] !== false);
+  const allDone = allContentDone && quizPassedState;
+
+  const completeBtn = document.getElementById('completeBtn');
+  const markDoneBtn = document.getElementById('markDoneBtn');
+  const completeBtnText = document.getElementById('completeBtnText');
+  const markDoneBtnText = document.getElementById('markDoneBtnText');
+  const markDoneIcon = document.getElementById('markDoneIcon');
+
+  if (allDone) {
+    completeBtn.className = 'complete-btn';
+    completeBtn.innerHTML = '<i class="fas fa-check-circle"></i> Mark Complete';
+    markDoneBtn.className = 'mark-done-btn';
+    markDoneBtn.innerHTML = '<i class="fas fa-check-circle"></i> Mark Complete';
+  } else {
+    // Build hint message
+    const pending = [];
+    contentTypes.forEach(t => {
+      if (!reqsMet[t]) {
+        if (t === 'video') pending.push('Watch the video to 80%');
+        else if (t === 'ppt') pending.push('View all slides');
+        else if (t === 'pdf') pending.push('Read all PDF pages');
+        else if (t === 'youtube') pending.push('Watch the video');
+      }
+    });
+    if (!quizPassedState) pending.push('Pass the quiz');
+    const hint = pending.length > 0 ? pending[0] : 'Complete lesson content';
+    if (completeBtnText) completeBtnText.textContent = hint;
+    if (markDoneBtnText) markDoneBtnText.textContent = hint;
+  }
+}
+
+// Check quiz pass status on load
+{% if quizzes %}
+fetch('/lms/quiz/{{ quizzes.0.id }}/check-pass/?student={{ request.user.id }}')
+  .then(r => r.json())
+  .then(data => {
+    if (data.passed) {
+      quizPassedState = true;
+      checkAllComplete();
+    }
+  }).catch(() => {});
+{% endif %}
+
+function unlockContent(type, contentId) {
+  reqsMet[type] = true;
+  checkAllComplete();
+  if (contentId) maybeShowPopup(contentId);
+}
+
+function markComplete() {
+  // Check if locked
+  const completeBtn = document.getElementById('completeBtn');
+  if (completeBtn.classList.contains('locked')) {
+    // Shake animation hint
+    completeBtn.style.transform = 'translateX(-4px)';
+    setTimeout(() => completeBtn.style.transform = 'translateX(4px)', 100);
+    setTimeout(() => completeBtn.style.transform = '', 200);
+    return;
+  }
+
+  fetch('/lms/lesson/{{ lesson.id }}/complete/', {
+    method: 'POST',
+    headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+  }).then(r => r.json()).then(data => {
+    if (data.status === 'success') {
+      document.getElementById('completeBtn').className = 'complete-btn done';
+      document.getElementById('completeBtn').innerHTML = '<i class="fas fa-check-double"></i> Completed!';
+      document.getElementById('markDoneBtn').className = 'mark-done-btn done';
+      document.getElementById('markDoneBtn').innerHTML = '<i class="fas fa-check-double"></i> Completed!';
+
+      if (data.cert_issued) {
+        // Show certificate popup
+        const popup = document.createElement('div');
+        popup.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        popup.innerHTML = `
+          <div style="background:#fff;border-radius:20px;padding:48px 40px;text-align:center;max-width:440px;margin:20px;box-shadow:0 25px 60px rgba(0,0,0,0.3)">
+            <div style="font-size:64px;margin-bottom:16px">🎓</div>
+            <h2 style="font-size:22px;font-weight:800;margin-bottom:8px;color:#0f172a">Course Complete!</h2>
+            <p style="font-size:14px;color:#6b7280;margin-bottom:24px;line-height:1.6">
+              Congratulations! You've completed <strong>${data.course_title}</strong>. 
+              Your certificate has been issued and is available on your dashboard.
+            </p>
+            <a href="/lms/dashboard/" style="display:inline-flex;align-items:center;gap:8px;background:#059669;color:#fff;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none;margin-right:8px">
+              <i class="fas fa-certificate"></i> View Certificate
+            </a>
+            <button onclick="this.closest('[style]').remove()" style="background:#f1f5f9;border:none;padding:12px 20px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px">
+              Continue
+            </button>
+          </div>`;
+        document.body.appendChild(popup);
+      }
+    }
+  });
+}
+
+// Run initial check
+document.addEventListener('DOMContentLoaded', checkAllComplete);
+
+// ── Mobile nav ──────────────────────────────────────────────────
+function toggleNav() {
+  const nav = document.querySelector('.module-nav');
+  const overlay = document.getElementById('navOverlay');
+  nav.classList.toggle('open');
+  overlay.classList.toggle('open');
+}
+function closeNav() {
+  document.querySelector('.module-nav').classList.remove('open');
+  document.getElementById('navOverlay').classList.remove('open');
+}
+
+// ── Init all content on page load ────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  {% for item in content_payloads %}
+    {% if item.content_type == 'pdf' %}
+      loadPdf('{{ item.id }}');
+    {% elif item.content_type == 'ppt' %}
+      initSlides('{{ item.id }}');
+    {% endif %}
+  {% endfor %}
+
+  {% for elem in interactive_elements %}
+    {% if elem.element_type == 'flashcards' %}
+      initFlashcards('{{ elem.id }}');
+    {% elif elem.element_type == 'drag_drop' %}
+      initDragDrop('{{ elem.id }}');
+    {% endif %}
+  {% endfor %}
+
+  // Init attached (popup) elements too
+  {% for elem in attached_elements %}
+    {% if elem.element_type == 'flashcards' %}
+      initFlashcards('{{ elem.id }}');
+    {% elif elem.element_type == 'drag_drop' %}
+      initDragDrop('{{ elem.id }}');
+    {% endif %}
+  {% endfor %}
+});
+
+// ── ATTACHED POPUP TRIGGERS ──────────────────────────────────────
+// Map: content_item_id -> [element_ids attached to it]
+const attachedTriggers = {
+  {% for elem in attached_elements %}
+  '{{ elem.attached_to_id }}': '{{ elem.id }}',
+  {% endfor %}
+};
+const shownPopups = new Set();
+
+function maybeShowPopup(contentId) {
+  const elemId = attachedTriggers[String(contentId)];
+  if (elemId && !shownPopups.has(elemId)) {
+    shownPopups.add(elemId);
+    document.getElementById('popup_overlay_' + elemId).style.display = 'flex';
+  }
+}
+
+function closePopup(elemId) {
+  document.getElementById('popup_overlay_' + elemId).style.display = 'none';
+}
+
+// ════════════════════════════════════════════════════════════════
+// INTERACTIVE ELEMENTS
+// ════════════════════════════════════════════════════════════════
+
+function markInteractiveComplete(elementId, score) {
+  fetch('/lms/interactive/' + elementId + '/complete/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+    body: JSON.stringify({ score: score || 0 })
+  }).then(r => r.json()).then(data => {
+    const badge = document.getElementById('completion_badge_' + elementId);
+    if (badge) badge.style.display = 'flex';
+  });
+}
+
+// ── FLASHCARDS ──────────────────────────────────────────────────
+const fcState = {};
+
+function initFlashcards(elemId) {
+  const dataEl = document.getElementById('fc_data_' + elemId);
+  const parsed = JSON.parse(dataEl.textContent);
+  const cards = parsed.cards || [];
+  fcState[elemId] = { cards, index: 0, flipped: false, seen: new Set([0]) };
+  updateFlashcard(elemId);
+}
+
+function updateFlashcard(elemId) {
+  const state = fcState[elemId];
+  const card = state.cards[state.index];
+  const textEl = document.getElementById('fc_text_' + elemId);
+  const cardEl = document.getElementById('fc_card_' + elemId);
+  const counterEl = document.getElementById('fc_counter_' + elemId);
+
+  textEl.textContent = state.flipped ? card.back : card.front;
+  cardEl.style.background = state.flipped
+    ? 'linear-gradient(135deg,#059669,#047857)'
+    : 'linear-gradient(135deg,#1a56db,#7c3aed)';
+  counterEl.textContent = 'Card ' + (state.index + 1) + ' of ' + state.cards.length;
+}
+
+function flipCard(elemId) {
+  const state = fcState[elemId];
+  state.flipped = !state.flipped;
+  updateFlashcard(elemId);
+}
+
+function fcNav(elemId, delta) {
+  const state = fcState[elemId];
+  let newIndex = state.index + delta;
+  if (newIndex < 0) newIndex = 0;
+  if (newIndex >= state.cards.length) newIndex = state.cards.length - 1;
+  state.index = newIndex;
+  state.flipped = false;
+  state.seen.add(newIndex);
+  updateFlashcard(elemId);
+
+  // Mark complete if all cards seen
+  if (state.seen.size >= state.cards.length) {
+    markInteractiveComplete(elemId, 100);
+  }
+}
+
+// ── KNOWLEDGE CHECK ─────────────────────────────────────────────
+function selectKC(elemId, selectedIdx, correctIdx) {
+  const options = document.querySelectorAll('#kc_options_' + elemId + ' .kc-option');
+  const feedback = document.getElementById('kc_feedback_' + elemId);
+
+  options.forEach(opt => opt.style.pointerEvents = 'none');
+
+  options.forEach((opt, i) => {
+    if (i === correctIdx) {
+      opt.style.borderColor = '#059669';
+      opt.style.background = '#d1fae5';
+    } else if (i === selectedIdx) {
+      opt.style.borderColor = '#dc2626';
+      opt.style.background = '#fee2e2';
+    }
+  });
+
+  const isCorrect = selectedIdx === correctIdx;
+  feedback.style.display = 'block';
+  feedback.style.background = isCorrect ? '#d1fae5' : '#fee2e2';
+  feedback.style.color = isCorrect ? '#065f46' : '#991b1b';
+
+  const explanation = document.getElementById('kc_' + elemId).dataset.explanation || '';
+  feedback.innerHTML = (isCorrect ? '✅ Correct! ' : '❌ Not quite. ') + explanation;
+
+  markInteractiveComplete(elemId, isCorrect ? 100 : 50);
+}
+
+// ── CLINICAL SCENARIO ───────────────────────────────────────────
+function selectScenario(elemId, selectedIdx) {
+  const options = document.querySelectorAll('#scenario_options_' + elemId + ' .scenario-option');
+  const feedback = document.getElementById('scenario_feedback_' + elemId);
+
+  options.forEach(opt => opt.style.pointerEvents = 'none');
+
+  const selected = options[selectedIdx];
+  const isBest = selected.dataset.best === 'true';
+  const outcome = selected.dataset.outcome;
+
+  options.forEach((opt, i) => {
+    if (i === selectedIdx) {
+      opt.style.borderColor = isBest ? '#059669' : '#f59e0b';
+      opt.style.background = isBest ? '#d1fae5' : '#fef3c7';
+    }
+  });
+
+  feedback.style.display = 'block';
+  feedback.style.background = isBest ? '#d1fae5' : '#fef3c7';
+  feedback.style.color = isBest ? '#065f46' : '#78350f';
+  feedback.innerHTML = (isBest ? '✅ Best choice! ' : '⚠️ Consider this: ') + outcome;
+
+  markInteractiveComplete(elemId, isBest ? 100 : 60);
+}
+
+// ── DRAG & DROP LABELING ────────────────────────────────────────
+const ddState = {};
+
+function initDragDrop(elemId) {
+  const dataEl = document.getElementById('dd_data_' + elemId);
+  const parsed = JSON.parse(dataEl.textContent);
+  const labels = parsed.labels || [];
+  ddState[elemId] = { labels, placed: {}, total: labels.length };
+
+  const container = document.getElementById('dd_container_' + elemId);
+  const targetsContainer = document.getElementById('dd_targets_' + elemId);
+  const labelsContainer = document.getElementById('dd_labels_' + elemId);
+
+  // Create drop zones
+  labels.forEach((label, i) => {
+    const zone = document.createElement('div');
+    zone.className = 'dd-zone';
+    zone.dataset.index = i;
+    zone.style.cssText = `position:absolute;left:${label.x}%;top:${label.y}%;width:90px;height:32px;border:2px dashed rgba(255,255,255,0.6);border-radius:6px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;text-align:center`;
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.borderColor = '#1a56db'; });
+    zone.addEventListener('dragleave', () => { zone.style.borderColor = 'rgba(255,255,255,0.6)'; });
+    zone.addEventListener('drop', e => onDrop(e, elemId, i));
+    targetsContainer.appendChild(zone);
+  });
+
+  // Create draggable labels (shuffled)
+  const shuffled = [...labels].sort(() => Math.random() - 0.5);
+  shuffled.forEach((label, originalIdx) => {
+    const trueIdx = labels.indexOf(label);
+    const chip = document.createElement('div');
+    chip.draggable = true;
+    chip.dataset.labelIdx = trueIdx;
+    chip.textContent = label.text;
+    chip.style.cssText = 'padding:8px 14px;background:var(--blue);color:#fff;border-radius:8px;font-size:12px;font-weight:600;cursor:grab;user-select:none';
+    chip.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('text/plain', trueIdx);
+    });
+    labelsContainer.appendChild(chip);
+  });
+}
+
+function onDrop(e, elemId, zoneIdx) {
+  e.preventDefault();
+  const labelIdx = parseInt(e.dataTransfer.getData('text/plain'));
+  const state = ddState[elemId];
+  const label = state.labels[labelIdx];
+
+  const zone = e.currentTarget;
+
+  if (labelIdx === zoneIdx) {
+    zone.style.borderColor = '#059669';
+    zone.style.background = 'rgba(5,150,105,0.3)';
+    zone.style.borderStyle = 'solid';
+    zone.textContent = label.text;
+    state.placed[zoneIdx] = true;
+
+    // Remove the chip
+    const chip = document.querySelector(`#dd_labels_${elemId} [data-label-idx="${labelIdx}"]`);
+    if (chip) chip.remove();
+
+    // Check if all placed
+    if (Object.keys(state.placed).length === state.total) {
+      const feedback = document.getElementById('dd_feedback_' + elemId);
+      feedback.style.display = 'block';
+      feedback.style.background = '#d1fae5';
+      feedback.style.color = '#065f46';
+      feedback.innerHTML = '✅ All labels placed correctly! Great job.';
+      markInteractiveComplete(elemId, 100);
+    }
+  } else {
+    // Wrong placement - shake feedback
+    zone.style.borderColor = '#dc2626';
+    setTimeout(() => zone.style.borderColor = 'rgba(255,255,255,0.6)', 600);
+  }
+}
+</script>
+{% endblock %}

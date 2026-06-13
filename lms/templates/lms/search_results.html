@@ -1,0 +1,86 @@
+{% extends 'lms/lms_base.html' %}
+{% load static %}
+{% block title %}Search | GloryLMS{% endblock %}
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: #f9fafb; color: #111827; }
+.page { max-width: 720px; margin: 0 auto; padding: 40px 24px; }
+.topbar { background: #fff; border-bottom: 1px solid rgba(0,0,0,0.08); height: 56px; padding: 0 24px; display: flex; align-items: center; gap: 14px; position: sticky; top: 0; z-index: 50; }
+.back-link { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 500; color: #6b7280; text-decoration: none; }
+.back-link:hover { color: #1a56db; }
+.search-form { display: flex; gap: 10px; margin-bottom: 28px; }
+.search-input { flex: 1; padding: 11px 16px; border: 1px solid #d1d5db; border-radius: 9px; font-size: 14px; outline: none; font-family: inherit; }
+.search-input:focus { border-color: #1a56db; box-shadow: 0 0 0 3px rgba(26,86,219,.1); }
+.search-btn { background: #1a56db; color: #fff; border: none; padding: 11px 20px; border-radius: 9px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.result-section { margin-bottom: 28px; }
+.result-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #6b7280; margin-bottom: 12px; }
+.result-item { background: #fff; border: 1px solid rgba(0,0,0,0.08); border-radius: 10px; padding: 14px 16px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; text-decoration: none; color: #111827; transition: border-color .15s; }
+.result-item:hover { border-color: #1a56db; }
+.result-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.result-name { font-size: 13px; font-weight: 600; }
+.result-meta { font-size: 11px; color: #6b7280; margin-top: 2px; }
+.empty { text-align: center; padding: 48px 0; color: #6b7280; }
+.empty i { font-size: 32px; display: block; margin-bottom: 12px; opacity: .4; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="topbar">
+  <a href="{% url 'lms_dashboard' %}" class="back-link"><i class="fas fa-arrow-left"></i> Dashboard</a>
+</div>
+
+<div class="page">
+  <form class="search-form" action="{% url 'lms_search' %}" method="GET">
+    <input type="text" name="q" value="{{ query }}" class="search-input" placeholder="Search lessons, courses…" autofocus>
+    <button type="submit" class="search-btn"><i class="fas fa-search"></i> Search</button>
+  </form>
+
+  {% if query %}
+    {% if results.courses %}
+    <div class="result-section">
+      <div class="result-title">Courses</div>
+      {% for course in results.courses %}
+      <a href="{% url 'course_classroom' course.id %}" class="result-item">
+        <div class="result-icon" style="background:#e8f0fe">📚</div>
+        <div>
+          <div class="result-name">{{ course.title }}</div>
+          <div class="result-meta">{{ course.program }} · {{ course.modules.count }} modules</div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if results.lessons %}
+    <div class="result-section">
+      <div class="result-title">Lessons</div>
+      {% for lesson in results.lessons %}
+      <a href="{% url 'lesson_view' lesson.id %}" class="result-item">
+        <div class="result-icon" style="background:#f3e8ff">📖</div>
+        <div>
+          <div class="result-name">{{ lesson.title }}</div>
+          <div class="result-meta">{{ lesson.module.course.program }} · {{ lesson.module.title }}</div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if not results.courses and not results.lessons %}
+    <div class="empty">
+      <i class="fas fa-search"></i>
+      No results found for "<strong>{{ query }}</strong>"
+    </div>
+    {% endif %}
+
+  {% else %}
+  <div class="empty">
+    <i class="fas fa-search"></i>
+    Type something to search your courses and lessons
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

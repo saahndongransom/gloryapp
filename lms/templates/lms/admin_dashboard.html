@@ -1,0 +1,1747 @@
+{% extends 'lms/lms_base.html' %}
+{% load static %}
+
+{% block title %}Admin Panel | GloryLMS{% endblock %}
+
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --blue:      #1a56db;
+  --blue-lt:   #e8f0fe;
+  --green:     #059669;
+  --green-lt:  #d1fae5;
+  --amber:     #d97706;
+  --amber-lt:  #fef3c7;
+  --purple:    #7c3aed;
+  --red:       #dc2626;
+  --red-lt:    #fee2e2;
+  --surface:   #ffffff;
+  --bg:        #f9fafb;
+  --border:    rgba(0,0,0,0.08);
+  --text:      #111827;
+  --muted:     #6b7280;
+  --radius:    10px;
+  --radius-lg: 14px;
+}
+
+html, body { height: 100%; }
+body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; }
+
+.app-shell { display: flex; width: 100%; min-height: 100vh; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 248px; flex-shrink: 0; background: #0f172a;
+  display: flex; flex-direction: column;
+  min-height: 100vh; position: sticky; top: 0; height: 100vh; overflow-y: auto;
+}
+.sidebar-brand { padding: 18px 16px 14px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; gap: 10px; }
+.brand-logo { width:32px; height:32px; background:var(--blue); border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.brand-logo i { color:#fff; font-size:13px; }
+.brand-name { font-size:14px; font-weight:700; color:#fff; letter-spacing:-0.3px; }
+.admin-pill { margin-left:auto; font-size:9px; font-weight:700; background:rgba(220,38,38,0.25); color:#fca5a5; padding:3px 8px; border-radius:20px; text-transform:uppercase; }
+
+.nav-label { padding:16px 16px 5px; font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:#475569; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; margin: 2px 8px; border-radius: 8px;
+  font-size: 13px; font-weight: 500; color: #94a3b8;
+  text-decoration: none; cursor: pointer;
+  transition: background .15s, color .15s;
+  background: transparent; border: none; width: calc(100% - 16px); text-align: left;
+}
+.nav-item i { width:16px; text-align:center; flex-shrink:0; font-size:13px; }
+.nav-item:hover { background: rgba(255,255,255,0.05); color: #f1f5f9; }
+.nav-item.active { background: rgba(26,86,219,0.2); color: #93c5fd; }
+.nav-item-link { display: flex; align-items: center; gap: 10px; padding: 9px 10px; margin: 2px 8px; border-radius: 8px; font-size: 13px; font-weight: 500; color: #94a3b8; text-decoration: none; transition: background .15s, color .15s; }
+.nav-item-link:hover { background: rgba(255,255,255,0.05); color: #f1f5f9; }
+.nav-item-link i { width:16px; text-align:center; flex-shrink:0; font-size:13px; }
+
+.sidebar-footer { margin-top:auto; padding:14px; border-top:1px solid rgba(255,255,255,0.06); }
+.user-row { display:flex; align-items:center; gap:9px; padding:7px; border-radius:8px; }
+.user-avatar { width:32px; height:32px; border-radius:50%; background:#1e3a5f; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#93c5fd; flex-shrink:0; }
+.user-name { font-size:12px; font-weight:600; color:#f1f5f9; }
+.user-role { font-size:10px; color:#64748b; }
+
+/* ── Main ── */
+.main-area { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 100vh; }
+
+.topbar {
+  background: #fff; border-bottom: 1px solid var(--border);
+  height: 60px; padding: 0 28px;
+  display: flex; align-items: center; gap: 14px;
+  position: sticky; top: 0; z-index: 50; flex-shrink: 0;
+}
+.topbar-title { font-size:15px; font-weight:700; }
+.topbar-crumb { font-size:12px; color:var(--muted); }
+.search-wrap { margin-left:auto; display:flex; align-items:center; gap:8px; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:7px 12px; width:210px; }
+.search-wrap i { color:var(--muted); font-size:12px; }
+.search-wrap input { border:none; background:transparent; outline:none; font-size:13px; color:var(--text); width:100%; }
+.search-wrap input::placeholder { color:#9ca3af; }
+.btn-primary { background:var(--blue); color:#fff; border:none; padding:8px 18px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; flex-shrink:0; text-decoration:none; }
+.btn-primary:hover { background:#1344b5; }
+.btn-danger { background:var(--red); color:#fff; border:none; padding:5px 12px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; }
+.btn-danger:hover { background:#b91c1c; }
+.btn-success { background:var(--green); color:#fff; border:none; padding:6px 12px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; }
+.btn-success:hover { background:#047857; }
+
+.alert-box { background:#fffbeb; border-left:4px solid #f59e0b; padding:14px 20px; margin:20px 28px -8px; border-radius:0 8px 8px 0; font-size:13px; color:#78350f; display:flex; align-items:flex-start; gap:10px; }
+.alert-box i { flex-shrink:0; margin-top:1px; }
+
+.page-content { padding:28px; flex:1; }
+
+/* ── Stats ── */
+.stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px; }
+.stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; position:relative; overflow:hidden; }
+.stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--accent, var(--blue)); }
+.stat-label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin-bottom:8px; }
+.stat-value { font-size:28px; font-weight:800; color:var(--text); letter-spacing:-1.2px; line-height:1; }
+.stat-value .unit { font-size:16px; font-weight:500; color:var(--muted); }
+.stat-delta { font-size:12px; font-weight:500; margin-top:6px; }
+.delta-up { color:var(--green); }
+.delta-warn { color:var(--amber); }
+
+.section-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.section-title { font-size:14px; font-weight:700; }
+
+.panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:22px; }
+.panel-title { font-size:14px; font-weight:700; margin-bottom:18px; padding-bottom:12px; border-bottom:1px solid var(--border); }
+.two-col { display:grid; grid-template-columns:1fr 1.2fr; gap:20px; margin-bottom:20px; }
+
+/* ── Forms ── */
+.form-group { margin-bottom:14px; }
+.form-label { display:block; font-size:12px; font-weight:600; color:var(--text); margin-bottom:5px; }
+.form-control { width:100%; padding:9px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:13px; color:var(--text); outline:none; transition:border-color .15s, box-shadow .15s; background:#fff; font-family:inherit; }
+.form-control:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(26,86,219,.1); }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.btn-submit { width:100%; background:var(--blue); color:#fff; border:none; padding:10px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; transition:background .15s; font-family:inherit; }
+.btn-submit:hover { background:#1344b5; }
+.btn-submit.green { background:var(--green); }
+.btn-submit.green:hover { background:#047857; }
+.btn-submit.purple { background:var(--purple); }
+.btn-submit.purple:hover { background:#6d28d9; }
+
+/* ── Tables ── */
+.data-table { width:100%; border-collapse:collapse; font-size:13px; }
+.data-table th { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); padding:10px 12px; background:#f9fafb; border-bottom:2px solid var(--border); text-align:left; white-space:nowrap; }
+.data-table td { padding:12px 12px; border-bottom:1px solid #f3f4f6; vertical-align:middle; }
+.data-table tr:last-child td { border-bottom:none; }
+.data-table tr:hover td { background:#fafafa; }
+.user-cell { display:flex; align-items:center; gap:10px; }
+.mini-avatar { width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#fff; flex-shrink:0; }
+
+.badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
+.badge-active { background:var(--green-lt); color:#065f46; }
+.badge-warn { background:var(--amber-lt); color:#92400e; }
+.badge-info { background:var(--blue-lt); color:#1e40af; }
+.badge-danger { background:var(--red-lt); color:#991b1b; }
+
+.progress-rail { height:6px; background:#f3f4f6; border-radius:3px; overflow:hidden; }
+.progress-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,var(--blue),#60a5fa); }
+.progress-row { display:flex; align-items:center; gap:10px; }
+.progress-row .pct { font-size:12px; font-weight:700; width:36px; text-align:right; }
+
+.actions-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:22px; }
+.action-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:18px; cursor:pointer; transition:border-color .2s, box-shadow .2s; text-decoration:none; display:block; color:var(--text); }
+.action-card:hover { border-color:rgba(26,86,219,.25); box-shadow:0 4px 14px rgba(26,86,219,.06); }
+.action-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; margin-bottom:10px; }
+.action-title { font-size:13px; font-weight:700; margin-bottom:3px; }
+.action-desc { font-size:11.5px; color:var(--muted); line-height:1.5; }
+
+.chart-wrap { position:relative; height:130px; }
+
+/* ── Content type cards ── */
+.content-type-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px; }
+.content-type-card {
+  border:2px solid var(--border); border-radius:10px; padding:16px 12px;
+  text-align:center; cursor:pointer; transition:all .15s;
+  background:#fff;
+}
+.content-type-card:hover { border-color:var(--blue); background:var(--blue-lt); }
+.content-type-card.selected { border-color:var(--blue); background:var(--blue-lt); }
+.content-type-card .ct-icon { font-size:24px; margin-bottom:8px; display:block; }
+.content-type-card .ct-label { font-size:12px; font-weight:600; color:var(--text); }
+.content-type-card .ct-desc { font-size:10px; color:var(--muted); margin-top:2px; }
+
+.upload-zone {
+  border:2px dashed #d1d5db; border-radius:10px; padding:32px;
+  text-align:center; cursor:pointer; transition:all .2s;
+  background:#fafafa;
+}
+.upload-zone:hover, .upload-zone.drag-over { border-color:var(--blue); background:var(--blue-lt); }
+.upload-zone i { font-size:28px; color:#9ca3af; display:block; margin-bottom:10px; }
+.upload-zone p { font-size:13px; color:var(--muted); margin-bottom:4px; }
+.upload-zone span { font-size:11px; color:#9ca3af; }
+.upload-zone input[type=file] { display:none; }
+
+.view-section { display:none; }
+.view-section.active { display:block; }
+
+.sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:98; }
+.sidebar-overlay.open { display:block; }
+.hamburger { display:none; background:none; border:none; font-size:18px; cursor:pointer; color:var(--text); padding:4px 8px; border-radius:6px; }
+
+@media (max-width: 768px) {
+  .app-shell { flex-direction: column; }
+  .sidebar { position:fixed; left:-260px; top:0; height:100vh; z-index:99; transition:left .25s; width:256px; }
+  .sidebar.open { left:0; }
+  .hamburger { display:flex; align-items:center; color:#0f172a; }
+  .main-area { width:100%; }
+  .stats-row { grid-template-columns:1fr 1fr; }
+  .two-col { grid-template-columns:1fr; }
+  .actions-grid { grid-template-columns:1fr; }
+  .content-type-grid { grid-template-columns:repeat(2,1fr); }
+}
+@media (max-width: 480px) {
+  .stats-row { grid-template-columns:1fr; }
+  .page-content { padding:16px; }
+  .topbar { padding:0 14px; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-logo"><i class="fas fa-layer-group"></i></div>
+      <span class="brand-name">GloryLMS</span>
+      <span class="admin-pill">Admin</span>
+    </div>
+
+    <div class="nav-label">Platform</div>
+    <button class="nav-item active" onclick="switchTab('overview',this)"><i class="fas fa-th-large"></i>Overview</button>
+    <button class="nav-item" onclick="switchTab('analytics',this)"><i class="fas fa-chart-line"></i>Analytics</button>
+    <button class="nav-item" onclick="switchTab('activity_monitor',this)"><i class="fas fa-satellite-dish"></i>Live Activity</button>
+    <button class="nav-item" onclick="switchTab('revenue',this)"><i class="fas fa-chart-pie"></i>Revenue Reports</button>
+    <button class="nav-item" onclick="switchTab('audit_log',this)"><i class="fas fa-shield-alt"></i>Audit Log</button>
+    <button class="nav-item" onclick="switchTab('reviews',this)"><i class="fas fa-star"></i>Course Reviews</button>
+    <button class="nav-item" onclick="switchTab('interactive',this)"><i class="fas fa-gamepad"></i>Interactive Content</button>
+    <button class="nav-item" onclick="switchTab('students',this)"><i class="fas fa-users"></i>Students</button>
+
+    <div class="nav-label">Curriculum</div>
+    <a href="{% url 'course_builder' %}" class="nav-item-link"><i class="fas fa-hammer"></i>Course Builder</a>
+    <button class="nav-item" onclick="switchTab('manage_courses',this)"><i class="fas fa-book"></i>Manage Courses</button>
+    <button class="nav-item" onclick="switchTab('media',this)"><i class="fas fa-photo-film"></i>Upload Content</button>
+    <button class="nav-item" onclick="switchTab('content_library',this)"><i class="fas fa-folder-open"></i>Content Library</button>
+    <button class="nav-item" onclick="switchTab('testing',this)"><i class="fas fa-vial"></i>Assessments</button>
+    <button class="nav-item" onclick="switchTab('enrollments',this)"><i class="fas fa-user-graduate"></i>Enrollments</button>
+
+    <div class="nav-label">Admin</div>
+    <button class="nav-item" onclick="switchTab('credentials',this)"><i class="fas fa-award"></i>Certificates</button>
+    <button class="nav-item" onclick="switchTab('announcements',this)"><i class="fas fa-bullhorn"></i>Announcements</button>
+    <button class="nav-item" onclick="switchTab('discussions',this)"><i class="fas fa-comment-dots"></i>Discussions</button>
+    <button class="nav-item" onclick="switchTab('support',this)"><i class="fas fa-comments"></i>Support Tickets</button>
+    <button class="nav-item" onclick="switchTab('subscriptions',this)"><i class="fas fa-credit-card"></i>Subscriptions</button>
+
+    <div class="sidebar-footer">
+      <div class="user-row">
+        <div class="user-avatar">AD</div>
+        <div>
+          <div class="user-name">{{ request.user.username|default:"Administrator" }}</div>
+          <div class="user-role">Super Admin · Full Access</div>
+        </div>
+      </div>
+      <a href="{% url 'setup_2fa' %}" class="nav-item-link" style="margin-top:8px">
+        <i class="fas fa-shield-alt"></i> Security (2FA)
+      </a>
+      <a href="{% url 'lms_logout' %}" class="nav-item-link" style="color:#fca5a5">
+        <i class="fas fa-sign-out-alt"></i> Sign Out
+      </a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main-area">
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+    <header class="topbar">
+      <button class="hamburger" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+      <div>
+        <div class="topbar-title" id="topbar-section-name">Platform Overview</div>
+        <div class="topbar-crumb">GloryLMS Administration</div>
+      </div>
+      <div class="search-wrap">
+        <i class="fas fa-search"></i>
+        <input type="text" placeholder="Search students, courses…">
+      </div>
+      <a href="{% url 'course_builder' %}" class="btn-primary">
+        <i class="fas fa-plus"></i> New Course
+      </a>
+    </header>
+
+    {% if messages %}
+      {% for msg in messages %}
+        <div class="alert-box">
+          <i class="fas fa-info-circle"></i>
+          <div>{{ msg|linebreaksbr }}</div>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <main class="page-content">
+
+      <!-- ══ OVERVIEW ══ -->
+      <div id="view-overview" class="view-section active">
+        <div class="stats-row">
+          <div class="stat-card" style="--accent:var(--green)">
+            <div class="stat-label">Monthly Revenue</div>
+            <div class="stat-value"><span class="unit">$</span>{{ total_revenue|floatformat:0 }}</div>
+            <div class="stat-delta delta-up"><i class="fas fa-arrow-up"></i> Active subscriptions</div>
+          </div>
+          <div class="stat-card" style="--accent:var(--blue)">
+            <div class="stat-label">Active Students</div>
+            <div class="stat-value">{{ total_students }}</div>
+            <div class="stat-delta delta-up"><i class="fas fa-users"></i> Enrolled learners</div>
+          </div>
+          <div class="stat-card" style="--accent:var(--purple)">
+            <div class="stat-label">Total Courses</div>
+            <div class="stat-value">{{ total_courses }}</div>
+            <div class="stat-delta" style="color:var(--purple)"><i class="fas fa-book-open"></i> Active programs</div>
+          </div>
+          <div class="stat-card" style="--accent:var(--amber)">
+            <div class="stat-label">Open Tickets</div>
+            <div class="stat-value">{{ open_tickets|length }}</div>
+            <div class="stat-delta delta-warn"><i class="fas fa-exclamation-circle"></i> Need attention</div>
+          </div>
+        </div>
+
+        <div class="section-head"><span class="section-title">Quick Actions</span></div>
+        <div class="actions-grid">
+          <a href="{% url 'course_builder' %}" class="action-card">
+            <div class="action-icon" style="background:var(--blue-lt)">🏗️</div>
+            <div class="action-title">Build a Course</div>
+            <div class="action-desc">Create a full course with modules and lessons in one page.</div>
+          </a>
+          <div class="action-card" onclick="switchTab('students', document.querySelector('[onclick*=students]'))">
+            <div class="action-icon" style="background:var(--green-lt)">👤</div>
+            <div class="action-title">Add Student</div>
+            <div class="action-desc">Create an account and auto-generate login credentials.</div>
+          </div>
+          <div class="action-card" onclick="switchTab('media', document.querySelector('[onclick*=media]'))">
+            <div class="action-icon" style="background:#f3e8ff">📁</div>
+            <div class="action-title">Upload Content</div>
+            <div class="action-desc">Add videos, PDFs, PowerPoints, or Word docs to lessons.</div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-title"><i class="fas fa-chart-area" style="color:var(--blue);margin-right:8px"></i>Revenue Activity</div>
+            <div class="chart-wrap"><canvas id="activityChart"></canvas></div>
+          </div>
+          <div class="panel">
+            <div class="panel-title"><i class="fas fa-comments" style="color:var(--amber);margin-right:8px"></i>Open Support Tickets</div>
+            {% for ticket in open_tickets|slice:":4" %}
+              <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #f3f4f6">
+                <div style="width:32px;height:32px;border-radius:8px;background:var(--amber-lt);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">💬</div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:12px;font-weight:600;margin-bottom:2px">{{ ticket.user.username }}</div>
+                  <div style="font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">"{{ ticket.message|truncatechars:55 }}"</div>
+                </div>
+                <form method="POST" style="flex-shrink:0">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="resolve_thread">
+                  <input type="hidden" name="thread_id" value="{{ ticket.id }}">
+                  <button type="submit" class="btn-success">Resolve</button>
+                </form>
+              </div>
+            {% empty %}
+              <div style="text-align:center;padding:30px 0;color:var(--muted);font-size:13px">
+                <i class="fas fa-check-circle" style="font-size:24px;color:var(--green);display:block;margin-bottom:8px"></i>
+                All tickets resolved
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ REVENUE REPORTS ══ -->
+      <div id="view-revenue" class="view-section">
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-icon" style="background:rgba(5,150,105,0.1);color:var(--green)"><i class="fas fa-dollar-sign"></i></div>
+            <div class="stat-value">${{ revenue_data.total_revenue|floatformat:0 }}</div>
+            <div class="stat-label">Total Revenue</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:rgba(26,86,219,0.1);color:var(--blue)"><i class="fas fa-users"></i></div>
+            <div class="stat-value">{{ revenue_data.total_enrollments }}</div>
+            <div class="stat-label">Total Enrollments</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:rgba(245,158,11,0.1);color:var(--amber)"><i class="fas fa-calendar-alt"></i></div>
+            <div class="stat-value">${{ revenue_data.this_month|floatformat:0 }}</div>
+            <div class="stat-label">This Month</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:rgba(124,58,237,0.1);color:#7c3aed"><i class="fas fa-history"></i></div>
+            <div class="stat-value">${{ revenue_data.last_month|floatformat:0 }}</div>
+            <div class="stat-label">Last Month</div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-title">
+              Monthly Revenue
+              <button onclick="exportRevenueCSV()" style="float:right;background:var(--bg);border:1px solid var(--border);padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer;font-weight:600">
+                <i class="fas fa-download"></i> Export CSV
+              </button>
+            </div>
+            <table class="data-table">
+              <thead><tr><th>Month</th><th>Enrollments</th><th>Revenue</th></tr></thead>
+              <tbody>
+                {% for m in revenue_data.monthly %}
+                <tr>
+                  <td><strong>{{ m.month }}</strong></td>
+                  <td>{{ m.count }}</td>
+                  <td style="font-weight:700;color:var(--green)">${{ m.revenue|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" style="text-align:center;color:var(--muted);padding:20px">No revenue data yet.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title">Revenue by Program</div>
+            <table class="data-table">
+              <thead><tr><th>Program</th><th>Enrollments</th><th>Revenue</th></tr></thead>
+              <tbody>
+                {% for p in revenue_data.by_program %}
+                <tr>
+                  <td><span class="badge badge-info">{{ p.program }}</span></td>
+                  <td>{{ p.count }}</td>
+                  <td style="font-weight:700;color:var(--green)">${{ p.revenue|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" style="text-align:center;color:var(--muted);padding:20px">No revenue data yet.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ AUDIT LOG ══ -->
+      <div id="view-audit_log" class="view-section">
+        <div class="panel">
+          <div class="panel-title">Recent Admin Activity (Last 100 entries)</div>
+          <table class="data-table">
+            <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Details</th><th>IP Address</th></tr></thead>
+            <tbody>
+              {% for log in audit_logs %}
+              <tr>
+                <td style="white-space:nowrap">{{ log.timestamp|date:"M d, Y H:i" }}</td>
+                <td><strong>{{ log.user.username|default:"Unknown" }}</strong></td>
+                <td>
+                  {% if log.action == 'login' %}<span class="badge badge-success">Login</span>
+                  {% elif log.action == 'login_failed' %}<span class="badge badge-danger">Failed Login</span>
+                  {% elif log.action == '2fa_enabled' %}<span class="badge badge-info">2FA Enabled</span>
+                  {% elif log.action == '2fa_disabled' %}<span class="badge badge-warning">2FA Disabled</span>
+                  {% else %}<span class="badge badge-info">{{ log.get_action_display }}</span>
+                  {% endif %}
+                </td>
+                <td>{{ log.target_repr }}</td>
+                <td style="font-family:monospace;font-size:11px">{{ log.ip_address|default:"-" }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">No audit log entries yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ COURSE REVIEWS MODERATION ══ -->
+      <div id="view-reviews" class="view-section">
+        <div class="panel">
+          <div class="panel-title">Pending Reviews ({{ pending_reviews|length }})</div>
+          {% for review in pending_reviews %}
+          <div style="border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+              <div>
+                <strong>{{ review.student.username }}</strong> — <span class="badge badge-info">{{ review.course.title }}</span>
+                <div style="color:#f59e0b;font-size:16px;margin-top:4px">
+                  {% for i in "12345" %}{% if forloop.counter <= review.rating %}★{% else %}☆{% endif %}{% endfor %}
+                  <span style="color:var(--muted);font-size:12px;font-weight:400">({{ review.rating }}/5)</span>
+                </div>
+              </div>
+              <span style="font-size:11px;color:var(--muted)">{{ review.created_at|date:"M d, Y" }}</span>
+            </div>
+            {% if review.comment %}
+            <p style="font-size:13px;color:var(--text);margin-bottom:12px;background:var(--bg);padding:10px;border-radius:8px">{{ review.comment }}</p>
+            {% endif %}
+            <div style="display:flex;gap:8px">
+              <form method="post" style="display:inline">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="approve_review">
+                <input type="hidden" name="review_id" value="{{ review.id }}">
+                <button type="submit" style="background:#059669;color:#fff;border:none;padding:6px 16px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">
+                  <i class="fas fa-check"></i> Approve
+                </button>
+              </form>
+              <form method="post" style="display:inline">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="reject_review">
+                <input type="hidden" name="review_id" value="{{ review.id }}">
+                <button type="submit" style="background:#dc2626;color:#fff;border:none;padding:6px 16px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">
+                  <i class="fas fa-times"></i> Reject &amp; Delete
+                </button>
+              </form>
+            </div>
+          </div>
+          {% empty %}
+          <p style="text-align:center;color:var(--muted);padding:30px">No pending reviews to moderate.</p>
+          {% endfor %}
+        </div>
+
+        <div class="panel" style="margin-top:20px">
+          <div class="panel-title">Approved Reviews ({{ approved_reviews|length }})</div>
+          <table class="data-table">
+            <thead><tr><th>Student</th><th>Course</th><th>Rating</th><th>Comment</th><th>Date</th><th></th></tr></thead>
+            <tbody>
+              {% for review in approved_reviews %}
+              <tr>
+                <td><strong>{{ review.student.username }}</strong></td>
+                <td>{{ review.course.title }}</td>
+                <td style="color:#f59e0b">{% for i in "12345" %}{% if forloop.counter <= review.rating %}★{% else %}☆{% endif %}{% endfor %}</td>
+                <td style="max-width:300px">{{ review.comment|truncatechars:80|default:"-" }}</td>
+                <td style="white-space:nowrap;font-size:12px">{{ review.created_at|date:"M d, Y" }}</td>
+                <td>
+                  <form method="post" style="display:inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="reject_review">
+                    <input type="hidden" name="review_id" value="{{ review.id }}">
+                    <button type="submit" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:12px"><i class="fas fa-trash"></i></button>
+                  </form>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">No approved reviews yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ INTERACTIVE CONTENT BUILDER ══ -->
+      <div id="view-interactive" class="view-section">
+
+        <div class="panel">
+          <div class="panel-title">Add Interactive Element</div>
+          <form method="post" id="interactiveForm">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_interactive">
+            <input type="hidden" name="data_json" id="dataJsonField">
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+              <div>
+                <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px">Lesson</label>
+                <select name="lesson_id" id="lessonSelect" required style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+                  <option value="">-- Select Lesson --</option>
+                  {% for course in all_courses %}
+                    <optgroup label="{{ course.title }}">
+                    {% for module in course.modules.all %}
+                      {% for lesson in module.lessons.all %}
+                        <option value="{{ lesson.id }}">{{ module.title }} → {{ lesson.title }}</option>
+                      {% endfor %}
+                    {% endfor %}
+                    </optgroup>
+                  {% endfor %}
+                </select>
+              </div>
+              <div>
+                <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px">Attach to Content (optional, shows as popup)</label>
+                <select name="attached_to" id="attachedToSelect" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+                  <option value="">-- Show at end of lesson --</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;margin-bottom:14px">
+              <div>
+                <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px">Title</label>
+                <input type="text" name="title" required placeholder="e.g. Key Terms Review" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+              </div>
+              <div>
+                <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px">Type</label>
+                <select name="element_type" id="elementTypeSelect" required onchange="switchBuilder(this.value)" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+                  <option value="">-- Select --</option>
+                  <option value="flashcards">Flashcard Deck</option>
+                  <option value="knowledge_check">Knowledge Check</option>
+                  <option value="scenario">Clinical Scenario</option>
+                  <option value="drag_drop">Drag &amp; Drop</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px">XP Points</label>
+                <input type="number" name="points" value="10" min="1" max="100" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+              </div>
+            </div>
+
+            <!-- FLASHCARDS BUILDER -->
+            <div id="builder_flashcards" class="builder-section" style="display:none;background:var(--bg);border-radius:10px;padding:16px;margin-bottom:14px">
+              <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:8px">Flashcards (front / back)</label>
+              <div id="flashcardRows"></div>
+              <button type="button" onclick="addFlashcardRow()" style="background:var(--blue);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;margin-top:8px">+ Add Card</button>
+            </div>
+
+            <!-- KNOWLEDGE CHECK BUILDER -->
+            <div id="builder_knowledge_check" class="builder-section" style="display:none;background:var(--bg);border-radius:10px;padding:16px;margin-bottom:14px">
+              <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px">Question</label>
+              <input type="text" id="kc_question" placeholder="e.g. What is a normal resting heart rate?" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;margin-bottom:12px">
+              <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:8px">Answer Options (select the correct one)</label>
+              <div id="kcOptionRows"></div>
+              <button type="button" onclick="addKCOption()" style="background:var(--blue);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;margin:8px 0 12px">+ Add Option</button>
+              <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px">Explanation (shown after answering)</label>
+              <textarea id="kc_explanation" rows="2" placeholder="Explain why this is correct..." style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical"></textarea>
+            </div>
+
+            <!-- SCENARIO BUILDER -->
+            <div id="builder_scenario" class="builder-section" style="display:none;background:var(--bg);border-radius:10px;padding:16px;margin-bottom:14px">
+              <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px">Situation / Scenario</label>
+              <textarea id="sc_situation" rows="3" placeholder="Describe the clinical situation the student must respond to..." style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;margin-bottom:12px"></textarea>
+              <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:8px">Response Choices</label>
+              <div id="scenarioChoiceRows"></div>
+              <button type="button" onclick="addScenarioChoice()" style="background:var(--blue);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;margin-top:8px">+ Add Choice</button>
+            </div>
+
+            <!-- DRAG & DROP BUILDER -->
+            <div id="builder_drag_drop" class="builder-section" style="display:none;background:var(--bg);border-radius:10px;padding:16px;margin-bottom:14px">
+              <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px">Image URL</label>
+              <input type="text" id="dd_image_url" placeholder="https://example.com/diagram.png" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;margin-bottom:12px">
+              <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:8px">Labels (text + position % from top-left)</label>
+              <div id="ddLabelRows"></div>
+              <button type="button" onclick="addDDLabel()" style="background:var(--blue);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;margin-top:8px">+ Add Label</button>
+            </div>
+
+            <button type="submit" onclick="return prepareSubmit()" style="background:#059669;color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">
+              <i class="fas fa-plus-circle"></i> Add Interactive Element
+            </button>
+          </form>
+        </div>
+
+        <div class="panel" style="margin-top:20px">
+          <div class="panel-title">Existing Interactive Elements</div>
+          <table class="data-table">
+            <thead><tr><th>Lesson</th><th>Title</th><th>Type</th><th>Points</th><th>Position</th><th></th></tr></thead>
+            <tbody>
+              {% for elem in all_interactive_elements %}
+              <tr>
+                <td style="font-size:12px">{{ elem.lesson.title|truncatechars:30 }}</td>
+                <td><strong>{{ elem.title }}</strong></td>
+                <td><span class="badge badge-info">{{ elem.get_element_type_display }}</span></td>
+                <td>{{ elem.points }} XP</td>
+                <td style="font-size:12px">{% if elem.attached_to %}Popup after content #{{ elem.attached_to_id }}{% else %}End of lesson{% endif %}</td>
+                <td>
+                  <form method="post" style="display:inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete_interactive">
+                    <input type="hidden" name="element_id" value="{{ elem.id }}">
+                    <button type="submit" style="background:none;border:none;color:#dc2626;cursor:pointer"><i class="fas fa-trash"></i></button>
+                  </form>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">No interactive elements yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ LIVE ACTIVITY MONITOR ══ -->
+      <div id="view-activity_monitor" class="view-section">
+        <div class="panel" style="margin-bottom:20px">
+          <div class="panel-title">
+            <i class="fas fa-satellite-dish" style="color:var(--green);margin-right:8px"></i>
+            Live Student Activity
+            <span style="font-size:11px;font-weight:400;color:var(--muted);margin-left:8px">Last 100 actions</span>
+            <button onclick="location.reload()" style="float:right;background:var(--bg);border:1px solid var(--border);padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer;font-weight:600">
+              <i class="fas fa-sync"></i> Refresh
+            </button>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>Student</th><th>Action</th><th>Details</th><th>Course</th><th>When</th></tr></thead>
+            <tbody>
+              {% for act in all_activities %}
+              <tr>
+                <td>
+                  <div class="user-cell">
+                    <div class="mini-avatar" style="background:
+                      {% if act.activity_type == 'lesson_complete' %}var(--green)
+                      {% elif act.activity_type == 'quiz_pass' %}var(--blue)
+                      {% elif act.activity_type == 'quiz_fail' %}var(--red)
+                      {% elif act.activity_type == 'certificate' %}var(--amber)
+                      {% else %}var(--muted){% endif %}">
+                      {{ act.student.username|slice:":2"|upper }}
+                    </div>
+                    <strong>{{ act.student.username }}</strong>
+                  </div>
+                </td>
+                <td>
+                  <span class="badge
+                    {% if act.activity_type == 'lesson_complete' %}badge-active
+                    {% elif act.activity_type == 'quiz_pass' %}badge-info
+                    {% elif act.activity_type == 'quiz_fail' %}badge-danger
+                    {% elif act.activity_type == 'lesson_view' %}badge-warn
+                    {% else %}badge-info{% endif %}">
+                    {% if act.activity_type == 'lesson_view' %}👁 Viewing
+                    {% elif act.activity_type == 'lesson_complete' %}✅ Completed
+                    {% elif act.activity_type == 'quiz_pass' %}🎯 Passed Quiz
+                    {% elif act.activity_type == 'quiz_fail' %}❌ Failed Quiz
+                    {% elif act.activity_type == 'certificate' %}🏆 Certificate
+                    {% else %}{{ act.get_activity_type_display }}{% endif %}
+                  </span>
+                </td>
+                <td style="font-size:12px;max-width:260px">{{ act.description|truncatechars:60 }}</td>
+                <td>{% if act.course %}<span class="badge badge-info">{{ act.course.program }}</span>{% endif %}</td>
+                <td style="font-size:11px;color:var(--muted);white-space:nowrap">{{ act.created_at|timesince }} ago</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:30px">No activity yet — students haven't started yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Per-student breakdown -->
+        <div class="panel">
+          <div class="panel-title">Student Progress Overview</div>
+          <table class="data-table">
+            <thead><tr><th>Student</th><th>Last Active</th><th>Lessons Done</th><th>Quizzes Taken</th><th>Avg Score</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for profile in students_profiles %}
+              <tr>
+                <td>
+                  <div class="user-cell">
+                    <div class="mini-avatar" style="background:var(--blue)">{{ profile.user_obj.username|slice:":2"|upper }}</div>
+                    <div>
+                      <div style="font-weight:600">{{ profile.user_obj.username }}</div>
+                      <div style="font-size:11px;color:var(--muted)">{{ profile.user_obj.email|truncatechars:22 }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td style="font-size:12px;color:var(--muted)">
+                  {% with last=profile.user_obj.activities.first %}
+                    {% if last %}{{ last.created_at|timesince }} ago{% else %}Never{% endif %}
+                  {% endwith %}
+                </td>
+                <td style="font-weight:700;color:var(--green)">{{ profile.progress_percentage }}%</td>
+                <td style="font-size:12px">
+                  {{ profile.user_obj.quizattempt_set.count }} attempt{{ profile.user_obj.quizattempt_set.count|pluralize }}
+                </td>
+                <td>
+                  {% if profile.last_score_attempt %}
+                    <span style="font-weight:700;color:{% if profile.last_score_attempt.passed %}var(--green){% else %}var(--red){% endif %}">
+                      {{ profile.last_score_attempt.score }}%
+                    </span>
+                  {% else %}<span style="color:var(--muted)">—</span>{% endif %}
+                </td>
+                <td>
+                  {% if profile.progress_percentage >= 80 %}<span class="badge badge-active">On Track</span>
+                  {% elif profile.progress_percentage >= 40 %}<span class="badge badge-info">In Progress</span>
+                  {% elif profile.progress_percentage > 0 %}<span class="badge badge-warn">Just Started</span>
+                  {% else %}<span class="badge badge-danger">Not Started</span>{% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">No students yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ ANALYTICS ══ -->
+      <div id="view-analytics" class="view-section">
+        <div class="panel">
+          <div class="panel-title">Student Progress</div>
+          <table class="data-table">
+            <thead><tr><th>Student</th><th>Progress</th><th>Last Score</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for profile in students_profiles %}
+              <tr>
+                <td>
+                  <div class="user-cell">
+                    <div class="mini-avatar" style="background:var(--blue)">{{ profile.user_obj.username|slice:":2"|upper }}</div>
+                    <div>
+                      <div style="font-weight:600">{{ profile.user_obj.username }}</div>
+                      <div style="font-size:11px;color:var(--muted)">{{ profile.user_obj.email }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="progress-row">
+                    <div class="progress-rail" style="width:120px"><div class="progress-fill" style="width:{{ profile.progress_percentage }}%"></div></div>
+                    <span class="pct">{{ profile.progress_percentage }}%</span>
+                  </div>
+                </td>
+                <td>
+                  {% if profile.last_score_attempt %}
+                    <span style="font-weight:700;color:{% if profile.last_score_attempt.passed %}var(--green){% else %}var(--red){% endif %}">
+                      {{ profile.last_score_attempt.score }}%
+                      {% if profile.last_score_attempt.passed %}<span class="badge badge-active">Passed</span>{% else %}<span class="badge badge-danger">Failed</span>{% endif %}
+                    </span>
+                  {% else %}<span style="color:var(--muted);font-size:12px">No attempts</span>{% endif %}
+                </td>
+                <td>
+                  {% if profile.progress_percentage >= 80 %}<span class="badge badge-active">On Track</span>
+                  {% elif profile.progress_percentage >= 40 %}<span class="badge badge-info">In Progress</span>
+                  {% else %}<span class="badge badge-warn">Needs Support</span>{% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="4" style="text-align:center;padding:30px;color:var(--muted)">No students yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ STUDENTS ══ -->
+      <div id="view-students" class="view-section">
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-title"><i class="fas fa-user-plus" style="color:var(--blue);margin-right:8px"></i>Create Student Account</div>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:18px;line-height:1.6">A secure password is auto-generated and shown after creation. Share it with the student.</p>
+            <form method="POST" action="{% url 'lms_dashboard' %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="create_student">
+              <div class="form-group">
+                <label class="form-label">Username</label>
+                <input type="text" name="username" class="form-control" placeholder="e.g., janesmith26" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" name="email" class="form-control" placeholder="e.g., jane@gmail.com" required>
+              </div>
+              <button type="submit" class="btn-submit">Create Account & Generate Password</button>
+            </form>
+          </div>
+          <div class="panel">
+            <div class="panel-title">All Students</div>
+            <table class="data-table">
+              <thead><tr><th>Student</th><th>Progress</th><th>Score</th></tr></thead>
+              <tbody>
+                {% for profile in students_profiles %}
+                <tr>
+                  <td>
+                    <div class="user-cell">
+                      <div class="mini-avatar" style="background:var(--blue)">{{ profile.user_obj.username|slice:":2"|upper }}</div>
+                      <div>
+                        <div style="font-weight:600">{{ profile.user_obj.username }}</div>
+                        <div style="font-size:11px;color:var(--muted)">{{ profile.user_obj.email|truncatechars:24 }}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="progress-row">
+                      <div class="progress-rail" style="width:70px"><div class="progress-fill" style="width:{{ profile.progress_percentage }}%"></div></div>
+                      <span class="pct">{{ profile.progress_percentage }}%</span>
+                    </div>
+                  </td>
+                  <td>
+                    {% if profile.last_score_attempt %}
+                      <span style="font-weight:700;color:{% if profile.last_score_attempt.passed %}var(--green){% else %}var(--red){% endif %}">{{ profile.last_score_attempt.score }}%</span>
+                    {% else %}<span style="color:var(--muted);font-size:11px">—</span>{% endif %}
+                  </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" style="text-align:center;color:var(--muted);padding:20px">No students yet.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ UPLOAD CONTENT ══ -->
+      <div id="view-media" class="view-section">
+        <div class="panel">
+          <div class="panel-title"><i class="fas fa-photo-film" style="color:var(--purple);margin-right:8px"></i>Add Lesson Content</div>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:24px;line-height:1.6">Select a content type, choose the target lesson, then add your content. A lesson can have multiple content items.</p>
+          <div class="form-label" style="margin-bottom:10px">What type of content are you adding?</div>
+          <div class="content-type-grid" id="contentTypeGrid">
+            <div class="content-type-card selected" onclick="selectContentType('video', this)"><span class="ct-icon">🎬</span><div class="ct-label">Video File</div><div class="ct-desc">Upload MP4, MOV, AVI</div></div>
+            <div class="content-type-card" onclick="selectContentType('record', this)"><span class="ct-icon">🔴</span><div class="ct-label">Record Video</div><div class="ct-desc">Record from webcam</div></div>
+            <div class="content-type-card" onclick="selectContentType('youtube', this)"><span class="ct-icon">▶️</span><div class="ct-label">YouTube</div><div class="ct-desc">Paste a YouTube link</div></div>
+            <div class="content-type-card" onclick="selectContentType('pdf', this)"><span class="ct-icon">📄</span><div class="ct-label">PDF</div><div class="ct-desc">Documents, guides</div></div>
+            <div class="content-type-card" onclick="selectContentType('ppt', this)"><span class="ct-icon">📊</span><div class="ct-label">PowerPoint</div><div class="ct-desc">PPT, PPTX slides</div></div>
+            <div class="content-type-card" onclick="selectContentType('word', this)"><span class="ct-icon">📝</span><div class="ct-label">Word Doc</div><div class="ct-desc">DOC, DOCX files</div></div>
+            <div class="content-type-card" onclick="selectContentType('image', this)"><span class="ct-icon">🖼️</span><div class="ct-label">Image</div><div class="ct-desc">JPG, PNG, GIF</div></div>
+            <div class="content-type-card" onclick="selectContentType('text', this)"><span class="ct-icon">✍️</span><div class="ct-label">Text Content</div><div class="ct-desc">Type notes, explanations</div></div>
+          </div>
+          <form method="POST" enctype="multipart/form-data" id="uploadForm" action="{% url 'lms_dashboard' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="upload_content">
+            <input type="hidden" name="content_type" id="selectedContentType" value="video">
+            <input type="hidden" name="text_content" id="textContentHidden" value="">
+            <div class="form-row" style="margin-bottom:14px">
+              <div class="form-group" style="margin-bottom:0">
+                <label class="form-label">Target Lesson</label>
+                <select name="lesson_id" class="form-control">
+                  {% for l in all_lessons %}<option value="{{ l.id }}">{{ l.module.course.program }} › {{ l.module.title|truncatechars:20 }} › {{ l.title }}</option>{% empty %}<option value="">No lessons yet</option>{% endfor %}
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <label class="form-label">Content Title</label>
+                <input type="text" name="title" class="form-control" placeholder="e.g., Introduction to Hand Hygiene" required>
+              </div>
+            </div>
+            <div id="block-video">
+              <label class="form-label">Upload Video File</label>
+              <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+                <i class="fas fa-cloud-upload-alt"></i><p>Click to browse or drag & drop your video here</p><span>MP4, MOV, AVI, MKV supported</span>
+                <input type="file" id="fileInput" name="file_attachment" accept=".mp4,.mov,.avi,.mkv,.webm" onchange="handleFileSelect(event)">
+              </div>
+              <div id="filePreview" style="display:none;margin-top:10px;padding:12px;background:var(--green-lt);border-radius:8px;align-items:center;gap:10px;font-size:13px">
+                <i class="fas fa-file-check" style="color:var(--green)"></i>
+                <span id="fileName" style="font-weight:600"></span><span id="fileSize" style="color:var(--muted)"></span>
+                <button type="button" onclick="clearFile()" style="margin-left:auto;background:none;border:none;color:var(--red);cursor:pointer;font-size:12px">Remove</button>
+              </div>
+            </div>
+            <div id="block-record" style="display:none">
+              <label class="form-label">Record from Webcam</label>
+              <div style="background:#0f172a;border-radius:10px;overflow:hidden;margin-bottom:12px"><video id="recordPreview" autoplay muted style="width:100%;max-height:300px;display:block"></video></div>
+              <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+                <button type="button" id="startCamBtn" onclick="startCamera()" class="btn-submit" style="width:auto;padding:9px 20px;background:#0f172a"><i class="fas fa-camera"></i> Start Camera</button>
+                <button type="button" id="startRecBtn" onclick="startRecording()" class="btn-submit" style="width:auto;padding:9px 20px;display:none"><i class="fas fa-circle" style="color:#ef4444"></i> Start Recording</button>
+                <button type="button" id="stopRecBtn" onclick="stopRecording()" class="btn-submit" style="width:auto;padding:9px 20px;background:#ef4444;display:none"><i class="fas fa-stop"></i> Stop Recording</button>
+                <div id="recTimer" style="display:none;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#ef4444"><i class="fas fa-circle" style="font-size:8px"></i> <span id="recTime">0:00</span></div>
+              </div>
+              <div id="recordedPreviewWrap" style="display:none;margin-bottom:12px">
+                <label class="form-label">Preview Recording</label>
+                <video id="recordedPreview" controls style="width:100%;border-radius:8px;max-height:250px"></video>
+                <div style="margin-top:8px;display:flex;gap:8px">
+                  <button type="button" onclick="reRecord()" style="background:none;border:1px solid var(--border);padding:7px 14px;border-radius:7px;font-size:12px;cursor:pointer"><i class="fas fa-redo"></i> Re-record</button>
+                  <span style="font-size:12px;color:var(--green);display:flex;align-items:center;gap:5px;margin-left:auto"><i class="fas fa-check-circle"></i> Recording ready</span>
+                </div>
+              </div>
+              <input type="file" id="recordedFileInput" name="file_attachment" style="display:none">
+            </div>
+            <div id="block-youtube" style="display:none">
+              <div class="form-group">
+                <label class="form-label">YouTube Video URL</label>
+                <input type="url" name="video_url" class="form-control" placeholder="https://www.youtube.com/watch?v=...">
+                <div style="font-size:11px;color:var(--muted);margin-top:5px">Students stay on the platform — video is embedded directly.</div>
+              </div>
+            </div>
+            <div id="block-pdf" style="display:none">
+              <label class="form-label">Upload PDF</label>
+              <div class="upload-zone" onclick="document.getElementById('pdfInput').click()">
+                <i class="fas fa-file-pdf" style="color:#ef4444"></i><p>Click to browse PDF</p><span>PDF files only</span>
+                <input type="file" id="pdfInput" name="file_attachment" accept=".pdf" onchange="handleFileSelect(event)" style="display:none">
+              </div>
+            </div>
+            <div id="block-ppt" style="display:none">
+              <label class="form-label">Upload PowerPoint</label>
+              <div class="upload-zone" onclick="document.getElementById('pptInput').click()">
+                <i class="fas fa-file-powerpoint" style="color:#d97706"></i><p>Click to browse PowerPoint</p><span>PPT, PPTX · Slides auto-converted</span>
+                <input type="file" id="pptInput" name="file_attachment" accept=".ppt,.pptx" onchange="handleFileSelect(event)" style="display:none">
+              </div>
+            </div>
+            <div id="block-word" style="display:none">
+              <label class="form-label">Upload Word Document</label>
+              <div class="upload-zone" onclick="document.getElementById('wordInput').click()">
+                <i class="fas fa-file-word" style="color:#1a56db"></i><p>Click to browse Word document</p><span>DOC, DOCX files</span>
+                <input type="file" id="wordInput" name="file_attachment" accept=".doc,.docx" onchange="handleFileSelect(event)" style="display:none">
+              </div>
+            </div>
+            <div id="block-image" style="display:none">
+              <label class="form-label">Upload Image</label>
+              <div class="upload-zone" onclick="document.getElementById('imgInput').click()">
+                <i class="fas fa-image" style="color:#7c3aed"></i><p>Click to browse image</p><span>JPG, PNG, GIF, WEBP</span>
+                <input type="file" id="imgInput" name="file_attachment" accept=".jpg,.jpeg,.png,.gif,.webp" onchange="handleFileSelect(event)" style="display:none">
+              </div>
+            </div>
+            <div id="block-text" style="display:none">
+              <label class="form-label">Type Your Content</label>
+              <div id="quillEditor" style="height:280px;background:#fff;border-radius:0 0 8px 8px;font-size:14px"></div>
+              <div style="font-size:11px;color:var(--muted);margin-top:6px">Use the toolbar to add headings, bullet points, links and more.</div>
+            </div>
+            <button type="submit" class="btn-submit purple" style="margin-top:16px" id="uploadBtn">
+              <i class="fas fa-upload" style="margin-right:6px"></i> <span id="uploadBtnText">Upload Content</span>
+            </button>
+          </form>
+        </div>
+      </div>
+
+            <!-- ══ ASSESSMENTS ══ -->
+      <div id="view-testing" class="view-section">
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-title">Create Quiz</div>
+            <form method="POST" action="{% url 'lms_dashboard' %}">
+              {% csrf_token %}<input type="hidden" name="action" value="create_quiz">
+              <div class="form-group">
+                <label class="form-label">Link to Lesson</label>
+                <select name="lesson_id" class="form-control">{% for l in all_lessons %}<option value="{{ l.id }}">{{ l.title }}</option>{% endfor %}</select>
+              </div>
+              <div class="form-group"><label class="form-label">Quiz Title</label><input type="text" name="title" class="form-control" placeholder="e.g., Module 3 Final Quiz" required></div>
+              <div class="form-group"><label class="form-label">Passing Score (%)</label><input type="number" name="passing_score" value="70" class="form-control"></div>
+              <div class="form-group"><label class="form-label">Time Limit (minutes, 0 = no limit)</label><input type="number" name="time_limit" value="0" class="form-control"></div>
+              <button type="submit" class="btn-submit">Create Quiz</button>
+            </form>
+
+            <div style="margin-top:28px">
+              <div class="panel-title">Add Question</div>
+              <form method="POST" action="{% url 'lms_dashboard' %}" enctype="multipart/form-data">
+              {% csrf_token %}<input type="hidden" name="action" value="create_question">
+                <div class="form-group">
+                  <label class="form-label">Select Quiz</label>
+                  <select name="quiz_id" class="form-control">{% for q in all_quizzes %}<option value="{{ q.id }}">{{ q.title }}</option>{% endfor %}</select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Question Type</label>
+                  <select name="question_type" class="form-control" id="questionTypeSelect" onchange="switchQuestionType(this.value)">
+                    <option value="multiple_choice">Multiple Choice</option>
+                    <option value="image_choice">Image + Multiple Choice</option>
+                    <option value="drag_drop_match">Drag &amp; Drop Matching</option>
+                  </select>
+                </div>
+
+                <div class="form-group"><label class="form-label">Question Text</label><textarea name="text" class="form-control" rows="2" style="resize:vertical" required></textarea></div>
+
+                <!-- Image upload (for image_choice) -->
+                <div class="form-group qtype-section qtype-image_choice" style="display:none">
+                  <label class="form-label">Question Image</label>
+                  <input type="file" name="image" class="form-control" accept="image/*">
+                </div>
+
+                <!-- Multiple choice options (for multiple_choice & image_choice) -->
+                <div class="qtype-section qtype-multiple_choice qtype-image_choice">
+                  <div class="form-row">
+                    <div class="form-group"><label class="form-label">Option A</label><input type="text" name="option_a" class="form-control"></div>
+                    <div class="form-group"><label class="form-label">Option B</label><input type="text" name="option_b" class="form-control"></div>
+                    <div class="form-group"><label class="form-label">Option C</label><input type="text" name="option_c" class="form-control"></div>
+                    <div class="form-group"><label class="form-label">Option D</label><input type="text" name="option_d" class="form-control"></div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Correct Answer</label>
+                    <select name="correct_answer" class="form-control"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>
+                  </div>
+                </div>
+
+                <!-- Drag & drop matching pairs -->
+                <div class="qtype-section qtype-drag_drop_match" style="display:none">
+                  <label class="form-label">Matching Pairs (left side matches right side)</label>
+                  <div id="matchPairRows"></div>
+                  <button type="button" onclick="addMatchPair()" style="background:var(--blue);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;margin-top:8px">+ Add Pair</button>
+                  <input type="hidden" name="match_data_json" id="matchDataJson">
+                </div>
+
+                <button type="submit" class="btn-submit green" onclick="return prepareQuestionSubmit()">Add Question</button>
+              </form>
+            </div>
+
+            <div style="margin-top:28px;border-top:1px solid var(--border);padding-top:20px">
+              <div class="panel-title">Bulk Add Questions</div>
+              <p style="font-size:12px;color:var(--muted);margin-bottom:10px">
+                Paste multiple questions using this format (separate each question with a blank line):
+              </p>
+              <pre style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;color:var(--muted);margin-bottom:12px;overflow-x:auto">Q: What does CNA stand for?
+A) Certified Nursing Assistant
+B) Certified Nurse Aide
+C) Clinical Nursing Associate
+D) Community Nursing Aide
+CORRECT: A
+
+Q: Normal body temperature is?
+A) 96.6°F
+B) 97.6°F
+C) 98.6°F
+D) 99.6°F
+CORRECT: C</pre>
+              <form method="POST" action="{% url 'lms_dashboard' %}">
+                {% csrf_token %}<input type="hidden" name="action" value="bulk_add_questions">
+                <div class="form-group">
+                  <label class="form-label">Select Quiz</label>
+                  <select name="quiz_id" class="form-control" required>{% for q in all_quizzes %}<option value="{{ q.id }}">{{ q.title }}</option>{% endfor %}</select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Questions (paste in the format above)</label>
+                  <textarea name="bulk_text" class="form-control" rows="10" style="resize:vertical;font-family:monospace;font-size:12px" required placeholder="Q: ...
+A) ...
+B) ...
+C) ...
+D) ...
+CORRECT: A
+
+Q: ...
+A) ...
+B) ...
+C) ...
+D) ...
+CORRECT: B"></textarea>
+                </div>
+                <button type="submit" class="btn-submit green"><i class="fas fa-layer-group"></i> Bulk Add Questions</button>
+              </form>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">All Quizzes</div>
+            <table class="data-table">
+              <thead><tr><th>Lesson</th><th>Quiz</th><th>Pass Mark</th></tr></thead>
+              <tbody>
+                {% for qz in all_quizzes %}
+                <tr><td style="font-size:12px;color:var(--muted)">{{ qz.lesson.title|truncatechars:28 }}</td><td><strong>{{ qz.title }}</strong></td><td>{{ qz.passing_score }}%</td></tr>
+                {% empty %}<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:20px">No quizzes yet.</td></tr>{% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ ENROLLMENTS ══ -->
+      <div id="view-enrollments" class="view-section">
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-title">Enroll Student in Course</div>
+            <form method="POST" action="{% url 'lms_dashboard' %}">
+              {% csrf_token %}<input type="hidden" name="action" value="create_enrollment">
+              <div class="form-group"><label class="form-label">Student</label><select name="student_id" class="form-control" required>{% for profile in students_profiles %}<option value="{{ profile.user_obj.id }}">{{ profile.user_obj.username }}</option>{% endfor %}</select></div>
+              <div class="form-group"><label class="form-label">Course</label><select name="course_id" class="form-control" required>{% for cs in all_courses %}<option value="{{ cs.id }}">{{ cs.title }}</option>{% endfor %}</select></div>
+              <button type="submit" class="btn-submit">Enroll Student</button>
+            </form>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Active Enrollments</div>
+            <table class="data-table">
+              <thead><tr><th>Student</th><th>Progress</th></tr></thead>
+              <tbody>
+                {% for profile in students_profiles %}
+                <tr>
+                  <td><strong>{{ profile.user_obj.username }}</strong></td>
+                  <td>
+                    <div class="progress-row">
+                      <div class="progress-rail" style="width:90px"><div class="progress-fill" style="width:{{ profile.progress_percentage }}%"></div></div>
+                      <span class="pct">{{ profile.progress_percentage }}%</span>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}<tr><td colspan="2" style="text-align:center;color:var(--muted)">No enrollments yet.</td></tr>{% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ CERTIFICATES ══ -->
+      <div id="view-credentials" class="view-section">
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-title">Issue Certificate</div>
+            <form method="POST" action="{% url 'lms_dashboard' %}">
+              {% csrf_token %}<input type="hidden" name="action" value="issue_certificate">
+              <div class="form-group">
+                <label class="form-label">Student</label>
+                <select name="student_id" class="form-control">
+                  {% for profile in students_profiles %}<option value="{{ profile.user_obj.id }}">{{ profile.user_obj.username }} · {{ profile.progress_percentage }}% done</option>{% endfor %}
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Course</label>
+                <select name="course_id" class="form-control">{% for cs in all_courses %}<option value="{{ cs.id }}">{{ cs.title }}</option>{% endfor %}</select>
+              </div>
+              <button type="submit" class="btn-submit purple">Generate Certificate</button>
+            </form>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Issued Certificates</div>
+            <table class="data-table">
+              <thead><tr><th>Student</th><th>Course</th><th>Certificate ID</th></tr></thead>
+              <tbody>
+                {% for cert in all_certificates %}
+                <tr>
+                  <td><strong>{{ cert.student.username }}</strong></td>
+                  <td>{{ cert.course.program }}</td>
+                  <td><code style="font-size:11px;font-weight:700;color:var(--purple);background:#f5f3ff;padding:3px 7px;border-radius:5px">{{ cert.certificate_code }}</code></td>
+                </tr>
+                {% empty %}<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:20px">No certificates yet.</td></tr>{% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ ANNOUNCEMENTS ══ -->
+      <div id="view-announcements" class="view-section">
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-title">Post Announcement</div>
+            <form method="POST" action="{% url 'lms_dashboard' %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="create_announcement">
+              <div class="form-group">
+                <label class="form-label">Title</label>
+                <input type="text" name="title" class="form-control" placeholder="e.g., Schedule Change" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Message</label>
+                <textarea name="message" class="form-control" rows="4" style="resize:vertical" placeholder="Write your announcement here..." required></textarea>
+              </div>
+              <button type="submit" class="btn-submit">Post Announcement</button>
+            </form>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Active Announcements</div>
+            <table class="data-table">
+              <thead><tr><th>Title</th><th>Posted</th><th></th></tr></thead>
+              <tbody>
+                {% for ann in all_announcements %}
+                <tr>
+                  <td>
+                    <strong>{{ ann.title }}</strong>
+                    <div style="font-size:11px;color:var(--muted);margin-top:2px">{{ ann.message|truncatechars:60 }}</div>
+                  </td>
+                  <td style="font-size:12px;color:var(--muted);white-space:nowrap">{{ ann.created_at|date:"M d, Y" }}</td>
+                  <td>
+                    <form method="POST" action="{% url 'lms_dashboard' %}">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="delete_announcement">
+                      <input type="hidden" name="announcement_id" value="{{ ann.id }}">
+                      <button type="submit" class="btn-danger">Delete</button>
+                    </form>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" style="text-align:center;color:var(--muted);padding:20px">No announcements yet.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ DISCUSSIONS ══ -->
+      <div id="view-discussions" class="view-section">
+        <div class="panel">
+          <div class="panel-title">Student Discussions & Questions</div>
+          <table class="data-table">
+            <thead><tr><th>Student</th><th>Lesson</th><th>Question</th><th>Time</th></tr></thead>
+            <tbody>
+              {% for disc in all_discussions %}
+              <tr>
+                <td>
+                  <div class="user-cell">
+                    <div class="mini-avatar" style="background:var(--blue)">{{ disc.user.username|slice:":2"|upper }}</div>
+                    <div style="font-weight:600">{{ disc.user.username }}</div>
+                  </div>
+                </td>
+                <td style="font-size:12px;color:var(--muted)">{{ disc.lesson.title|truncatechars:25 }}<br><span style="font-size:10px">{{ disc.lesson.module.course.program }}</span></td>
+                <td style="font-size:13px;max-width:300px">
+                  {% if disc.parent %}<span style="font-size:10px;color:var(--muted)">↳ Reply to a question</span><br>{% endif %}
+                  {{ disc.message|truncatechars:100 }}
+                </td>
+                <td style="font-size:11px;color:var(--muted);white-space:nowrap">{{ disc.created_at|timesince }} ago</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:30px">No discussions yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ SUPPORT ══ -->
+      <div id="view-support" class="view-section">
+        <div class="panel">
+          <div class="panel-title">Open Support Tickets</div>
+          <table class="data-table">
+            <thead><tr><th>Student</th><th>Lesson</th><th>Message</th><th>Action</th></tr></thead>
+            <tbody>
+              {% for ticket in open_tickets %}
+              <tr>
+                <td><strong>{{ ticket.user.username }}</strong><br><small style="color:var(--muted)">{{ ticket.created_at|date:"M d, Y" }}</small></td>
+                <td style="font-size:12px">{{ ticket.lesson.title|truncatechars:30 }}</td>
+                <td style="font-size:12px;max-width:280px">"{{ ticket.message|truncatechars:80 }}"</td>
+                <td>
+                  <form method="POST" action="{% url 'lms_dashboard' %}">
+              {% csrf_token %}<input type="hidden" name="action" value="resolve_thread"><input type="hidden" name="thread_id" value="{{ ticket.id }}">
+                    <button type="submit" class="btn-success">Resolve</button>
+                  </form>
+                </td>
+              </tr>
+              {% empty %}<tr><td colspan="4" style="text-align:center;padding:30px;color:var(--muted)">
+                <i class="fas fa-check-double" style="display:block;font-size:24px;color:var(--green);margin-bottom:8px"></i>
+                All tickets resolved!
+              </td></tr>{% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ MANAGE COURSES ══ -->
+      <div id="view-manage_courses" class="view-section">
+        <div class="panel" style="margin-bottom:20px">
+          <div class="panel-title">All Courses</div>
+          <table class="data-table">
+            <thead><tr><th>Program</th><th>Course Title</th><th>Modules</th><th>Lessons</th><th>Actions</th></tr></thead>
+            <tbody>
+              {% for course in all_courses %}
+              <tr>
+                <td><span class="badge badge-info">{{ course.program }}</span></td>
+                <td><strong>{{ course.title }}</strong></td>
+                <td>{{ course.modules.count }}</td>
+                <td>{% with lessons=course.modules.all %}{% for m in lessons %}{% endfor %}{{ course.modules.all|length }}{% endwith %}</td>
+                <td style="display:flex;gap:8px;flex-wrap:wrap">
+                  <a href="{% url 'course_builder' %}?edit={{ course.id }}" class="btn-success" style="font-size:12px;padding:5px 10px;border-radius:6px;text-decoration:none">Edit</a>
+                  <form method="POST" onsubmit="return confirm('Delete this course and ALL its modules, lessons and content?')">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete_course">
+                    <input type="hidden" name="course_id" value="{{ course.id }}">
+                    <button type="submit" class="btn-danger">Delete</button>
+                  </form>
+                </td>
+              </tr>
+              {% for module in course.modules.all %}
+              <tr style="background:#fafafa">
+                <td style="padding-left:32px;color:var(--muted);font-size:12px" colspan="2">
+                  <i class="fas fa-layer-group" style="margin-right:6px;color:var(--muted)"></i>{{ module.title }}
+                </td>
+                <td colspan="2" style="font-size:12px;color:var(--muted)">{{ module.lessons.count }} lesson{{ module.lessons.count|pluralize }}</td>
+                <td>
+                  <form method="POST" onsubmit="return confirm('Delete this module and all its lessons?')">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete_module">
+                    <input type="hidden" name="module_id" value="{{ module.id }}">
+                    <button type="submit" class="btn-danger" style="font-size:11px;padding:4px 8px">Remove</button>
+                  </form>
+                </td>
+              </tr>
+              {% for lesson in module.lessons.all %}
+              <tr style="background:#f9fafb">
+                <td style="padding-left:56px;color:var(--muted);font-size:11px" colspan="2">
+                  <i class="fas fa-file-alt" style="margin-right:6px;color:#d1d5db"></i>{{ lesson.title }}
+                </td>
+                <td colspan="2" style="font-size:11px;color:var(--muted)">{{ lesson.contents.count }} content item{{ lesson.contents.count|pluralize }}</td>
+                <td>
+                  <form method="POST" onsubmit="return confirm('Delete this lesson?')">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete_lesson">
+                    <input type="hidden" name="lesson_id" value="{{ lesson.id }}">
+                    <button type="submit" class="btn-danger" style="font-size:11px;padding:4px 8px">Delete</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+              {% endfor %}
+              {% empty %}
+              <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:30px">No courses yet. <a href="{% url 'course_builder' %}" style="color:var(--blue);font-weight:600">Build your first course →</a></td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ CONTENT LIBRARY ══ -->
+      <div id="view-content_library" class="view-section">
+        <div class="panel">
+          <div class="panel-title">All Uploaded Content</div>
+          <table class="data-table">
+            <thead><tr><th>Type</th><th>Title</th><th>Lesson</th><th>Course</th><th>Action</th></tr></thead>
+            <tbody>
+              {% for ci in all_content_items %}
+              <tr>
+                <td>
+                  <span style="font-size:18px">
+                    {% if ci.content_type == 'video' or ci.content_type == 'record' %}🎬
+                    {% elif ci.content_type == 'youtube' %}▶️
+                    {% elif ci.content_type == 'pdf' %}📄
+                    {% elif ci.content_type == 'ppt' %}📊
+                    {% elif ci.content_type == 'word' %}📝
+                    {% elif ci.content_type == 'image' %}🖼️
+                    {% elif ci.content_type == 'text' %}✍️
+                    {% endif %}
+                  </span>
+                </td>
+                <td><strong>{{ ci.title }}</strong></td>
+                <td style="font-size:12px;color:var(--muted)">{{ ci.lesson.title|truncatechars:30 }}</td>
+                <td><span class="badge badge-info">{{ ci.lesson.module.course.program }}</span></td>
+                <td>
+                  <form method="POST" action="{% url 'lms_dashboard' %}" onsubmit="return confirm('Delete this content item?')">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete_content">
+                    <input type="hidden" name="content_id" value="{{ ci.id }}">
+                    <button type="submit" class="btn-danger">Delete</button>
+                  </form>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:30px">No content uploaded yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ SUBSCRIPTIONS ══ -->
+      <div id="view-subscriptions" class="view-section">
+        <div class="panel">
+          <div class="panel-title">Subscription Ledger</div>
+          <table class="data-table">
+            <thead><tr><th>Student</th><th>Plan</th><th>Amount</th><th>Status</th><th>Since</th></tr></thead>
+            <tbody>
+              {% for sub in all_subscriptions %}
+              <tr>
+                <td>
+                  <div class="user-cell">
+                    <div class="mini-avatar" style="background:var(--green)">{{ sub.student.username|slice:":2"|upper }}</div>
+                    <div><strong>{{ sub.student.username }}</strong><br><span style="font-size:11px;color:var(--muted)">{{ sub.student.email }}</span></div>
+                  </div>
+                </td>
+                <td><span class="badge badge-info">{{ sub.tier_name }}</span></td>
+                <td><strong style="color:var(--green)">${{ sub.amount_paid }}</strong></td>
+                <td>{% if sub.status == 'active' %}<span class="badge badge-active">Active</span>{% else %}<span class="badge badge-warn">{{ sub.status|upper }}</span>{% endif %}</td>
+                <td style="color:var(--muted);font-size:12px">{{ sub.started_at|date:"M d, Y" }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="5" style="text-align:center;padding:30px;color:var(--muted)">No subscriptions yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+function selectContentType(type, card) {
+  document.querySelectorAll('.content-type-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  const sct = document.getElementById('selectedContentType');
+  if (sct) sct.value = type;
+  ['video','record','youtube','pdf','ppt','word','image','text'].forEach(b => { const el = document.getElementById('block-' + b); if (el) el.style.display = 'none'; });
+  const target = document.getElementById('block-' + type);
+  if (target) target.style.display = 'block';
+  else console.warn('block-' + type + ' not found');
+  const btnText = {video:'Upload Video',record:'Save Recording',youtube:'Save YouTube Link',pdf:'Upload PDF',ppt:'Upload & Convert Slides',word:'Upload Document',image:'Upload Image',text:'Save Text Content'};
+  const btn = document.getElementById('uploadBtnText');
+  if (btn) btn.textContent = btnText[type] || 'Upload Content';
+  if (type === 'text' && !window.quillInstance) initQuill();
+}
+function handleFileSelect(e) { const f = e.target.files[0]; if (f) showFilePreview(f); }
+function handleDragOver(e) { e.preventDefault(); }
+function handleDrop(e) { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) { const dt = new DataTransfer(); dt.items.add(f); document.getElementById('fileInput').files = dt.files; showFilePreview(f); } }
+function showFilePreview(f) {
+  const size = f.size>1024*1024?(f.size/(1024*1024)).toFixed(1)+' MB':(f.size/1024).toFixed(0)+' KB';
+  const fn=document.getElementById('fileName'); const fs=document.getElementById('fileSize');
+  if(fn) fn.textContent=f.name; if(fs) fs.textContent='('+size+')';
+  const fp=document.getElementById('filePreview'); const uz=document.getElementById('uploadZone');
+  if(fp) fp.style.display='flex'; if(uz) uz.style.display='none';
+}
+function clearFile() { const fi=document.getElementById('fileInput'); if(fi) fi.value=''; const fp=document.getElementById('filePreview'); if(fp) fp.style.display='none'; const uz=document.getElementById('uploadZone'); if(uz) uz.style.display='block'; }
+let mediaRecorder=null,recordedChunks=[],recordStream=null,recTimerInterval=null,recSeconds=0;
+async function startCamera() {
+  try { recordStream=await navigator.mediaDevices.getUserMedia({video:true,audio:true}); document.getElementById('recordPreview').srcObject=recordStream; document.getElementById('startCamBtn').style.display='none'; document.getElementById('startRecBtn').style.display='inline-flex'; }
+  catch(e) { alert('Camera access denied.'); }
+}
+function startRecording() {
+  recordedChunks=[]; mediaRecorder=new MediaRecorder(recordStream,{mimeType:'video/webm'});
+  mediaRecorder.ondataavailable=e=>{if(e.data.size>0)recordedChunks.push(e.data);}; mediaRecorder.onstop=saveRecording; mediaRecorder.start();
+  document.getElementById('startRecBtn').style.display='none'; document.getElementById('stopRecBtn').style.display='inline-flex'; document.getElementById('recTimer').style.display='flex';
+  recSeconds=0; recTimerInterval=setInterval(()=>{recSeconds++;const m=Math.floor(recSeconds/60);const s=recSeconds%60;document.getElementById('recTime').textContent=m+':'+(s<10?'0':'')+s;},1000);
+}
+function stopRecording() { mediaRecorder.stop(); clearInterval(recTimerInterval); document.getElementById('stopRecBtn').style.display='none'; document.getElementById('recTimer').style.display='none'; }
+function saveRecording() {
+  const blob=new Blob(recordedChunks,{type:'video/webm'}); document.getElementById('recordedPreview').src=URL.createObjectURL(blob); document.getElementById('recordedPreviewWrap').style.display='block';
+  const file=new File([blob],'recorded-lesson.webm',{type:'video/webm'}); const dt=new DataTransfer(); dt.items.add(file); document.getElementById('recordedFileInput').files=dt.files; document.getElementById('recordedFileInput').name='file_attachment';
+}
+function reRecord() { document.getElementById('recordedPreviewWrap').style.display='none'; document.getElementById('startRecBtn').style.display='inline-flex'; recordedChunks=[]; }
+function initQuill() {
+  const link=document.createElement('link'); link.rel='stylesheet'; link.href='https://cdn.quilljs.com/1.3.6/quill.snow.css'; document.head.appendChild(link);
+  const script=document.createElement('script'); script.src='https://cdn.quilljs.com/1.3.6/quill.min.js';
+  script.onload=()=>{window.quillInstance=new Quill('#quillEditor',{theme:'snow',placeholder:'Type your lesson content here...',modules:{toolbar:[[{header:[1,2,3,false]}],['bold','italic','underline'],[{list:'ordered'},{list:'bullet'}],['blockquote'],['link'],['clean']]}});};
+  document.head.appendChild(script);
+}
+const uf=document.getElementById('uploadForm');
+if(uf){uf.addEventListener('submit',function(){if(window.quillInstance&&document.getElementById('selectedContentType').value==='text'){document.getElementById('textContentHidden').value=quillInstance.root.innerHTML;}});}
+
+</script>
+<script>
+// ── Tab switching ──
+const SECTION_NAMES = {
+  overview:'Platform Overview', analytics:'Student Analytics',
+  students:'Manage Students', media:'Upload Content',
+  testing:'Assessments', enrollments:'Enrollments',
+  credentials:'Certificates', support:'Support Tickets',
+  subscriptions:'Subscriptions'
+};
+function switchTab(tabId, clickedEl) {
+  document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('view-' + tabId).classList.add('active');
+  if (clickedEl) clickedEl.classList.add('active');
+  document.getElementById('topbar-section-name').textContent = SECTION_NAMES[tabId] || tabId;
+}
+
+
+
+// ── Revenue chart ──
+document.addEventListener('DOMContentLoaded', () => {
+  const ctx = document.getElementById('activityChart');
+  if (!ctx) return;
+  new Chart(ctx.getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+      datasets: [{
+        data: {{ chart_data_json|safe }},
+        borderColor: '#1a56db',
+        backgroundColor: 'rgba(26,86,219,0.05)',
+        borderWidth: 2.5, tension: 0.4, fill: true,
+        pointBackgroundColor: '#1a56db', pointRadius: 4, pointHoverRadius: 6
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#9ca3af' } },
+        y: { grid: { color: '#f3f4f6' }, ticks: { font: { size: 11 }, color: '#9ca3af' } }
+      }
+    }
+  });
+});
+function exportRevenueCSV() {
+  const rows = [['Month', 'Enrollments', 'Revenue']];
+  {% for m in revenue_data.monthly %}
+  rows.push(['{{ m.month }}', '{{ m.count }}', '{{ m.revenue|floatformat:2 }}']);
+  {% endfor %}
+  let csv = rows.map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], {type: 'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'glory_nursing_revenue_report.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ══ INTERACTIVE CONTENT BUILDER ══
+function switchBuilder(type) {
+  document.querySelectorAll('.builder-section').forEach(el => el.style.display = 'none');
+  if (type) {
+    const el = document.getElementById('builder_' + type);
+    if (el) el.style.display = 'block';
+    // Initialize with one empty row if empty
+    if (type === 'flashcards' && document.getElementById('flashcardRows').children.length === 0) addFlashcardRow();
+    if (type === 'knowledge_check' && document.getElementById('kcOptionRows').children.length === 0) {
+      addKCOption(); addKCOption();
+    }
+    if (type === 'scenario' && document.getElementById('scenarioChoiceRows').children.length === 0) {
+      addScenarioChoice(); addScenarioChoice();
+    }
+    if (type === 'drag_drop' && document.getElementById('ddLabelRows').children.length === 0) addDDLabel();
+  }
+}
+
+// Flashcards
+function addFlashcardRow() {
+  const div = document.createElement('div');
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:8px';
+  div.innerHTML = `
+    <input type="text" class="fc-front" placeholder="Front (question/term)" style="padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px">
+    <input type="text" class="fc-back" placeholder="Back (answer/definition)" style="padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px">
+    <button type="button" onclick="this.parentElement.remove()" style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:0 10px;cursor:pointer">✕</button>
+  `;
+  document.getElementById('flashcardRows').appendChild(div);
+}
+
+// Knowledge Check options
+let kcOptionCount = 0;
+function addKCOption() {
+  const idx = kcOptionCount++;
+  const div = document.createElement('div');
+  div.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;align-items:center';
+  div.innerHTML = `
+    <input type="radio" name="kc_correct" value="${idx}" ${idx === 0 ? 'checked' : ''} style="flex-shrink:0">
+    <input type="text" class="kc-option" placeholder="Answer option ${idx + 1}" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px">
+    <button type="button" onclick="this.parentElement.remove()" style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:6px 10px;cursor:pointer">✕</button>
+  `;
+  document.getElementById('kcOptionRows').appendChild(div);
+}
+
+// Scenario choices
+function addScenarioChoice() {
+  const div = document.createElement('div');
+  div.style.cssText = 'background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px';
+  div.innerHTML = `
+    <input type="text" class="sc-text" placeholder="Choice text (what the student selects)" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:6px">
+    <textarea class="sc-outcome" rows="2" placeholder="Outcome / feedback if chosen" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;resize:vertical;margin-bottom:6px"></textarea>
+    <label style="font-size:11px;display:flex;align-items:center;gap:6px"><input type="checkbox" class="sc-best"> This is the best/correct choice</label>
+    <button type="button" onclick="this.parentElement.remove()" style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;margin-top:6px">Remove Choice</button>
+  `;
+  document.getElementById('scenarioChoiceRows').appendChild(div);
+}
+
+// Drag & drop labels
+function addDDLabel() {
+  const div = document.createElement('div');
+  div.style.cssText = 'display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;margin-bottom:8px';
+  div.innerHTML = `
+    <input type="text" class="dd-text" placeholder="Label text" style="padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px">
+    <input type="number" class="dd-x" placeholder="X %" min="0" max="100" style="padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px">
+    <input type="number" class="dd-y" placeholder="Y %" min="0" max="100" style="padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px">
+    <button type="button" onclick="this.parentElement.remove()" style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:0 10px;cursor:pointer">✕</button>
+  `;
+  document.getElementById('ddLabelRows').appendChild(div);
+}
+
+// Build the data JSON before submit
+function prepareSubmit() {
+  const type = document.getElementById('elementTypeSelect').value;
+  let data = {};
+
+  if (type === 'flashcards') {
+    const cards = [];
+    document.querySelectorAll('#flashcardRows > div').forEach(row => {
+      const front = row.querySelector('.fc-front').value.trim();
+      const back = row.querySelector('.fc-back').value.trim();
+      if (front && back) cards.push({front, back});
+    });
+    if (cards.length === 0) { alert('Add at least one flashcard'); return false; }
+    data = {cards};
+
+  } else if (type === 'knowledge_check') {
+    const question = document.getElementById('kc_question').value.trim();
+    const explanation = document.getElementById('kc_explanation').value.trim();
+    const options = [];
+    document.querySelectorAll('.kc-option').forEach(inp => {
+      if (inp.value.trim()) options.push(inp.value.trim());
+    });
+    const correctRadio = document.querySelector('input[name="kc_correct"]:checked');
+    const correct = correctRadio ? parseInt(correctRadio.value) : 0;
+    if (!question || options.length < 2) { alert('Add a question and at least 2 options'); return false; }
+    data = {question, options, correct, explanation};
+
+  } else if (type === 'scenario') {
+    const situation = document.getElementById('sc_situation').value.trim();
+    const choices = [];
+    document.querySelectorAll('#scenarioChoiceRows > div').forEach(row => {
+      const text = row.querySelector('.sc-text').value.trim();
+      const outcome = row.querySelector('.sc-outcome').value.trim();
+      const is_best = row.querySelector('.sc-best').checked;
+      if (text) choices.push({text, outcome, is_best});
+    });
+    if (!situation || choices.length < 2) { alert('Add a situation and at least 2 choices'); return false; }
+    data = {situation, choices};
+
+  } else if (type === 'drag_drop') {
+    const image_url = document.getElementById('dd_image_url').value.trim();
+    const labels = [];
+    document.querySelectorAll('#ddLabelRows > div').forEach(row => {
+      const text = row.querySelector('.dd-text').value.trim();
+      const x = parseFloat(row.querySelector('.dd-x').value) || 0;
+      const y = parseFloat(row.querySelector('.dd-y').value) || 0;
+      if (text) labels.push({text, x, y});
+    });
+    if (!image_url || labels.length === 0) { alert('Add an image URL and at least one label'); return false; }
+    data = {image_url, labels};
+
+  } else {
+    alert('Please select a type');
+    return false;
+  }
+
+  document.getElementById('dataJsonField').value = JSON.stringify(data);
+  return true;
+}
+
+// Load content items when lesson is selected (for "Attach to" dropdown)
+document.addEventListener('DOMContentLoaded', () => {
+  const lessonSelect = document.getElementById('lessonSelect');
+  if (lessonSelect) {
+    lessonSelect.addEventListener('change', function() {
+      const lessonId = this.value;
+      const attachSelect = document.getElementById('attachedToSelect');
+      attachSelect.innerHTML = '<option value="">-- Show at end of lesson --</option>';
+      if (!lessonId) return;
+
+      fetch('/lms/lesson/' + lessonId + '/content-items/')
+        .then(r => r.json())
+        .then(data => {
+          data.items.forEach(item => {
+            const opt = document.createElement('option');
+            opt.value = item.id;
+            opt.textContent = item.title + ' (' + item.content_type + ')';
+            attachSelect.appendChild(opt);
+          });
+        });
+    });
+  }
+});
+
+// ══ QUESTION TYPE SWITCHER ══
+function switchQuestionType(type) {
+  document.querySelectorAll('.qtype-section').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.qtype-' + type).forEach(el => el.style.display = 'block');
+
+  if (type === 'drag_drop_match' && document.getElementById('matchPairRows').children.length === 0) {
+    addMatchPair();
+    addMatchPair();
+  }
+}
+
+function addMatchPair() {
+  const div = document.createElement('div');
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:8px';
+  div.innerHTML = `
+    <input type="text" class="match-left" placeholder="Left item (e.g. term)" style="padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px">
+    <input type="text" class="match-right" placeholder="Right item (e.g. definition)" style="padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px">
+    <button type="button" onclick="this.parentElement.remove()" style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:0 10px;cursor:pointer">✕</button>
+  `;
+  document.getElementById('matchPairRows').appendChild(div);
+}
+
+function prepareQuestionSubmit() {
+  const type = document.getElementById('questionTypeSelect').value;
+
+  if (type === 'drag_drop_match') {
+    const pairs = [];
+    document.querySelectorAll('#matchPairRows > div').forEach(row => {
+      const left = row.querySelector('.match-left').value.trim();
+      const right = row.querySelector('.match-right').value.trim();
+      if (left && right) pairs.push({left, right});
+    });
+    if (pairs.length < 2) { alert('Add at least 2 matching pairs'); return false; }
+    document.getElementById('matchDataJson').value = JSON.stringify({pairs});
+  }
+
+  if (type === 'multiple_choice' || type === 'image_choice') {
+    const a = document.querySelector('input[name="option_a"]').value.trim();
+    const b = document.querySelector('input[name="option_b"]').value.trim();
+    const c = document.querySelector('input[name="option_c"]').value.trim();
+    const d = document.querySelector('input[name="option_d"]').value.trim();
+    if (!a || !b || !c || !d) { alert('Fill in all 4 options'); return false; }
+  }
+
+  return true;
+}
+
+function toggleSidebar() {
+  const s = document.querySelector('.sidebar');
+  const o = document.getElementById('sidebarOverlay');
+  s.classList.toggle('open'); o.classList.toggle('open');
+}
+function closeSidebar() {
+  document.querySelector('.sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
+</script>
+{% endblock %}

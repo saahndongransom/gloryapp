@@ -53,5 +53,36 @@
       </div>
     </div>
   </div>
+
+  <!-- ══ STUDENT REVIEWS ══ -->
+  {% if reviews %}
+  <div class="container" style="margin-top:40px">
+    <h2 style="margin-bottom:8px">What Our Students Say</h2>
+    {% if avg_rating %}
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px">
+      <span style="font-size:28px;font-weight:800;color:#1a1a1a">{{ avg_rating|floatformat:1 }}</span>
+      <div style="color:#f59e0b;font-size:22px">
+        {% for i in "12345" %}{% if forloop.counter <= avg_rating %}★{% else %}☆{% endif %}{% endfor %}
+      </div>
+      <span style="color:var(--text-light);font-size:13px">({{ review_count }} review{{ review_count|pluralize }})</span>
+    </div>
+    {% endif %}
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
+      {% for review in reviews %}
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px">
+        <div style="color:#f59e0b;font-size:16px;margin-bottom:8px">
+          {% for i in "12345" %}{% if forloop.counter <= review.rating %}★{% else %}☆{% endif %}{% endfor %}
+        </div>
+        {% if review.comment %}
+        <p style="font-size:13px;color:#374151;margin-bottom:10px;line-height:1.5">"{{ review.comment }}"</p>
+        {% endif %}
+        <div style="font-size:12px;color:#9ca3af;font-weight:600">— {{ review.student.first_name|default:review.student.username }}, {{ review.course.title }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
 </section>
 {% endblock %}

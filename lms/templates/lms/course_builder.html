@@ -1,0 +1,531 @@
+{% extends 'lms/lms_base.html' %}
+{% load static %}
+
+{% block title %}Course Builder | GloryLMS{% endblock %}
+
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --blue:     #1a56db;
+  --blue-lt:  #e8f0fe;
+  --green:    #059669;
+  --green-lt: #d1fae5;
+  --amber:    #d97706;
+  --red:      #dc2626;
+  --surface:  #ffffff;
+  --bg:       #f9fafb;
+  --border:   rgba(0,0,0,0.08);
+  --text:     #111827;
+  --muted:    #6b7280;
+  --radius:   10px;
+}
+
+html, body { height: 100%; }
+body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); }
+
+/* ── Page layout ── */
+.page { display: flex; flex-direction: column; min-height: 100vh; }
+
+.topbar {
+  background: #fff; border-bottom: 1px solid var(--border);
+  height: 60px; padding: 0 28px;
+  display: flex; align-items: center; gap: 16px;
+  position: sticky; top: 0; z-index: 50;
+}
+.topbar-back { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: var(--muted); text-decoration: none; }
+.topbar-back:hover { color: var(--blue); }
+.topbar-divider { width: 1px; height: 18px; background: var(--border); }
+.topbar-title { font-size: 15px; font-weight: 700; }
+.topbar-actions { margin-left: auto; display: flex; gap: 10px; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: all .15s; }
+.btn-primary { background: var(--blue); color: #fff; }
+.btn-primary:hover { background: #1344b5; }
+.btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+.btn-ghost:hover { background: var(--bg); color: var(--text); }
+
+.content { display: grid; grid-template-columns: 1fr 340px; gap: 24px; padding: 28px; flex: 1; align-items: start; }
+
+/* ── Course card (left) ── */
+.builder-main { display: flex; flex-direction: column; gap: 0; }
+
+.course-header-card {
+  background: #fff; border: 1px solid var(--border);
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 24px; border-bottom: none;
+}
+.course-header-card h2 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 12px; }
+.course-name-input {
+  width: 100%; font-size: 22px; font-weight: 800; color: var(--text);
+  border: none; outline: none; background: transparent;
+  font-family: inherit; padding: 0;
+}
+.course-name-input::placeholder { color: #d1d5db; }
+.course-meta-row { display: flex; gap: 12px; margin-top: 12px; }
+.meta-input {
+  flex: 1; padding: 8px 12px; border: 1px solid var(--border);
+  border-radius: 8px; font-size: 13px; color: var(--text);
+  outline: none; font-family: inherit; background: var(--bg);
+}
+.meta-input:focus { border-color: var(--blue); background: #fff; box-shadow: 0 0 0 3px rgba(26,86,219,.08); }
+
+/* ── Module tree ── */
+.module-tree {
+  background: #fff; border: 1px solid var(--border);
+  border-radius: 0 0 var(--radius) var(--radius);
+  overflow: hidden;
+}
+
+.module-block { border-top: 1px solid var(--border); }
+
+.module-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 20px;
+  background: #fafafa;
+  cursor: pointer;
+  user-select: none;
+}
+.module-row:hover { background: #f3f4f6; }
+.drag-handle { color: #d1d5db; cursor: grab; font-size: 14px; flex-shrink: 0; }
+.drag-handle:active { cursor: grabbing; }
+.module-toggle { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 11px; transition: transform .2s; flex-shrink: 0; }
+.module-toggle.open { transform: rotate(90deg); }
+.module-number { font-size: 11px; font-weight: 700; color: var(--muted); width: 20px; flex-shrink: 0; }
+.module-name-input {
+  flex: 1; font-size: 14px; font-weight: 600; color: var(--text);
+  border: none; outline: none; background: transparent; font-family: inherit;
+}
+.module-name-input:focus { background: #fff; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--blue); }
+.module-actions { display: flex; gap: 4px; opacity: 0; transition: opacity .15s; }
+.module-row:hover .module-actions { opacity: 1; }
+.icon-btn { width: 28px; height: 28px; border-radius: 6px; border: none; background: transparent; color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+.icon-btn:hover { background: #e5e7eb; color: var(--text); }
+.icon-btn.danger:hover { background: #fee2e2; color: var(--red); }
+.lesson-count { font-size: 11px; color: var(--muted); font-weight: 500; flex-shrink: 0; }
+
+/* ── Lessons ── */
+.lessons-list { padding: 8px 0 8px 52px; }
+.lesson-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 20px 9px 0;
+  border-radius: 8px;
+  margin: 2px 12px;
+}
+.lesson-row:hover { background: var(--bg); }
+.lesson-icon { width: 28px; height: 28px; border-radius: 7px; background: var(--blue-lt); display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--blue); flex-shrink: 0; }
+.lesson-name-input {
+  flex: 1; font-size: 13px; color: var(--text);
+  border: none; outline: none; background: transparent; font-family: inherit;
+}
+.lesson-name-input:focus { background: #fff; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--blue); }
+.lesson-actions { display: flex; gap: 4px; opacity: 0; transition: opacity .15s; }
+.lesson-row:hover .lesson-actions { opacity: 1; }
+
+/* ── Add buttons ── */
+.add-lesson-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 20px 8px 52px;
+  font-size: 13px; font-weight: 500; color: var(--blue);
+  cursor: pointer; border: none; background: transparent;
+  font-family: inherit; width: 100%; text-align: left;
+  transition: background .15s;
+}
+.add-lesson-btn:hover { background: var(--blue-lt); }
+.add-lesson-btn i { font-size: 11px; }
+
+.add-module-btn {
+  display: flex; align-items: center; gap: 10px;
+  padding: 16px 20px;
+  font-size: 13px; font-weight: 600; color: var(--blue);
+  cursor: pointer; border: none; background: transparent;
+  font-family: inherit; width: 100%; text-align: left;
+  border-top: 1px dashed rgba(26,86,219,.25);
+  transition: background .15s;
+}
+.add-module-btn:hover { background: var(--blue-lt); }
+
+/* ── Right sidebar ── */
+.sidebar-panel { display: flex; flex-direction: column; gap: 16px; }
+
+.info-card {
+  background: #fff; border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px;
+}
+.info-card h3 { font-size: 13px; font-weight: 700; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.info-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
+.info-row:last-child { border-bottom: none; }
+.info-row .label { color: var(--muted); }
+.info-row .value { font-weight: 600; }
+
+.tip-card {
+  background: var(--blue-lt); border: 1px solid rgba(26,86,219,.15);
+  border-radius: var(--radius); padding: 16px;
+}
+.tip-card h4 { font-size: 12px; font-weight: 700; color: var(--blue); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.tip-card ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.tip-card ul li { font-size: 12px; color: #1e40af; display: flex; align-items: flex-start; gap: 7px; line-height: 1.5; }
+.tip-card ul li::before { content: '→'; flex-shrink: 0; font-weight: 700; margin-top: 1px; }
+
+.enroll-card {
+  background: #0f172a; border-radius: var(--radius); padding: 20px;
+}
+.enroll-card h3 { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+.enroll-card p { font-size: 12px; color: #94a3b8; margin-bottom: 14px; line-height: 1.5; }
+.enroll-select { width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,.15); background: rgba(255,255,255,.08); color: #fff; font-size: 13px; font-family: inherit; outline: none; margin-bottom: 10px; }
+.enroll-select option { background: #1e293b; }
+.btn-enroll { width: 100%; background: var(--blue); color: #fff; border: none; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.btn-enroll:hover { background: #1344b5; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed; bottom: 24px; right: 24px;
+  background: #111827; color: #fff;
+  padding: 12px 20px; border-radius: 10px;
+  font-size: 13px; font-weight: 500;
+  display: flex; align-items: center; gap: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.2);
+  transform: translateY(80px); opacity: 0;
+  transition: all .3s cubic-bezier(.34,1.56,.64,1);
+  z-index: 999;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast i { color: #34d399; }
+
+/* ── Empty state ── */
+.empty-tree {
+  padding: 48px 24px; text-align: center;
+  color: var(--muted); font-size: 13px;
+}
+.empty-tree i { font-size: 32px; color: #e5e7eb; display: block; margin-bottom: 12px; }
+
+@media (max-width: 900px) {
+  .content { grid-template-columns: 1fr; }
+  .sidebar-panel { display: grid; grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 600px) {
+  .sidebar-panel { grid-template-columns: 1fr; }
+  .content { padding: 16px; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <a href="{% url 'lms_dashboard' %}" class="topbar-back">
+      <i class="fas fa-arrow-left"></i> Admin Dashboard
+    </a>
+    <div class="topbar-divider"></div>
+    <div class="topbar-title">Course Builder</div>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost" onclick="saveCourse()">
+        <i class="fas fa-save"></i> Save Draft
+      </button>
+      <button class="btn btn-primary" onclick="publishCourse()">
+        <i class="fas fa-rocket"></i> Save & Publish
+      </button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- Left: Builder -->
+    <div class="builder-main">
+
+      <!-- Course details -->
+      <div class="course-header-card">
+        <h2>Course Details</h2>
+        <form method="POST" id="courseForm">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="create_course">
+          <input
+            type="text"
+            name="title"
+            id="courseTitle"
+            class="course-name-input"
+            placeholder="Course title e.g. Certified Nursing Assistant"
+            required
+          >
+          <div class="course-meta-row">
+            <input type="text" name="program" id="courseProgram" class="meta-input" placeholder="Program code e.g. CNA" style="max-width:160px" required>
+            <input type="text" class="meta-input" placeholder="Description (optional)" id="courseDesc">
+          </div>
+        </form>
+      </div>
+
+      <!-- Module tree -->
+      <div class="module-tree" id="moduleTree">
+        <div class="empty-tree" id="emptyState">
+          <i class="fas fa-layer-group"></i>
+          Add your first module below to start building the course structure
+        </div>
+
+        <div id="modulesContainer"></div>
+
+        <button class="add-module-btn" onclick="addModule()">
+          <i class="fas fa-plus-circle"></i> Add Module
+        </button>
+      </div>
+    </div>
+
+    <!-- Right: Info + actions -->
+    <div class="sidebar-panel">
+
+      <!-- Stats -->
+      <div class="info-card">
+        <h3>Course Summary</h3>
+        <div class="info-row"><span class="label">Modules</span><span class="value" id="moduleCount">0</span></div>
+        <div class="info-row"><span class="label">Lessons</span><span class="value" id="lessonCount">0</span></div>
+        <div class="info-row"><span class="label">Program</span><span class="value" id="programDisplay">—</span></div>
+        <div class="info-row"><span class="label">Status</span><span class="value" style="color:var(--amber)">Draft</span></div>
+      </div>
+
+      <!-- Enroll a student -->
+      <div class="enroll-card">
+        <h3>Enroll a Student</h3>
+        <p>After saving the course, enroll students directly from here.</p>
+        <form method="POST">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="create_enrollment">
+          <input type="hidden" name="course_id" id="enrollCourseId" value="">
+          <select name="student_id" class="enroll-select">
+            <option value="">Select student…</option>
+            {% for profile in students_profiles %}
+              <option value="{{ profile.user_obj.id }}">{{ profile.user_obj.username }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn-enroll"><i class="fas fa-user-plus"></i> Enroll Student</button>
+        </form>
+      </div>
+
+      <!-- Tips -->
+      <div class="tip-card">
+        <h4><i class="fas fa-lightbulb"></i> How to build a course</h4>
+        <ul>
+          <li>Fill in the course title and program code above</li>
+          <li>Click "Add Module" to create a section</li>
+          <li>Click "Add Lesson" inside a module to add content</li>
+          <li>Click any name to edit it in place</li>
+          <li>Hit "Save & Publish" when ready</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast">
+  <i class="fas fa-check-circle"></i>
+  <span id="toastMsg">Saved successfully</span>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ── State ──────────────────────────────────────
+let modules = [];
+let moduleCounter = 0;
+let lessonCounter = 0;
+
+// ── Toast ──────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── Update summary ─────────────────────────────
+function updateSummary() {
+  const totalLessons = modules.reduce((sum, m) => sum + m.lessons.length, 0);
+  document.getElementById('moduleCount').textContent = modules.length;
+  document.getElementById('lessonCount').textContent = totalLessons;
+  const prog = document.getElementById('courseProgram').value.toUpperCase();
+  document.getElementById('programDisplay').textContent = prog || '—';
+
+  // hide/show empty state
+  document.getElementById('emptyState').style.display = modules.length ? 'none' : 'block';
+}
+
+// ── Add module ─────────────────────────────────
+function addModule() {
+  moduleCounter++;
+  const id = 'mod_' + moduleCounter;
+  modules.push({ id, title: '', lessons: [], open: true });
+  renderModules();
+  // focus the new module input
+  setTimeout(() => {
+    const inp = document.getElementById('minput_' + id);
+    if (inp) inp.focus();
+  }, 50);
+}
+
+// ── Add lesson ─────────────────────────────────
+function addLesson(moduleId) {
+  lessonCounter++;
+  const lid = 'les_' + lessonCounter;
+  const mod = modules.find(m => m.id === moduleId);
+  if (mod) {
+    mod.lessons.push({ id: lid, title: '' });
+    renderModules();
+    setTimeout(() => {
+      const inp = document.getElementById('linput_' + lid);
+      if (inp) inp.focus();
+    }, 50);
+  }
+}
+
+// ── Delete module ──────────────────────────────
+function deleteModule(moduleId) {
+  if (modules.find(m => m.id === moduleId)?.lessons.length > 0) {
+    if (!confirm('Delete this module and all its lessons?')) return;
+  }
+  modules = modules.filter(m => m.id !== moduleId);
+  renderModules();
+}
+
+// ── Delete lesson ──────────────────────────────
+function deleteLesson(moduleId, lessonId) {
+  const mod = modules.find(m => m.id === moduleId);
+  if (mod) mod.lessons = mod.lessons.filter(l => l.id !== lessonId);
+  renderModules();
+}
+
+// ── Toggle module open/close ───────────────────
+function toggleModule(moduleId) {
+  const mod = modules.find(m => m.id === moduleId);
+  if (mod) { mod.open = !mod.open; renderModules(); }
+}
+
+// ── Sync input values back to state ───────────
+function syncModuleTitle(moduleId, value) {
+  const mod = modules.find(m => m.id === moduleId);
+  if (mod) mod.title = value;
+  updateSummary();
+}
+function syncLessonTitle(moduleId, lessonId, value) {
+  const mod = modules.find(m => m.id === moduleId);
+  if (mod) {
+    const les = mod.lessons.find(l => l.id === lessonId);
+    if (les) les.title = value;
+  }
+}
+
+// ── Render ─────────────────────────────────────
+function renderModules() {
+  const container = document.getElementById('modulesContainer');
+  container.innerHTML = modules.map((mod, mi) => `
+    <div class="module-block" id="${mod.id}">
+      <div class="module-row" onclick="toggleModule('${mod.id}')">
+        <span class="drag-handle"><i class="fas fa-grip-vertical"></i></span>
+        <span class="module-toggle ${mod.open ? 'open' : ''}"><i class="fas fa-chevron-right"></i></span>
+        <span class="module-number">${mi + 1}</span>
+        <input
+          id="minput_${mod.id}"
+          class="module-name-input"
+          type="text"
+          placeholder="Module title e.g. Patient Care Basics"
+          value="${mod.title}"
+          onclick="event.stopPropagation()"
+          oninput="syncModuleTitle('${mod.id}', this.value)"
+        >
+        <span class="lesson-count">${mod.lessons.length} lesson${mod.lessons.length !== 1 ? 's' : ''}</span>
+        <div class="module-actions" onclick="event.stopPropagation()">
+          <button class="icon-btn danger" title="Delete module" onclick="deleteModule('${mod.id}')">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+
+      ${mod.open ? `
+        <div class="lessons-list">
+          ${mod.lessons.map(les => `
+            <div class="lesson-row" id="${les.id}">
+              <div class="lesson-icon"><i class="fas fa-file-alt"></i></div>
+              <input
+                id="linput_${les.id}"
+                class="lesson-name-input"
+                type="text"
+                placeholder="Lesson title e.g. Handwashing Protocols"
+                value="${les.title}"
+                oninput="syncLessonTitle('${mod.id}', '${les.id}', this.value)"
+              >
+              <div class="lesson-actions">
+                <button class="icon-btn danger" title="Delete lesson" onclick="deleteLesson('${mod.id}', '${les.id}')">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        <button class="add-lesson-btn" onclick="addLesson('${mod.id}')">
+          <i class="fas fa-plus"></i> Add lesson
+        </button>
+      ` : ''}
+    </div>
+  `).join('');
+
+  updateSummary();
+}
+
+// ── Save / Publish ─────────────────────────────
+function saveCourse(publish = false) {
+  const title = document.getElementById('courseTitle').value.trim();
+  const program = document.getElementById('courseProgram').value.trim();
+
+  if (!title) { alert('Please enter a course title.'); document.getElementById('courseTitle').focus(); return; }
+  if (!program) { alert('Please enter a program code.'); document.getElementById('courseProgram').focus(); return; }
+  if (modules.length === 0) { alert('Please add at least one module.'); return; }
+
+  // Validate all modules have titles
+  for (const mod of modules) {
+    if (!mod.title.trim()) { alert('Please give all modules a title.'); document.getElementById('minput_' + mod.id).focus(); return; }
+    for (const les of mod.lessons) {
+      if (!les.title.trim()) { alert('Please give all lessons a title.'); document.getElementById('linput_' + les.id).focus(); return; }
+    }
+  }
+
+  // Build form data and POST
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = '{% url "lms_dashboard" %}';
+  form.style.display = 'none';
+
+  const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+  const fields = {
+    csrfmiddlewaretoken: csrfToken,
+    action: 'create_full_course',
+    title: title,
+    program: program,
+    structure: JSON.stringify(modules.map(m => ({
+      title: m.title,
+      lessons: m.lessons.map(l => ({ title: l.title }))
+    })))
+  };
+
+  Object.entries(fields).forEach(([k, v]) => {
+    const inp = document.createElement('input');
+    inp.type = 'hidden'; inp.name = k; inp.value = v;
+    form.appendChild(inp);
+  });
+
+  document.body.appendChild(form);
+  form.submit();
+}
+
+function publishCourse() { saveCourse(true); }
+
+// ── Sync program code to summary live ─────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('courseProgram').addEventListener('input', updateSummary);
+  updateSummary();
+});
+</script>
+{% endblock %}

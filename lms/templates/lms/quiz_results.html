@@ -1,0 +1,256 @@
+{% extends 'lms/lms_base.html' %}
+{% load static %}
+
+{% block title %}Quiz Results | GloryLMS{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --blue: #1a56db; --green: #059669; --red: #dc2626;
+  --amber: #d97706; --surface: #fff; --bg: #f9fafb;
+  --border: rgba(0,0,0,0.08); --text: #111827; --muted: #6b7280;
+}
+body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); }
+.page { max-width: 800px; margin: 0 auto; padding: 40px 24px; }
+
+/* Score card */
+.score-card {
+  background: var(--surface); border-radius: 16px;
+  padding: 40px; text-align: center; margin-bottom: 28px;
+  border: 1px solid var(--border);
+  position: relative; overflow: hidden;
+}
+.score-card.passed { border-top: 5px solid var(--green); }
+.score-card.failed { border-top: 5px solid var(--red); }
+.score-icon { font-size: 56px; margin-bottom: 16px; }
+.score-title { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+.score-subtitle { font-size: 15px; color: var(--muted); margin-bottom: 28px; }
+.score-big { font-size: 72px; font-weight: 900; line-height: 1; margin-bottom: 8px; }
+.score-big.pass { color: var(--green); }
+.score-big.fail { color: var(--red); }
+.score-meta { display: flex; justify-content: center; gap: 32px; margin-top: 24px; }
+.score-meta-item { text-align: center; }
+.score-meta-item .val { font-size: 22px; font-weight: 800; }
+.score-meta-item .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-top: 2px; }
+
+/* Actions */
+.actions { display: flex; gap: 12px; justify-content: center; margin-bottom: 36px; flex-wrap: wrap; }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 24px; border-radius: 9px; font-size: 14px; font-weight: 700; cursor: pointer; border: none; text-decoration: none; font-family: inherit; }
+.btn-primary { background: var(--blue); color: #fff; }
+.btn-primary:hover { background: #1344b5; }
+.btn-outline { background: #fff; color: var(--text); border: 1px solid var(--border); }
+.btn-outline:hover { border-color: var(--blue); color: var(--blue); }
+.btn-green { background: var(--green); color: #fff; }
+
+/* Review */
+.review-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+.question-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+.question-card.correct { border-left: 4px solid var(--green); }
+.question-card.wrong { border-left: 4px solid var(--red); }
+.q-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+.q-badge { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0; margin-top: 2px; }
+.q-badge.correct { background: var(--green); }
+.q-badge.wrong { background: var(--red); }
+.q-text { font-size: 14px; font-weight: 600; line-height: 1.5; }
+.options { display: flex; flex-direction: column; gap: 8px; }
+.option { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-radius: 8px; font-size: 13px; background: #f9fafb; border: 1px solid #e5e7eb; }
+.option.correct-ans { background: #d1fae5; border-color: var(--green); font-weight: 600; color: #065f46; }
+.option.wrong-ans { background: #fee2e2; border-color: var(--red); color: #991b1b; }
+.option-letter { width: 22px; height: 22px; border-radius: 50%; background: #e5e7eb; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+.option.correct-ans .option-letter { background: var(--green); color: #fff; }
+.option.wrong-ans .option-letter { background: var(--red); color: #fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if attempt.passed %}
+<canvas id="confettiCanvas" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999"></canvas>
+{% endif %}
+<div class="page">
+
+  <!-- Score card -->
+  <div class="score-card {% if attempt.passed %}passed{% else %}failed{% endif %}">
+    <div class="score-icon">{% if attempt.passed %}🎉{% else %}📚{% endif %}</div>
+    <div class="score-title">{{ quiz.title }}</div>
+    <div class="score-subtitle">
+      {% if attempt.passed %}Congratulations! You passed this assessment.{% else %}Keep studying — you can retake this quiz.{% endif %}
+    </div>
+    <div class="score-big {% if attempt.passed %}pass{% else %}fail{% endif %}">{{ attempt.score }}%</div>
+    <div style="font-size:13px;color:var(--muted)">Passing score: {{ quiz.passing_score }}%</div>
+    <div class="score-meta">
+      {% if results_data %}
+      <div class="score-meta-item">
+        <div class="val" style="color:var(--green)">{{ results_data.correct }}</div>
+        <div class="lbl">Correct</div>
+      </div>
+      <div class="score-meta-item">
+        <div class="val" style="color:var(--red)">{{ results_data.total|add:"-"|add:results_data.correct }}</div>
+        <div class="lbl">Incorrect</div>
+      </div>
+      <div class="score-meta-item">
+        <div class="val">{{ results_data.total }}</div>
+        <div class="lbl">Total</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="actions">
+    <a href="{% url 'lesson_view' lesson.id %}" class="btn btn-outline">
+      <i class="fas fa-arrow-left"></i> Back to Lesson
+    </a>
+    {% if attempt.passed %}
+      <a href="{% url 'course_classroom' lesson.module.course.id %}" class="btn btn-green">
+        <i class="fas fa-th-large"></i> Continue Course
+      </a>
+    {% else %}
+      <a href="{% url 'quiz_view' quiz.id %}" class="btn btn-primary">
+        <i class="fas fa-redo"></i> Retake Quiz
+      </a>
+    {% endif %}
+  </div>
+
+  <!-- Answer review -->
+  {% if results_data %}
+  <div class="review-title">Answer Review</div>
+  {% for r in results_data.results %}
+  <div class="question-card {% if r.correct %}correct{% else %}wrong{% endif %}">
+    <div class="q-header">
+      <div class="q-badge {% if r.correct %}correct{% else %}wrong{% endif %}">
+        {% if r.correct %}<i class="fas fa-check"></i>{% else %}<i class="fas fa-times"></i>{% endif %}
+      </div>
+      <div class="q-text">{{ forloop.counter }}. {{ r.text }}</div>
+    </div>
+    <div class="options">
+      {% for opt in 'ABCD' %}
+        {% with opt_key="option_"|add:opt|lower %}
+        <div class="option
+          {% if opt == r.correct_answer %}correct-ans{% endif %}
+          {% if opt == r.selected and not r.correct %}wrong-ans{% endif %}">
+          <div class="option-letter">{{ opt }}</div>
+          {% if opt == 'A' %}{{ r.option_a }}
+          {% elif opt == 'B' %}{{ r.option_b }}
+          {% elif opt == 'C' %}{{ r.option_c }}
+          {% elif opt == 'D' %}{{ r.option_d }}{% endif %}
+          {% if opt == r.correct_answer %}<i class="fas fa-check" style="margin-left:auto;color:var(--green)"></i>{% endif %}
+          {% if opt == r.selected and not r.correct %}<i class="fas fa-times" style="margin-left:auto;color:var(--red)"></i>{% endif %}
+        </div>
+        {% endwith %}
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+</div>
+
+{% if attempt.passed %}
+<script>
+// ── Confetti / celebration animation ──────────────────────────
+(function() {
+  const canvas = document.getElementById('confettiCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const colors = ['#1a56db', '#059669', '#f59e0b', '#dc2626', '#7c3aed', '#ec4899'];
+  const shapes = ['circle', 'square', 'star'];
+  const particles = [];
+
+  function createParticle() {
+    return {
+      x: Math.random() * canvas.width,
+      y: -20 - Math.random() * 100,
+      size: Math.random() * 8 + 4,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      shape: shapes[Math.floor(Math.random() * shapes.length)],
+      speedY: Math.random() * 3 + 2,
+      speedX: (Math.random() - 0.5) * 2,
+      rotation: Math.random() * 360,
+      rotationSpeed: (Math.random() - 0.5) * 10,
+      opacity: 1,
+    };
+  }
+
+  for (let i = 0; i < 150; i++) {
+    const p = createParticle();
+    p.y = Math.random() * canvas.height - canvas.height;
+    particles.push(p);
+  }
+
+  function drawStar(ctx, x, y, size) {
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
+      const px = x + size * Math.cos(angle);
+      const py = y + size * Math.sin(angle);
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  let frame = 0;
+  const maxFrames = 240; // ~4 seconds at 60fps
+
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    frame++;
+
+    particles.forEach(p => {
+      p.y += p.speedY;
+      p.x += p.speedX;
+      p.rotation += p.rotationSpeed;
+
+      if (frame > maxFrames - 60) {
+        p.opacity -= 1 / 60;
+      }
+
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate((p.rotation * Math.PI) / 180);
+      ctx.globalAlpha = Math.max(0, p.opacity);
+      ctx.fillStyle = p.color;
+
+      if (p.shape === 'circle') {
+        ctx.beginPath();
+        ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (p.shape === 'square') {
+        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+      } else if (p.shape === 'star') {
+        drawStar(ctx, 0, 0, p.size / 1.5);
+      }
+
+      ctx.restore();
+
+      if (p.y > canvas.height + 20) {
+        Object.assign(p, createParticle());
+        p.y = -20;
+      }
+    });
+
+    if (frame < maxFrames) {
+      requestAnimationFrame(animate);
+    } else {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      canvas.style.display = 'none';
+    }
+  }
+
+  animate();
+
+  window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  });
+})();
+</script>
+{% endif %}
+
+{% endblock %}

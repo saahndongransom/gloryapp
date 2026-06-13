@@ -1,0 +1,489 @@
+{% extends 'lms/lms_base.html' %}
+{% load static %}
+
+{% block title %}My Dashboard | GloryLMS{% endblock %}
+
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --blue:      #1a56db;
+  --blue-lt:   #e8f0fe;
+  --green:     #059669;
+  --green-lt:  #d1fae5;
+  --amber:     #d97706;
+  --amber-lt:  #fef3c7;
+  --purple:    #7c3aed;
+  --purple-lt: #f3e8ff;
+  --red:       #dc2626;
+  --surface:   #ffffff;
+  --bg:        #f9fafb;
+  --border:    rgba(0,0,0,0.08);
+  --text:      #111827;
+  --muted:     #6b7280;
+  --radius:    10px;
+  --radius-lg: 14px;
+}
+
+html, body { height: 100%; }
+body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; }
+
+/* ── Shell ── */
+.app-shell { display: flex; width: 100%; min-height: 100vh; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 256px;
+  flex-shrink: 0;
+  background: #0f172a;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+.sidebar-brand { padding: 18px 18px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; gap: 10px; }
+.brand-logo { width: 32px; height: 32px; background: var(--blue); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.brand-logo i { color: #fff; font-size: 14px; }
+.brand-name { font-size: 15px; font-weight: 700; color: #fff; letter-spacing: -0.3px; }
+.brand-pill { margin-left: auto; font-size: 10px; font-weight: 600; background: rgba(255,255,255,0.08); color: #94a3b8; padding: 3px 8px; border-radius: 20px; }
+
+.nav-label { padding: 18px 18px 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #475569; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; margin: 2px 8px; border-radius: 8px; font-size: 13.5px; font-weight: 500; color: #94a3b8; text-decoration: none; transition: background .15s, color .15s; cursor: pointer; }
+.nav-item i { width: 18px; text-align: center; flex-shrink: 0; }
+.nav-item:hover { background: rgba(255,255,255,0.06); color: #f1f5f9; }
+.nav-item.active { background: rgba(26,86,219,0.22); color: #93c5fd; }
+.badge-count { margin-left: auto; background: var(--red); color: #fff; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; min-width: 18px; text-align: center; }
+
+.sidebar-footer { margin-top: auto; padding: 16px; border-top: 1px solid rgba(255,255,255,0.06); }
+.user-row { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px; }
+.user-avatar { width: 34px; height: 34px; border-radius: 50%; background: #1e3a5f; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #93c5fd; flex-shrink: 0; }
+.user-name { font-size: 13px; font-weight: 600; color: #f1f5f9; }
+.user-role { font-size: 11px; color: #64748b; }
+
+/* ── Main ── */
+.main-area { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 100vh; }
+
+.topbar { background: #fff; border-bottom: 1px solid var(--border); height: 60px; padding: 0 28px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 50; flex-shrink: 0; }
+.topbar-greeting { display: flex; flex-direction: column; }
+.topbar-greeting .title { font-size: 15px; font-weight: 700; }
+.topbar-greeting .subtitle { font-size: 12px; color: var(--muted); }
+
+.search-wrap { margin-left: auto; display: flex; align-items: center; gap: 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px; width: 220px; }
+.search-wrap i { color: var(--muted); font-size: 13px; }
+.search-wrap input { border: none; background: transparent; outline: none; font-size: 13px; color: var(--text); width: 100%; }
+.search-wrap input::placeholder { color: #9ca3af; }
+
+.topbar-icon-btn { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border); background: #fff; display: flex; align-items: center; justify-content: center; color: var(--muted); cursor: pointer; position: relative; }
+.notif-dot { position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; background: var(--red); border-radius: 50%; border: 1.5px solid #fff; }
+
+/* ── Content ── */
+.page-content { padding: 28px; flex: 1; }
+
+/* ── Stats ── */
+.stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 28px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; position: relative; overflow: hidden; }
+.stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--accent-color, var(--blue)); }
+.stat-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 8px; }
+.stat-value { font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -1.2px; line-height: 1; }
+.stat-value .unit { font-size: 16px; font-weight: 500; color: var(--muted); }
+.stat-delta { font-size: 12px; font-weight: 500; margin-top: 6px; }
+.delta-up { color: var(--green); }
+.delta-warn { color: var(--amber); }
+
+/* ── Section ── */
+.section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.section-title { font-size: 15px; font-weight: 700; }
+.section-link { font-size: 12px; font-weight: 500; color: var(--blue); text-decoration: none; }
+
+/* ── Courses ── */
+.courses-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-bottom: 28px; }
+.course-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; display: flex; flex-direction: column; transition: border-color .2s, box-shadow .2s; text-decoration: none; color: inherit; }
+.course-card:hover { border-color: rgba(26,86,219,.25); box-shadow: 0 6px 20px rgba(26,86,219,.07); }
+.course-card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
+.course-thumb { width: 46px; height: 46px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+.pill { display: inline-flex; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+.pill-blue { background: var(--blue-lt); color: var(--blue); }
+.pill-green { background: var(--green-lt); color: #065f46; }
+.course-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.course-meta { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+.progress-rail { height: 5px; background: #f3f4f6; border-radius: 3px; overflow: hidden; margin-bottom: 12px; }
+.progress-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--blue), #60a5fa); }
+.course-footer { display: flex; align-items: center; gap: 8px; }
+.next-label { font-size: 12px; font-weight: 500; color: var(--muted); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.btn-continue { background: var(--blue); color: #fff; border: none; padding: 7px 14px; border-radius: 7px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; text-decoration: none; }
+.btn-continue:hover { background: #1344b5; }
+
+/* ── Empty ── */
+.empty-state { background: var(--surface); border: 1px dashed rgba(0,0,0,.12); border-radius: var(--radius-lg); padding: 60px 24px; text-align: center; margin-bottom: 28px; }
+.empty-icon { width: 72px; height: 72px; background: var(--bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 28px; color: #d1d5db; }
+.empty-state h3 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+.empty-state p { font-size: 13px; color: var(--muted); max-width: 320px; margin: 0 auto 20px; line-height: 1.6; }
+.btn-outline { display: inline-flex; align-items: center; gap: 6px; padding: 9px 20px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px; font-weight: 600; color: var(--text); text-decoration: none; }
+.btn-outline:hover { border-color: var(--blue); color: var(--blue); }
+
+/* ── Bottom ── */
+.bottom-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; }
+.panel-title { font-size: 14px; font-weight: 700; margin-bottom: 16px; }
+
+/* ── Activity ── */
+.activity-item { display: flex; align-items: flex-start; gap: 12px; padding: 11px 0; border-bottom: 1px solid #f3f4f6; }
+.activity-item:last-child { border-bottom: none; }
+.act-icon { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+.act-text { font-size: 13px; line-height: 1.5; }
+.act-time { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* ── Leaderboard ── */
+.lb-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid #f3f4f6; }
+.lb-row:last-child { border-bottom: none; }
+.lb-rank { width: 22px; text-align: center; font-size: 12px; font-weight: 700; color: var(--muted); flex-shrink: 0; }
+.lb-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; flex-shrink: 0; }
+.lb-name { flex: 1; font-size: 13px; font-weight: 500; }
+.lb-score { font-size: 12px; font-weight: 700; color: var(--blue); }
+.lb-you { background: var(--blue-lt); border-radius: 8px; padding: 8px 10px; }
+.lb-you .lb-name { color: var(--blue); font-weight: 700; }
+
+/* ── Badges ── */
+.badges-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; margin-top: 16px; }
+.badges-scroll { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 6px; }
+.badge-node { display: flex; flex-direction: column; align-items: center; min-width: 80px; text-align: center; gap: 6px; }
+.badge-circle { width: 54px; height: 54px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; background: #f3f4f6; color: #d1d5db; }
+.badge-node.earned .badge-circle { background: linear-gradient(135deg, #fde68a, #f59e0b); color: #fff; box-shadow: 0 3px 10px rgba(245,158,11,.25); }
+.badge-label { font-size: 11px; font-weight: 600; color: var(--muted); }
+.badge-node.earned .badge-label { color: var(--amber); }
+
+/* ── Responsive ── */
+/* ── Mobile sidebar overlay ── */
+.sidebar-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5); z-index: 98;
+}
+.sidebar-overlay.open { display: block; }
+.hamburger {
+  display: none; background: none; border: none;
+  font-size: 18px; cursor: pointer; color: var(--text);
+  padding: 4px 8px;
+}
+
+@media (max-width: 900px) {
+  .app-shell { flex-direction: column; }
+  .sidebar {
+    position: fixed; left: -280px; top: 0; height: 100vh;
+    z-index: 99; transition: left .25s ease;
+    width: 272px;
+  }
+  .sidebar.open { left: 0; }
+  .hamburger { display: flex; align-items: center; }
+  .main-area { width: 100%; }
+  .stats-row { grid-template-columns: 1fr 1fr; }
+  .bottom-grid { grid-template-columns: 1fr; }
+  .courses-grid { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 600px) {
+  .stats-row { grid-template-columns: 1fr 1fr; }
+  .page-content { padding: 16px; }
+  .topbar { padding: 0 16px; }
+  .course-card { padding: 16px; }
+}
+@media (max-width: 380px) {
+  .stats-row { grid-template-columns: 1fr; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="app-shell">
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-logo"><i class="fas fa-layer-group"></i></div>
+      <span class="brand-name">GloryLMS</span>
+      <span class="brand-pill">Healthcare</span>
+    </div>
+
+    <div class="nav-label">Main</div>
+    <a href="{% url 'lms_dashboard' %}" class="nav-item active"><i class="fas fa-th-large"></i> Dashboard</a>
+    <a href="#" class="nav-item"><i class="fas fa-book-open"></i> My Courses</a>
+    <a href="#" class="nav-item"><i class="fas fa-clipboard-check"></i> Assessments</a>
+    <a href="#" class="nav-item"><i class="fas fa-award"></i> Certificates</a>
+
+    <div class="nav-label">Community</div>
+    <a href="#" class="nav-item"><i class="fas fa-comments"></i> Discussions<span class="badge-count">3</span></a>
+    <a href="{% url 'contact' %}" class="nav-item"><i class="fas fa-headset"></i> Support</a>
+
+    <div class="nav-label">Account</div>
+    <a href="{% url 'account_settings' %}" class="nav-item"><i class="fas fa-cog"></i> Settings</a>
+    <a href="{% url 'lms_logout' %}" class="nav-item"><i class="fas fa-sign-out-alt"></i> Sign Out</a>
+
+    <div class="sidebar-footer">
+      <div class="user-row">
+        <div class="user-avatar">{{ request.user.first_name|slice:":1"|upper }}{{ request.user.last_name|slice:":1"|upper|default:request.user.username|slice:":1"|upper }}</div>
+        <div>
+          <div class="user-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+          <div class="user-role">Nursing Candidate</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-area">
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+  <header class="topbar">
+    <button class="hamburger" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+      <div class="topbar-greeting">
+        <span class="title">Welcome back, {{ request.user.first_name|default:request.user.username }} 👋</span>
+        <span class="subtitle">You have {% if enrollments %}{{ enrollments|length }} active course{{ enrollments|length|pluralize }}{% else %}no active courses yet{% endif %}</span>
+      </div>
+      <div class="search-wrap">
+        <i class="fas fa-search"></i>
+        <input type="text" placeholder="Search lessons, quizzes…" onkeydown="if(event.key==='Enter'){window.location='/lms/search/?q='+this.value}">
+      </div>
+      <button class="topbar-icon-btn" title="Notifications">
+        <i class="far fa-bell"></i>
+        <span class="notif-dot"></span>
+      </button>
+    </header>
+
+    <main class="page-content">
+
+      <div class="stats-row">
+        <div class="stat-card" style="--accent-color: var(--blue)">
+          <div class="stat-label">Overall Progress</div>
+          <div class="stat-value">{{ overall_progress }}<span class="unit">%</span></div>
+          <div class="stat-delta delta-up"><i class="fas fa-check-circle"></i> {{ total_completed }} lessons done</div>
+        </div>
+        <div class="stat-card" style="--accent-color: var(--green)">
+          <div class="stat-label">Avg Quiz Score</div>
+          <div class="stat-value">{{ avg_score }}<span class="unit">%</span></div>
+          <div class="stat-delta delta-up"><i class="fas fa-chart-line"></i> Based on all attempts</div>
+        </div>
+        <div class="stat-card" style="--accent-color: var(--amber)">
+          <div class="stat-label">Study Streak</div>
+          <div class="stat-value">{{ streak.current_streak }}<span class="unit">d</span></div>
+          {% if streak.current_streak == streak.longest_streak and streak.current_streak > 0 %}
+          <div class="stat-delta delta-warn">🔥 Personal best!</div>
+          {% elif streak.current_streak > 0 %}
+          <div class="stat-delta delta-warn">🔥 Keep it going! Best: {{ streak.longest_streak }}d</div>
+          {% else %}
+          <div class="stat-delta" style="color:var(--muted)">Log in daily to start a streak!</div>
+          {% endif %}
+        </div>
+        <div class="stat-card" style="--accent-color: var(--purple)">
+          <div class="stat-label">Cohort Rank</div>
+          <div class="stat-value">#{{ my_rank }}</div>
+          <div class="stat-delta" style="color: var(--purple)">Out of {{ leaderboard|length }} students</div>
+        </div>
+      </div>
+
+      <div class="section-head">
+        {% if announcements %}
+        <div style="margin-bottom:24px">
+          {% for ann in announcements %}
+          <div style="background:linear-gradient(135deg,#1e3a5f,#1a56db);color:#fff;border-radius:12px;padding:16px 20px;margin-bottom:10px;display:flex;align-items:flex-start;gap:12px">
+            <i class="fas fa-bullhorn" style="margin-top:2px;flex-shrink:0;color:#93c5fd"></i>
+            <div>
+              <div style="font-size:13px;font-weight:700;margin-bottom:3px">{{ ann.title }}</div>
+              <div style="font-size:12px;opacity:.8;line-height:1.5">{{ ann.message }}</div>
+              <div style="font-size:10px;opacity:.5;margin-top:4px">{{ ann.created_at|timesince }} ago</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <span class="section-title">Active Courses</span>
+        <a href="{% url 'programs' %}" class="section-link">Browse all programs →</a>
+      </div>
+
+      {% if enrollments %}
+        <div class="courses-grid">
+          {% for enrollment in enrollments %}
+            <div class="course-card">
+              <div class="course-card-header">
+                <div class="course-thumb" style="background: {% if enrollment.course.program == 'CNA' %}var(--blue-lt){% elif enrollment.course.program == 'CMA' %}var(--green-lt){% else %}var(--purple-lt){% endif %}">
+                  {% if enrollment.course.program == 'CNA' %}🏥{% elif enrollment.course.program == 'CMA' %}💊{% else %}🩺{% endif %}
+                </div>
+                {% if enrollment.progress_percentage == 100 %}
+                  <span class="pill pill-green"><i class="fas fa-check-circle"></i> Complete</span>
+                {% else %}
+                  <span class="pill pill-blue">{{ enrollment.course.program }}</span>
+                {% endif %}
+              </div>
+              <div class="course-title">{{ enrollment.course.title }}</div>
+              <div class="course-meta">
+                {{ enrollment.progress_percentage }}% complete &middot; {{ enrollment.completed_count }}/{{ enrollment.total_lessons }} lessons &middot; {{ enrollment.module_count }} modules
+              </div>
+              <div class="progress-rail">
+                <div class="progress-fill" style="width: {{ enrollment.progress_percentage }}%"></div>
+              </div>
+              <div class="course-footer">
+                <span class="next-label">
+                  <i class="fas fa-play-circle" style="color: var(--blue); margin-right:4px"></i>
+                  {% if enrollment.next_lesson %}{{ enrollment.next_lesson.title|truncatechars:22 }}{% else %}Start course{% endif %}
+                </span>
+                {% if enrollment.next_lesson %}
+                  <a href="{% url 'lesson_view' enrollment.next_lesson.id %}" class="btn-continue">Continue <i class="fas fa-arrow-right" style="font-size:10px"></i></a>
+                {% else %}
+                  <a href="{% url 'course_classroom' enrollment.course.id %}" class="btn-continue">Start <i class="fas fa-arrow-right" style="font-size:10px"></i></a>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-icon"><i class="fas fa-graduation-cap"></i></div>
+          <h3>No courses yet</h3>
+          <p>Once an administrator enrolls you in a program, it will appear here.</p>
+          <a href="{% url 'programs' %}" class="btn-outline"><i class="fas fa-compass"></i> Explore Programs</a>
+        </div>
+      {% endif %}
+
+      <!-- ══ COURSE REVIEW PROMPTS ══ -->
+      {% if reviewable_courses %}
+      {% for course in reviewable_courses %}
+      <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #fbbf24;border-radius:14px;padding:20px;margin-top:20px">
+        <div style="display:flex;align-items:flex-start;gap:14px">
+          <div style="font-size:32px">⭐</div>
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:15px;margin-bottom:4px;color:#92400e">You completed {{ course.title }}!</div>
+            <div style="font-size:13px;color:#78350f;margin-bottom:12px">How was your experience? Your review helps other students and helps us improve.</div>
+            <form method="post" action="{% url 'submit_review' %}">
+              {% csrf_token %}
+              <input type="hidden" name="course_id" value="{{ course.id }}">
+              <div style="display:flex;gap:4px;margin-bottom:10px" class="star-rating">
+                {% for i in "12345" %}
+                <label style="cursor:pointer;font-size:24px;color:#d1d5db" class="star-label">
+                  <input type="radio" name="rating" value="{{ i }}" style="display:none" required>
+                  ★
+                </label>
+                {% endfor %}
+              </div>
+              <textarea name="comment" rows="2" placeholder="Share your thoughts about this course (optional)..." style="width:100%;padding:10px;border:1px solid #fbbf24;border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:10px;resize:vertical"></textarea>
+              <button type="submit" style="background:#d97706;color:#fff;border:none;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Submit Review</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+      {% endif %}
+
+      <div class="bottom-grid">
+        <div class="panel">
+          <div class="panel-title">Recent Activity</div>
+          {% if activity %}
+            {% for item in activity %}
+            <div class="activity-item">
+              <div class="act-icon" style="background: {{ item.color }}">{{ item.icon }}</div>
+              <div>
+                <div class="act-text">{{ item.text|safe }} <span style="font-size:10px;color:var(--muted);margin-left:4px">{{ item.course }}</span></div>
+                <div class="act-time">{{ item.time|timesince }} ago</div>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div style="text-align:center;padding:24px 0;color:var(--muted);font-size:13px">
+              <i class="fas fa-book-open" style="font-size:24px;display:block;margin-bottom:8px;opacity:.4"></i>
+              No activity yet — start a lesson!
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Class Leaderboard</div>
+          {% for entry in leaderboard %}
+          <div class="lb-row" {% if entry.is_me %}style="background:var(--blue-lt);border-radius:8px;padding:4px 8px;margin:2px -8px"{% endif %}>
+            <div class="lb-rank">
+              {% if forloop.counter == 1 %}🥇
+              {% elif forloop.counter == 2 %}🥈
+              {% elif forloop.counter == 3 %}🥉
+              {% else %}{{ forloop.counter }}{% endif %}
+            </div>
+            <div class="lb-avatar" style="background:{% if entry.is_me %}var(--blue){% else %}#64748b{% endif %}">{{ entry.initials }}</div>
+            <div class="lb-name" style="{% if entry.is_me %}font-weight:700;color:var(--blue){% endif %}">
+              {% if entry.is_me %}You{% else %}{{ entry.username }}{% endif %}
+            </div>
+            <div class="lb-score">{{ entry.xp }} XP</div>
+          </div>
+          {% empty %}
+          <div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">No students yet</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="badges-panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div>
+            <div class="panel-title" style="margin-bottom:2px">My Certificates</div>
+          </div>
+          {% if my_certificates %}
+          <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+            {% for cert in my_certificates %}
+            <div style="display:flex;align-items:center;gap:12px;padding:14px;background:#f9fafb;border-radius:10px;border:1px solid rgba(0,0,0,0.06)">
+              <div style="width:38px;height:38px;border-radius:9px;background:linear-gradient(135deg,#d97706,#f59e0b);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🏆</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:700">{{ cert.course.title|truncatechars:30 }}</div>
+                <div style="font-size:11px;color:var(--muted)">{{ cert.certificate_code }}</div>
+              </div>
+              <a href="{% url 'download_certificate' cert.id %}" style="background:var(--blue);color:#fff;padding:7px 14px;border-radius:7px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap">
+                <i class="fas fa-download" style="margin-right:4px"></i>Download PDF
+              </a>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div style="font-size:12px;color:var(--muted);margin-bottom:16px">No certificates yet. Complete a course to earn one.</div>
+          {% endif %}
+          <div class="panel-title" style="margin-bottom:2px">Clinical Milestones</div>
+            <div style="font-size:12px;color:var(--muted)">Earned by completing lessons, acing quizzes, and logging in daily</div>
+          </div>
+          <a href="#" class="section-link">View all →</a>
+        </div>
+        <div class="badges-scroll">
+          <div class="badge-node earned"><div class="badge-circle"><i class="fas fa-hand-holding-medical"></i></div><span class="badge-label">Orientation</span></div>
+          <div class="badge-node {% if enrollments %}earned{% endif %}"><div class="badge-circle"><i class="fas fa-stethoscope"></i></div><span class="badge-label">Clinical Rookie</span></div>
+          <div class="badge-node"><div class="badge-circle"><i class="fas fa-capsules"></i></div><span class="badge-label">Meds Master</span></div>
+          <div class="badge-node"><div class="badge-circle"><i class="fas fa-bolt"></i></div><span class="badge-label">Perfect Exam</span></div>
+          <div class="badge-node"><div class="badge-circle"><i class="fas fa-fire"></i></div><span class="badge-label">30-Day Streak</span></div>
+          <div class="badge-node"><div class="badge-circle"><i class="fas fa-trophy"></i></div><span class="badge-label">Top of Class</span></div>
+          <div class="badge-node"><div class="badge-circle"><i class="fas fa-graduation-cap"></i></div><span class="badge-label">Licensed Pro</span></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+function toggleSidebar() {
+  const s = document.querySelector('.sidebar');
+  const o = document.getElementById('sidebarOverlay');
+  s.classList.toggle('open');
+  o.classList.toggle('open');
+}
+function closeSidebar() {
+  document.querySelector('.sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
+document.querySelectorAll('.nav-item, .nav-item-link').forEach(item => {
+  item.addEventListener('click', () => {
+    if (window.innerWidth <= 900) closeSidebar();
+  });
+});
+
+// Star rating interaction
+document.querySelectorAll('.star-rating').forEach(group => {
+  const labels = group.querySelectorAll('.star-label');
+  labels.forEach((label, idx) => {
+    label.addEventListener('click', () => {
+      labels.forEach((l, i) => l.style.color = i <= idx ? '#f59e0b' : '#d1d5db');
+    });
+  });
+});
+</script>
+{% endblock %}

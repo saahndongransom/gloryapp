@@ -1,0 +1,96 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% block title %}CNA Enrollment Application – Glory Nursing{% endblock %}
+{% block content %}
+<section class="page-hero">
+  <div class="container">
+    <h1>CNA Enrollment Application</h1>
+    <p>Certified Nursing Assistant Program — Glory Nursing Healthcare Training School</p>
+    <nav class="breadcrumb"><a href="/">Home</a> / <a href="{% url 'apply' %}">Apply</a> / <span>CNA Application</span></nav>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container apply-grid">
+    <div>
+      <h2 style="margin-bottom:8px">How to Apply</h2>
+      <p style="color:var(--text-light);margin-bottom:28px">Complete your application in 3 simple steps below.</p>
+
+      <!-- Steps -->
+      <div style="display:flex;flex-direction:column;gap:16px;margin-bottom:32px">
+
+        <!-- Step 1 -->
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;display:flex;align-items:flex-start;gap:16px">
+          <div style="width:36px;height:36px;background:#1a56db;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:16px;flex-shrink:0">1</div>
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:15px;margin-bottom:4px">Fill &amp; Sign the Application</div>
+            <div style="font-size:13px;color:#64748b;margin-bottom:14px">Open the application form in our online editor. Fill in all fields, sign digitally, and download your completed PDF.</div>
+            <a href="/apply/cna/fill/" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px">
+              <i class="fas fa-edit"></i> Open Application Editor
+            </a>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;display:flex;align-items:flex-start;gap:16px">
+          <div style="width:36px;height:36px;background:#f59e0b;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:16px;flex-shrink:0">2</div>
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:15px;margin-bottom:4px">Submit Your Application</div>
+            <div style="font-size:13px;color:#64748b;margin-bottom:4px">In the editor, enter your email and click <strong>Submit Application</strong> — your completed PDF is sent to Glory Nursing automatically. No printing or emailing needed.</div>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:14px;padding:20px;display:flex;align-items:flex-start;gap:16px">
+          <div style="width:36px;height:36px;background:#059669;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:16px;flex-shrink:0">3</div>
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:15px;margin-bottom:4px">Complete Payment &amp; Get Instant Access</div>
+            <div style="font-size:13px;color:#64748b;margin-bottom:14px">Pay your tuition securely online. Your LMS account will be created instantly and login credentials emailed to you.</div>
+            <a href="/lms/enroll/3/" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px;background:#059669">
+              <i class="fas fa-lock"></i> Pay $299 &amp; Enroll Now
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div>
+      <div class="sidebar-card">
+        <h3><i class="fas fa-file-pdf" style="color:#e74c3c;margin-right:8px"></i> Required Documents</h3>
+        <p style="font-size:0.88rem;color:var(--text-light);margin-bottom:16px">Your application packet includes all required forms:</p>
+        <ul class="doc-includes-list">
+          <li><i class="fas fa-check"></i> Enrollment Application</li>
+          <li><i class="fas fa-check"></i> Affidavit of Lawful Presence</li>
+          <li><i class="fas fa-check"></i> Clinical Tasks Policy</li>
+          <li><i class="fas fa-check"></i> Photo/Media Release Waiver</li>
+          <li><i class="fas fa-check"></i> OSDH/NAR Rules &amp; Regulations</li>
+          <li><i class="fas fa-check"></i> Grievance &amp; Refund Policy</li>
+          <li><i class="fas fa-check"></i> Background Check Waiver</li>
+        </ul>
+      </div>
+
+      <div class="sidebar-card" style="margin-top:20px">
+        <h3><i class="fas fa-phone" style="color:var(--green-primary);margin-right:8px"></i> Need Help?</h3>
+        <p style="font-size:0.88rem;color:var(--text-light)">Our admissions team is here to guide you.</p>
+        <p style="margin-top:10px"><strong>(405) 968-5004</strong></p>
+        <p>glorynursing@yahoo.com</p>
+        <p style="font-size:0.82rem;color:var(--text-muted);margin-top:8px">Mon–Fri: 8AM–6PM | Sat: 9AM–2PM</p>
+      </div>
+
+      <div class="sidebar-card" style="margin-top:20px;background:var(--green-light);border-color:var(--green-primary)">
+        <h3>📋 CNA Requirements</h3>
+        <ul class="check-list">
+          <li><i class="fas fa-check-circle"></i> Must be 18 years or older</li>
+          <li><i class="fas fa-check-circle"></i> High school diploma or GED</li>
+          <li><i class="fas fa-check-circle"></i> Valid government-issued ID</li>
+          <li><i class="fas fa-check-circle"></i> Social Security card</li>
+          <li><i class="fas fa-check-circle"></i> Background check required</li>
+          <li><i class="fas fa-check-circle"></i> Immunization records</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

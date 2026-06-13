@@ -1,0 +1,277 @@
+/*
+  LMS TEMPLATE BASE — paste this at the top of every LMS template <style> block.
+  All variables are prefixed --lms- so they never collide with glory.css globals.
+  Class renames: .badge → .lms-badge  |  .btn-primary → .lms-btn  |  .topbar → .lms-topbar
+                 .sidebar → .lms-sidebar-nav  |  .progress-* → .lms-prog-*
+*/
+
+:root {
+  /* LMS-specific palette — scoped to avoid overriding --blue, --text, --border, --bg */
+  --lms-blue:       #1a56db;
+  --lms-blue-lt:    #e8f0fe;
+  --lms-green:      #059669;
+  --lms-green-lt:   #d1fae5;
+  --lms-amber:      #d97706;
+  --lms-amber-lt:   #fef3c7;
+  --lms-purple:     #7c3aed;
+  --lms-purple-lt:  #f3e8ff;
+  --lms-red:        #dc2626;
+  --lms-red-lt:     #fee2e2;
+  --lms-surface:    #ffffff;
+  --lms-bg:         #f9fafb;
+  --lms-border:     rgba(0, 0, 0, 0.08);
+  --lms-text:       #111827;
+  --lms-muted:      #6b7280;
+  --lms-sidebar-w:  256px;
+  --lms-topbar-h:   60px;
+  --lms-radius:     10px;
+  --lms-radius-lg:  14px;
+}
+
+/* ── Button (replaces .btn-primary to avoid glory.css conflict) ─────── */
+.lms-btn {
+  background: var(--lms-blue);
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background .15s;
+}
+.lms-btn:hover { background: #1344b5; }
+.lms-btn.green { background: var(--lms-green); }
+.lms-btn.green:hover { background: #047857; }
+.lms-btn.purple { background: var(--lms-purple); }
+.lms-btn.purple:hover { background: #6d28d9; }
+.lms-btn.danger { background: var(--lms-red); }
+.lms-btn.danger:hover { background: #b91c1c; }
+
+/* ── Badge (replaces .badge to avoid glory.css conflict) ────────────── */
+.lms-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.lms-badge.active  { background: var(--lms-green-lt);  color: #065f46; }
+.lms-badge.warn    { background: var(--lms-amber-lt);  color: #92400e; }
+.lms-badge.info    { background: var(--lms-blue-lt);   color: #1e40af; }
+.lms-badge.danger  { background: var(--lms-red-lt);    color: #991b1b; }
+.lms-badge.purple  { background: var(--lms-purple-lt); color: #5b21b6; }
+
+/* ── Progress (replaces .progress-container / .progress-bar-fill) ───── */
+.lms-prog-rail {
+  height: 6px;
+  background: #f3f4f6;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.lms-prog-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--lms-blue), #60a5fa);
+  transition: width .5s ease;
+}
+/* Taller variant for course cards */
+.lms-prog-rail.sm { height: 5px; }
+.lms-prog-rail.lg { height: 10px; }
+.lms-prog-fill.green { background: var(--lms-green); }
+
+/* ── Topbar (replaces .topbar to avoid glory.css conflict) ──────────── */
+.lms-topbar {
+  background: var(--lms-surface);
+  border-bottom: 1px solid var(--lms-border);
+  height: var(--lms-topbar-h);
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+/* ── Sidebar nav (replaces bare .sidebar) ───────────────────────────── */
+.lms-sidebar-nav {
+  background: #0f172a;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--lms-sidebar-w);
+  height: 100vh;
+  z-index: 100;
+  overflow-y: auto;
+}
+/* If the site navbar overlaps, push sidebar down */
+.lms-sidebar-nav.below-navbar {
+  top: 70px;   /* match glory.css navbar height */
+  height: calc(100vh - 70px);
+}
+
+/* ── Main content offset ────────────────────────────────────────────── */
+.lms-main-area {
+  margin-left: var(--lms-sidebar-w);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ── App shell ──────────────────────────────────────────────────────── */
+.lms-app-shell {
+  display: grid;
+  grid-template-columns: var(--lms-sidebar-w) 1fr;
+  min-height: 100vh;
+}
+
+/* ── Search box ─────────────────────────────────────────────────────── */
+.lms-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--lms-bg);
+  border: 1px solid var(--lms-border);
+  border-radius: 8px;
+  padding: 7px 12px;
+  width: 220px;
+}
+.lms-search i { color: var(--lms-muted); font-size: 12px; }
+.lms-search input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 13px;
+  color: var(--lms-text);
+  width: 100%;
+}
+.lms-search input::placeholder { color: #9ca3af; }
+
+/* ── Stats strip ────────────────────────────────────────────────────── */
+.lms-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.lms-stat-card {
+  background: var(--lms-surface);
+  border: 1px solid var(--lms-border);
+  border-radius: var(--lms-radius);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.lms-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--lms-accent, var(--lms-blue));
+}
+.lms-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--lms-muted);
+  margin-bottom: 8px;
+}
+.lms-stat-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--lms-text);
+  letter-spacing: -1.2px;
+  line-height: 1;
+}
+.lms-stat-value .unit { font-size: 16px; font-weight: 500; color: var(--lms-muted); }
+.lms-stat-delta { font-size: 12px; font-weight: 500; margin-top: 6px; }
+.lms-delta-up   { color: var(--lms-green); }
+.lms-delta-warn { color: var(--lms-amber); }
+
+/* ── Generic panel card ─────────────────────────────────────────────── */
+.lms-panel {
+  background: var(--lms-surface);
+  border: 1px solid var(--lms-border);
+  border-radius: var(--lms-radius-lg);
+  padding: 22px;
+}
+.lms-panel-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--lms-border);
+  color: var(--lms-text);
+}
+
+/* ── Data table ─────────────────────────────────────────────────────── */
+.lms-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.lms-table th {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--lms-muted);
+  padding: 10px 12px;
+  background: var(--lms-bg);
+  border-bottom: 2px solid var(--lms-border);
+  text-align: left;
+  white-space: nowrap;
+}
+.lms-table td {
+  padding: 12px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  vertical-align: middle;
+}
+.lms-table tr:last-child td { border-bottom: none; }
+.lms-table tr:hover td { background: #fafafa; }
+
+/* ── Form controls (separate from glory.css element selectors) ──────── */
+.lms-form-group { margin-bottom: 14px; }
+.lms-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--lms-text);
+  margin-bottom: 5px;
+}
+.lms-input, .lms-select, .lms-textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--lms-text);
+  background: #fff;
+  outline: none;
+  font-family: inherit;
+  transition: border-color .15s, box-shadow .15s;
+}
+.lms-input:focus,
+.lms-select:focus,
+.lms-textarea:focus {
+  border-color: var(--lms-blue);
+  box-shadow: 0 0 0 3px rgba(26, 86, 219, .1);
+}
+.lms-textarea { resize: vertical; }
+.lms-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* ── Responsive ─────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .lms-app-shell { grid-template-columns: 1fr; }
+  .lms-sidebar-nav { display: none; }
+  .lms-main-area { margin-left: 0; }
+  .lms-stats-row { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 600px) {
+  .lms-stats-row { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,37 @@
+{% extends 'lms/lms_base.html' %}
+{% block title %}Enrollment Successful | Glory Nursing{% endblock %}
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: #f9fafb; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+.card { background: #fff; border-radius: 20px; padding: 48px 40px; max-width: 480px; width: 100%; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.08); margin: 20px; }
+.icon { font-size: 64px; margin-bottom: 20px; }
+h1 { font-size: 24px; font-weight: 800; margin-bottom: 10px; color: #0f172a; }
+p { font-size: 14px; color: #6b7280; line-height: 1.7; margin-bottom: 8px; }
+.credentials { background: #f0fdf4; border: 1px solid #86efac; border-radius: 10px; padding: 16px 20px; margin: 20px 0; text-align: left; }
+.cred-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; }
+.cred-label { color: #6b7280; font-weight: 500; }
+.cred-val { font-weight: 700; color: #059669; }
+.login-btn { display: inline-flex; align-items: center; gap: 8px; background: #1a56db; color: #fff; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-size: 15px; font-weight: 700; margin-top: 8px; }
+.note { font-size: 12px; color: #9ca3af; margin-top: 16px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="icon">🎉</div>
+  <h1>You're Enrolled!</h1>
+  <p>Welcome to Glory Nursing, <strong>{{ data.name }}</strong>!</p>
+  <p>Your enrollment in <strong>{{ data.course }}</strong> is confirmed.</p>
+
+  <div class="credentials">
+    <div class="cred-row"><span class="cred-label">Username</span><span class="cred-val">{{ data.username }}</span></div>
+    <div class="cred-row"><span class="cred-label">Password</span><span class="cred-val">Check your email</span></div>
+    <div class="cred-row"><span class="cred-label">Email sent to</span><span class="cred-val">{{ data.email }}</span></div>
+  </div>
+
+  <p>Your login credentials have been sent to your email. Log in now to start learning!</p>
+  <a href="{% url 'lms_login' %}" class="login-btn"><i class="fas fa-sign-in-alt"></i> Log In Now</a>
+  <p class="note">If you don't receive the email within 5 minutes, check your spam folder.</p>
+</div>
+{% endblock %}

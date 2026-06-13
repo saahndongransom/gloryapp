@@ -1,0 +1,194 @@
+{% extends 'lms/lms_base.html' %}
+{% block title %}Enroll in {{ course.title }} | Glory Nursing{% endblock %}
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --blue:#1a56db; --green:#059669; --border:rgba(0,0,0,0.08); --text:#111827; --muted:#6b7280; --bg:#f9fafb; }
+body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); }
+.page { max-width: 960px; margin: 0 auto; padding: 40px 24px; display: grid; grid-template-columns: 1fr 420px; gap: 32px; }
+@media (max-width: 768px) { .page { grid-template-columns: 1fr; } }
+
+/* Course info */
+.course-info { }
+.back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); text-decoration: none; margin-bottom: 20px; }
+.back-link:hover { color: var(--blue); }
+.course-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--blue); color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; margin-bottom: 14px; }
+.course-title { font-size: 28px; font-weight: 800; margin-bottom: 12px; line-height: 1.2; }
+.course-desc { font-size: 14px; color: var(--muted); line-height: 1.7; margin-bottom: 24px; }
+.course-features { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+.feature { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.feature i { color: var(--green); width: 16px; }
+.price-display { font-size: 40px; font-weight: 900; color: var(--text); margin-bottom: 4px; }
+.price-display span { font-size: 18px; font-weight: 500; color: var(--muted); }
+
+/* Payment card */
+.payment-card { background: #fff; border-radius: 16px; padding: 28px; border: 1px solid var(--border); box-shadow: 0 8px 24px rgba(0,0,0,0.06); position: sticky; top: 20px; }
+.card-title { font-size: 16px; font-weight: 800; margin-bottom: 6px; }
+.card-sub { font-size: 12px; color: var(--muted); margin-bottom: 24px; }
+.form-group { margin-bottom: 14px; }
+.form-label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px; }
+.form-control { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; outline: none; font-family: inherit; }
+.form-control:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(26,86,219,.1); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.divider { border: none; border-top: 1px solid #f3f4f6; margin: 20px 0; }
+.sq-label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px; }
+#card-container { min-height: 48px; }
+.pay-btn { width: 100%; background: var(--green); color: #fff; border: none; padding: 14px; border-radius: 10px; font-size: 15px; font-weight: 800; cursor: pointer; font-family: inherit; margin-top: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.pay-btn:hover { background: #047857; }
+.pay-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+.secure-note { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11px; color: var(--muted); margin-top: 12px; }
+.error-box { background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  <!-- Course Info -->
+  <div class="course-info">
+    <a href="/" class="back-link"><i class="fas fa-arrow-left"></i> Back to courses</a>
+    <div class="course-badge"><i class="fas fa-graduation-cap"></i> {{ course.program }}</div>
+    <h1 class="course-title">{{ course.title }}</h1>
+    <p class="course-desc">{{ course.description|default:"Join this comprehensive healthcare training program at Glory Nursing. Learn from expert instructors with hands-on clinical training." }}</p>
+
+    <div class="course-features">
+      <div class="feature"><i class="fas fa-check-circle"></i> {{ course.modules.count }} modules · {{ course.modules.all|length }} lessons</div>
+      <div class="feature"><i class="fas fa-check-circle"></i> Certificate of completion included</div>
+      <div class="feature"><i class="fas fa-check-circle"></i> Lifetime access to course materials</div>
+      <div class="feature"><i class="fas fa-check-circle"></i> Expert licensed instructors</div>
+      <div class="feature"><i class="fas fa-check-circle"></i> State-approved program</div>
+    </div>
+
+    <div class="price-display">${{ course.price }} <span>one-time</span></div>
+  </div>
+
+  <!-- Payment Card -->
+  <div class="payment-card">
+    {% if messages %}
+      {% for msg in messages %}
+      <div style="background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:16px;display:flex;align-items:center;gap:8px">
+        <i class="fas fa-exclamation-circle"></i> {{ msg }}
+      </div>
+      {% endfor %}
+    {% endif %}
+    <div class="card-title">Complete Your Enrollment</div>
+    <div class="card-sub">Secure payment powered by Square</div>
+
+    <div class="error-box" id="errorBox"></div>
+
+    <form id="enrollForm" method="POST" action="{% url 'process_payment' course.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="nonce" id="nonceInput">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">First Name *</label>
+          <input type="text" name="first_name" class="form-control" placeholder="Jane" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Last Name *</label>
+          <input type="text" name="last_name" class="form-control" placeholder="Smith" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email Address *</label>
+        <input type="email" name="email" class="form-control" placeholder="jane@email.com" required>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Your login credentials will be sent here.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone Number</label>
+        <input type="tel" name="phone" class="form-control" placeholder="+1 (555) 000-0000">
+      </div>
+
+      <hr class="divider">
+
+      <label class="sq-label">Card Details *</label>
+      <div id="card-container"></div>
+
+      <div style="margin:14px 0;display:flex;align-items:flex-start;gap:8px">
+        <input type="checkbox" id="agreeTerms" style="margin-top:3px">
+        <label for="agreeTerms" style="font-size:12px;color:var(--muted);line-height:1.5">
+          I agree to the <a href="/terms/" target="_blank" style="color:var(--blue)">Terms of Service</a> and
+          <a href="/privacy/" target="_blank" style="color:var(--blue)">Privacy Policy</a>, including the No Refund Policy.
+        </label>
+      </div>
+
+      <button type="button" class="pay-btn" id="payBtn" onclick="handlePayment()">
+        <i class="fas fa-lock"></i> Pay ${{ course.price }} & Enroll
+      </button>
+      <div class="secure-note">
+        <i class="fas fa-shield-alt"></i> Secured by Square · SSL Encrypted
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if square_env == 'sandbox' %}
+<script src="https://sandbox.web.squarecdn.com/v1/square.js"></script>
+{% else %}
+<script src="https://web.squarecdn.com/v1/square.js"></script>
+{% endif %}
+<script>
+let card = null;
+let squareInitialized = false;
+
+async function initSquare() {
+  try {
+    if (!window.Square) {
+      console.error('Square.js not loaded');
+      return;
+    }
+    const payments = window.Square.payments('{{ square_app_id }}', '{{ location_id }}');
+    card = await payments.card();
+    await card.attach('#card-container');
+    squareInitialized = true;
+    console.log('Square card initialized successfully');
+  } catch (e) {
+    console.error('Square init error:', e);
+    document.getElementById('card-container').innerHTML = 
+      '<p style="color:#dc2626;font-size:13px;padding:10px">Card form failed to load. Please refresh the page.</p>';
+  }
+}
+
+async function handlePayment() {
+  const btn = document.getElementById('payBtn');
+  const errorBox = document.getElementById('errorBox');
+  errorBox.style.display = 'none';
+
+  if (!document.getElementById('agreeTerms').checked) {
+    errorBox.textContent = 'Please agree to the Terms of Service and Privacy Policy before proceeding.';
+    errorBox.style.display = 'block';
+    return;
+  }
+
+  if (!squareInitialized || !card) {
+    errorBox.textContent = 'Payment form not ready. Please refresh the page.';
+    errorBox.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+  try {
+    const result = await card.tokenize();
+    if (result.status === 'OK') {
+      document.getElementById('nonceInput').value = result.token;
+      document.getElementById('enrollForm').submit();
+    } else {
+      const msg = result.errors && result.errors[0] ? result.errors[0].message : 'Card tokenization failed';
+      throw new Error(msg);
+    }
+  } catch (e) {
+    errorBox.textContent = e.message;
+    errorBox.style.display = 'block';
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-lock"></i> Pay ${{ course.price }} & Enroll';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', initSquare);
+</script>
+{% endblock %}
