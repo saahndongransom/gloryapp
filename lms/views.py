@@ -6,7 +6,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
-from django.db.models import Sum
+from django.db.models import Sum, Prefetch
 from django.db import models
 from django.http import JsonResponse
 from .models import (
@@ -180,7 +180,7 @@ def lms_dashboard_view(request):
                         from django.core.mail import send_mail
                         send_mail(
                             subject='Your Glory Nursing LMS Login Credentials',
-                            message=f"Welcome to Glory Nursing!\n\nUsername: {username}\nPassword: {pwd}\n\nLogin at: http://127.0.0.1:8000/lms/login/\n\nPlease change your password after first login.",
+                            message=f"Welcome to Glory Nursing!\n\nUsername: {username}\nPassword: {pwd}\n\nLogin at: https://glorynursingok.com/lms/login/\n\nPlease change your password after first login.",
                             from_email=None,
                             recipient_list=[email],
                             fail_silently=True,
@@ -608,7 +608,7 @@ def lms_dashboard_view(request):
 @login_required(login_url='lms_login')
 def course_classroom(request, course_id):
     enrollment = get_object_or_404(Enrollment, course_id=course_id, student=request.user)
-    modules = Module.objects.filter(course_id=course_id).prefetch_related('lessons')
+    modules = Module.objects.filter(course_id=course_id).order_by('order').prefetch_related(Prefetch('lessons', queryset=Lesson.objects.order_by('order')))
     course_lessons = Lesson.objects.filter(module__course_id=course_id)
     total = course_lessons.count()
     completed = LessonProgress.objects.filter(
@@ -803,9 +803,6 @@ def lesson_view(request, lesson_id):
 
     attached_elements = [e for e in interactive_elements if e.attached_to_id]
     standalone_elements = [e for e in interactive_elements if not e.attached_to_id]
-    print(f"DEBUG: total={len(interactive_elements)}, standalone={len(standalone_elements)}, attached={len(attached_elements)}")
-    for e in standalone_elements:
-        print(f"  standalone: {e.id} {e.title}")
     completed_element_ids = set()
     if not request.user.is_staff:
         completed_element_ids = set(InteractiveCompletion.objects.filter(
@@ -1348,7 +1345,7 @@ Amount Paid: ${course.price}
 Username: {username}
 
 Login to the admin dashboard to view their enrollment:
-http://127.0.0.1:8000/lms/dashboard/
+https://glorynursingok.com/lms/dashboard/
 
 Glory Nursing Online Portal""",
                     from_email=None,
@@ -1373,7 +1370,7 @@ Course: {course.title}
 Username: {username}
 Password: {pwd}
 
-Login at: http://127.0.0.1:8000/lms/login/
+Login at: https://glorynursingok.com/lms/login/
 
 Please change your password after your first login.
 

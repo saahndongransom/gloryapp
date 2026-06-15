@@ -20,6 +20,9 @@ class Module(models.Model):
     title = models.CharField(max_length=255)
     order = models.IntegerField(default=1)
 
+    class Meta:
+        ordering = ['order']
+
     def __str__(self):
         return f"{self.course.program} -> {self.title}"
 
@@ -27,6 +30,9 @@ class Lesson(models.Model):
     module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name='lessons')
     title = models.CharField(max_length=255)
     order = models.IntegerField(default=1)
+
+    class Meta:
+        ordering = ['order']
 
     def __str__(self):
         return self.title

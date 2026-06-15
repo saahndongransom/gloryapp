@@ -210,8 +210,8 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
     <div class="nav-label">Main</div>
     <a href="{% url 'lms_dashboard' %}" class="nav-item active"><i class="fas fa-th-large"></i> Dashboard</a>
     <a href="#" class="nav-item"><i class="fas fa-book-open"></i> My Courses</a>
-    <a href="#" class="nav-item"><i class="fas fa-clipboard-check"></i> Assessments</a>
-    <a href="#" class="nav-item"><i class="fas fa-award"></i> Certificates</a>
+    <a href="#active-courses" class="nav-item"><i class="fas fa-clipboard-check"></i> Assessments</a>
+    <a href="#my-certificates" class="nav-item"><i class="fas fa-award"></i> Certificates</a>
 
     <div class="nav-label">Community</div>
     <a href="#" class="nav-item"><i class="fas fa-comments"></i> Discussions<span class="badge-count">3</span></a>
@@ -296,7 +296,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
           {% endfor %}
         </div>
         {% endif %}
-        <span class="section-title">Active Courses</span>
+        <span class="section-title" id="active-courses">Active Courses</span>
         <a href="{% url 'programs' %}" class="section-link">Browse all programs →</a>
       </div>
 
@@ -419,7 +419,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
       <div class="badges-panel">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
           <div>
-            <div class="panel-title" style="margin-bottom:2px">My Certificates</div>
+            <div class="panel-title" id="my-certificates" style="margin-bottom:2px">My Certificates</div>
           </div>
           {% if my_certificates %}
           <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">

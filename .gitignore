@@ -6,3 +6,8 @@ venv/
 .DS_Store.env
 .DS_Store
 *.DS_Store
+
+# Build artifacts / runtime files
+staticfiles/
+*.log
+media/

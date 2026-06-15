@@ -457,7 +457,7 @@ def fill_pdf_cna(request):
         'render_url': '/apply/cna/render-page/',
         'save_url': '/apply/cna/save/',
         'back_url': '/apply/cna/',
-        'enroll_id': 3,
+        'enroll_id': 1,
     })
 
 def fill_pdf_cma(request):
@@ -472,7 +472,7 @@ def fill_pdf_cma(request):
         'render_url': '/apply/cma/render-page/',
         'save_url': '/apply/cma/save/',
         'back_url': '/apply/cma/',
-        'enroll_id': 4,
+        'enroll_id': 2,
     })
 
 def render_pdf_page(request):
@@ -531,8 +531,8 @@ def _save_pdf_with_annotations(request, pdf_filename, output_filename):
             continue
 
         page = writer.pages[page_idx]
-        page_height = float(page.mediabox[3])
-        page_width = float(page.mediabox[2])
+        page_height = float(reader.pages[page_idx].mediabox[3])
+        page_width = float(reader.pages[page_idx].mediabox[2])
 
         overlay_buf = io.BytesIO()
         c = rl_canvas.Canvas(overlay_buf, pagesize=(page_width, page_height))

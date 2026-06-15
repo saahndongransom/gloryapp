@@ -14,7 +14,6 @@
     <div class="programs-grid programs-grid-full">
       {% for program in programs %}
       <a href="{% url 'program_detail' program.slug %}" class="program-card">
-        <div class="program-icon">{{ program.icon }}</div>
         <h3>{{ program.short }}</h3>
         <p class="program-title-full">{{ program.title }}</p>
         <div class="program-meta">

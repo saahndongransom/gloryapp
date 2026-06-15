@@ -57,17 +57,27 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'glorynursing.wsgi.application'
 
+import dj_database_url
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
+        conn_max_age=600,
+    )
 }
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'core/static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
@@ -98,4 +108,30 @@ CSRF_TRUSTED_ORIGINS = [
     'https://marmalade-lettuce-cedar.ngrok-free.dev',
     'http://127.0.0.1:8000',
     'http://localhost:8000',
+    'http://159.198.77.164',
+    'https://159.198.77.164',
+    'http://glorynursingok.com',
+    'https://glorynursingok.com',
+    'http://www.glorynursingok.com',
+    'https://www.glorynursingok.com',
 ]
+
+# ── Logging ──
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'ERROR',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'django_errors.log',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'ERROR',
+            'propagate': True,
+        },
+    },
+}
