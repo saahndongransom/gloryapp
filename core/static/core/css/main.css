@@ -32,7 +32,7 @@ body {
   color: var(--text);
   background: var(--white);
   line-height: 1.65;
-  font-size: 16px;
+  font-size: 17px;
 }
 
 h1, h2, h3, h4 {
@@ -157,7 +157,7 @@ img { max-width: 100%; display: block; }
   line-height: 1;
 }
 .brand-logo-img {
-  height: 56px;
+  height: 66px;
   width: auto;
   object-fit: contain;
 }
@@ -669,7 +669,7 @@ img { max-width: 100%; display: block; }
 .program-meta { display: flex; gap: 16px; flex-wrap: wrap; }
 .program-meta span { font-size: 0.8rem; color: var(--text-light); }
 .program-meta i { color: var(--green-primary); margin-right: 4px; }
-.program-desc { font-size: 0.88rem; color: var(--text-light); flex: 1; }
+.program-desc { font-size: 1rem; color: var(--text-light); flex: 1; }
 .program-schedules { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 .badge {
   background: var(--green-light);

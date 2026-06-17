@@ -41,7 +41,7 @@ body{font-family:Arial,sans-serif;background:#2d2d44;overflow:hidden;height:100v
 .titem.on{border-color:#1a56db}
 .titem img{width:100%;display:block}
 .tnum{position:absolute;bottom:3px;right:5px;font-size:9px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8)}
-.finput{position:absolute;border:2px solid #1a56db;border-radius:3px;padding:1px 4px;outline:none;background:rgba(255,255,255,0.95);font-family:Helvetica,Arial,sans-serif;z-index:100;min-width:60px}
+.finput{position:absolute;border:2px solid #1a56db;border-radius:3px;padding:1px 4px;outline:none;background:rgba(255,255,255,0.95);color:#000000;font-family:"Times New Roman",Times,serif;font-weight:normal;z-index:100;min-width:60px}
 .smodal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center}
 .smodal.open{display:flex}
 .sbox{background:#1e293b;border-radius:12px;padding:20px;width:500px}
@@ -53,65 +53,84 @@ body{font-family:Arial,sans-serif;background:#2d2d44;overflow:hidden;height:100v
 .spin{width:22px;height:22px;border:3px solid rgba(255,255,255,0.1);border-top-color:#1a56db;border-radius:50%;animation:sp .7s linear infinite;margin-right:8px}
 @keyframes sp{to{transform:rotate(360deg)}}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#059669;color:#fff;padding:9px 18px;border-radius:7px;font-size:13px;font-weight:600;display:none;z-index:9999}
+.mobile-input-bar{display:none;position:fixed;bottom:0;left:0;right:0;z-index:2000;background:#1e293b;border-top:2px solid #1a56db;padding:8px 12px;gap:8px;align-items:center}
+.mobile-input-bar input{flex:1;background:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:16px;font-family:"Times New Roman",Times,serif;color:#000;outline:none}
+.mobile-input-bar button{background:#1a56db;color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:18px;font-weight:700;cursor:pointer;flex-shrink:0}
+.mobile-input-bar .mib-cancel{background:#475569}
+.tap-marker{position:absolute;width:4px;height:20px;background:rgba(26,86,219,0.5);pointer-events:none;z-index:50}
+@media(max-width:768px){
+  .mobile-input-bar{display:none}
+  .finput{display:none !important}
+}
 
 @media (max-width: 768px) {
-  /* Hide right panel completely */
+  body { overflow: hidden; }
   .rpanel { display: none !important; }
+  .shell { flex-direction: column; height: 100vh; }
+  .body-row { flex-direction: column; flex: 1; overflow: hidden; min-height: 0; }
 
-  /* Stack layout vertically on mobile */
-  .shell { flex-direction: column; }
-  .body-row { flex-direction: column; flex: 1; overflow: hidden; }
-
-  /* Top bar - compact 2 rows */
+  /* Compact top bar - single row */
   .topbar {
     height: auto;
     flex-wrap: wrap;
-    gap: 6px;
-    padding: 8px 10px;
+    gap: 5px;
+    padding: 6px 8px;
     min-height: unset;
   }
-  .btn-back { order: 0; font-size: 16px; }
+  .btn-back { order: 0; font-size: 18px; padding: 4px; }
   .topbar-title { font-size: 11px; order: 1; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .pgind { font-size: 11px; order: 2; white-space: nowrap; }
-  #studentEmail { width: 100% !important; order: 3; font-size: 12px; }
+  #studentEmail { width: 100% !important; order: 3; font-size: 12px; padding: 6px 10px; }
   .btn-dl { font-size: 11px; padding: 6px 10px; order: 4; }
-  .btn-dl:first-of-type { background: #1a56db; }
 
-  /* Toolbar - horizontal row at top of canvas area */
+  /* Horizontal toolbar */
   .toolbar {
     width: 100%;
     flex-direction: row;
-    height: 52px;
-    padding: 6px 10px;
-    gap: 4px;
+    height: 48px;
+    padding: 4px 8px;
+    gap: 2px;
     overflow-x: auto;
     border-right: none;
     border-bottom: 1px solid rgba(255,255,255,0.08);
     justify-content: flex-start;
     align-items: center;
+    flex-shrink: 0;
+    scrollbar-width: none;
   }
-  .tbtn { width: 40px; height: 40px; font-size: 15px; flex-shrink: 0; }
+  .toolbar::-webkit-scrollbar { display: none; }
+  .tbtn { width: 38px; height: 38px; font-size: 14px; flex-shrink: 0; }
   .tlbl { display: none; }
-  .tsep { width: 1px; height: 28px; background: rgba(255,255,255,0.08); margin: 0 2px; }
+  .tsep { width: 1px; height: 26px; background: rgba(255,255,255,0.08); margin: 0 2px; flex-shrink: 0; }
 
-  /* Canvas - full width, scrollable */
+  /* Canvas area - fill remaining space, scrollable */
   .cva {
     flex: 1;
-    padding: 10px 6px 80px;
+    padding: 8px 0 70px 0;
     overflow-x: auto;
     overflow-y: auto;
     align-items: flex-start;
     justify-content: flex-start;
     -webkit-overflow-scrolling: touch;
+    min-height: 0;
   }
 
-  /* Page nav fixed at bottom */
+  /* PDF page fits screen width */
+  .pgwrap { margin: 0 auto 70px; }
+  .pgwrap img { width: 100vw !important; height: auto !important; display: block; }
+  #annoLayer { width: 100vw !important; }
+
+  /* Bottom nav */
   .pg-nav {
-    border-radius: 0;
-    margin-top: 0;
-    padding: 10px 16px;
+    padding: 8px 12px;
+    gap: 10px;
   }
-  .pg-nav button { padding: 8px 18px; font-size: 14px; }
+  .pg-nav button { padding: 8px 16px; font-size: 13px; font-weight: 700; }
+  .pg-nav .pg-info { font-size: 12px; min-width: 80px; }
+
+  /* Signature modal */
+  .sbox { width: 95vw; padding: 14px; }
+  #sigC { width: 100% !important; height: 120px; }
 }
 </style>
 </head>
@@ -163,7 +182,7 @@ body{font-family:Arial,sans-serif;background:#2d2d44;overflow:hidden;height:100v
       <div class="rpsec">
         <div class="rptitle">Properties</div>
         <div class="rplbl">Font Size</div>
-        <input type="number" class="rpinp" id="fsinp" value="12" min="6" max="36">
+        <input type="number" class="rpinp" id="fsinp" value="22" min="6" max="36">
         <div class="rplbl" style="margin-top:8px">Color</div>
         <div class="crow">
           <div class="cdot on" style="background:#000" onclick="setClr('#000000',this)"></div>
@@ -181,6 +200,13 @@ body{font-family:Arial,sans-serif;background:#2d2d44;overflow:hidden;height:100v
       <div class="thumbs" id="thumbs"></div>
     </div>
   </div>
+</div>
+
+<!-- Mobile bottom input bar -->
+<div class="mobile-input-bar" id="mobileInputBar">
+  <button class="mib-cancel" onclick="cancelMobileInput()">✕</button>
+  <input type="text" id="mobileInputField" placeholder="Type here then tap ✓" autocomplete="off">
+  <button onclick="confirmMobileInput()">✓</button>
 </div>
 
 <div class="smodal" id="smodal">
@@ -204,7 +230,7 @@ var DPI = 120;
 var curPg = 1;
 var curTool = 'text';
 var curClr = '#000000';
-var curFS = 12;
+var curFS = window.innerWidth <= 768 ? 16 : 12;
 var zoom = 100;
 var pimgs = {};
 var pdims = {};
@@ -216,6 +242,10 @@ var sdrawing = false;
 var sctx = null;
 
 window.addEventListener('load', function() {
+  // On mobile, use higher DPI for sharp text
+  if (window.innerWidth <= 768) {
+    DPI = 180;
+  }
   loadPg(1);
   buildThumbs();
   initSig();
@@ -275,16 +305,65 @@ function onCanvasClick(e) {
 function spawnInput(e) {
   var cv=document.getElementById('annoLayer');
   var r=cv.getBoundingClientRect();
-  var x=e.clientX-r.left; var y=e.clientY-r.top;
+  var scaleX = cv.width / r.width;
+  var scaleY = cv.height / r.height;
+  var xCSS = e.clientX - r.left;
+  var yCSS = e.clientY - r.top;
+  var x = xCSS * scaleX;
+  var y = yCSS * scaleY;
+
+  if (window.innerWidth <= 768) {
+    // Mobile: use bottom input bar
+    pendingX = x;
+    pendingY = y;
+    // Show tap marker
+    document.querySelectorAll('.tap-marker').forEach(function(m){m.remove();});
+    var marker = document.createElement('div');
+    marker.className = 'tap-marker';
+    marker.style.left = xCSS + 'px';
+    marker.style.top = (yCSS - 10) + 'px';
+    document.getElementById('pgwrap').appendChild(marker);
+    // Show bottom input bar
+    var bar = document.getElementById('mobileInputBar');
+    bar.style.display = 'flex';
+    var field = document.getElementById('mobileInputField');
+    field.value = '';
+    field.focus();
+    return;
+  }
+
+  // Desktop: floating input
+  commitInput();
   var inp=document.createElement('input');
   inp.type='text'; inp.className='finput';
-  inp.style.left=x+'px'; inp.style.top=(y-curFS-2)+'px';
-  inp.style.fontSize=curFS+'px'; inp.style.color=curClr;
+  inp.style.left=xCSS+'px';
+  inp.style.top=(yCSS - curFS - 2)+'px';
+  inp.style.fontSize=curFS+'px';
+  inp.style.color=curClr;
   document.getElementById('pgwrap').appendChild(inp);
   inp.focus();
   ainput={el:inp,x:x,y:y};
   inp.onkeydown=function(e){if(e.key==='Enter')commitInput();if(e.key==='Escape'){inp.remove();ainput=null;}};
   inp.onblur=function(){setTimeout(commitInput,150);};
+}
+
+var pendingX = 0;
+var pendingY = 0;
+
+function confirmMobileInput() {
+  var txt = document.getElementById('mobileInputField').value.trim();
+  if (txt) {
+    if (!ann[curPg]) ann[curPg] = [];
+    ann[curPg].push({type:'text', x:pendingX, y:pendingY, text:txt, fs:curFS, clr:curClr});
+    redraw();
+  }
+  cancelMobileInput();
+}
+
+function cancelMobileInput() {
+  document.getElementById('mobileInputBar').style.display = 'none';
+  document.getElementById('mobileInputField').value = '';
+  document.querySelectorAll('.tap-marker').forEach(function(m){m.remove();});
 }
 
 function commitInput() {
@@ -300,15 +379,17 @@ function commitInput() {
 
 function placeCheck(e) {
   var cv=document.getElementById('annoLayer'); var r=cv.getBoundingClientRect();
+  var scaleX=cv.width/r.width; var scaleY=cv.height/r.height;
   if (!ann[curPg]) ann[curPg]=[];
-  ann[curPg].push({type:'check',x:e.clientX-r.left,y:e.clientY-r.top});
+  ann[curPg].push({type:'check',x:(e.clientX-r.left)*scaleX,y:(e.clientY-r.top)*scaleY});
   redraw();
 }
 
 function eraseAt(e) {
   if (!ann[curPg]) return;
   var cv=document.getElementById('annoLayer'); var r=cv.getBoundingClientRect();
-  var x=e.clientX-r.left; var y=e.clientY-r.top;
+  var scaleX=cv.width/r.width; var scaleY=cv.height/r.height;
+  var x=(e.clientX-r.left)*scaleX; var y=(e.clientY-r.top)*scaleY;
   ann[curPg]=ann[curPg].filter(function(a){return Math.abs(a.x-x)>25||Math.abs(a.y-y)>25;});
   redraw();
 }
@@ -319,7 +400,7 @@ function redraw() {
   var cv=document.getElementById('annoLayer'); var ctx=cv.getContext('2d');
   ctx.clearRect(0,0,cv.width,cv.height);
   (ann[curPg]||[]).forEach(function(a){
-    if (a.type==='text'){ctx.font=a.fs+'px Helvetica,Arial';ctx.fillStyle=a.clr||'#000';ctx.fillText(a.text,a.x,a.y);}
+    if (a.type==='text'){ctx.font=a.fs+'px "Times New Roman",Times,serif';ctx.fillStyle=a.clr||'#000000';ctx.textBaseline='top';ctx.fillText(a.text,a.x,a.y);}
     else if(a.type==='check'){ctx.font='bold 16px Helvetica,Arial';ctx.fillStyle='#000';ctx.fillText('\u2713',a.x,a.y);}
     else if(a.type==='sig'){var i=new Image();i.onload=function(){ctx.drawImage(i,a.x,a.y,a.w,a.h);};i.src=a.data;}
   });
@@ -343,8 +424,9 @@ function clearSigCanvas(){sctx.clearRect(0,0,460,150);}
 function confirmSig(){sigData=document.getElementById('sigC').toDataURL('image/png');closeSig();sigPending=true;showToast('Click on the PDF where you want your signature');}
 function placeSigAt(e){
   var cv=document.getElementById('annoLayer');var r=cv.getBoundingClientRect();
+  var scaleX=cv.width/r.width; var scaleY=cv.height/r.height;
   if(!ann[curPg])ann[curPg]=[];
-  ann[curPg].push({type:'sig',x:e.clientX-r.left,y:e.clientY-r.top,data:sigData,w:180,h:50});
+  ann[curPg].push({type:'sig',x:(e.clientX-r.left)*scaleX,y:(e.clientY-r.top)*scaleY,data:sigData,w:180,h:50});
   sigPending=false;redraw();showToast('Signature placed!');
 }
 
@@ -393,6 +475,10 @@ function dlPDF(){
 }
 
 document.addEventListener('keydown',function(e){if(e.key==='Escape'){commitInput();closeSig();}if((e.ctrlKey||e.metaKey)&&e.key==='z')doUndo();});
+document.getElementById('mobileInputField').addEventListener('keydown', function(e){
+  if (e.key === 'Enter') confirmMobileInput();
+  if (e.key === 'Escape') cancelMobileInput();
+});
 </script>
 </body>
 </html>

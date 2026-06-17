@@ -175,6 +175,16 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
             <input type="file" name="doc_bg" accept=".pdf,.jpg,.jpeg,.png">
           </div>
         </div>
+        <div class="addon-item">
+          <div class="addon-row">
+            <div class="addon-left">
+              <i class="fas fa-credit-card" style="color:#6b7280;font-size:13px"></i>
+              <label>Card Processing Fee (3.7%)</label>
+            </div>
+            <div class="addon-price" id="processingFeeDisplay">$0</div>
+          </div>
+        </div>
+
       </div>
 
       <!-- Payment Plan -->
@@ -264,22 +274,35 @@ function getAddon() {
 function getTotal() {
   var addon = getAddon();
   var fullTotal = BASE_PRICE + addon;
-  if (currentPlan === 'full') return fullTotal;
-  if (currentPlan === 'half') return Math.ceil(fullTotal * 0.5);
-  if (currentPlan === 'custom') {
+  var subtotal;
+  if (currentPlan === 'full') subtotal = fullTotal;
+  else if (currentPlan === 'half') subtotal = Math.ceil(fullTotal * 0.5);
+  else if (currentPlan === 'custom') {
     var custom = parseFloat(document.getElementById('customAmountInput').value) || 0;
-    return Math.min(custom, fullTotal);
-  }
-  return fullTotal;
+    subtotal = Math.min(custom, fullTotal);
+  } else { subtotal = fullTotal; }
+  var fee = Math.ceil(subtotal * 0.037 * 100) / 100;
+  return Math.round((subtotal + fee) * 100) / 100;
 }
 
 function updateTotal() {
   var addon = getAddon();
   document.getElementById('addonTotalInput').value = addon;
-  var total = getTotal();
-  document.getElementById('totalAmount').textContent = '$' + total;
-  document.getElementById('payBtnText').textContent = 'Pay $' + total + ' & Enroll';
-  document.getElementById('payAmountInput').value = total;
+  var fullTotal = BASE_PRICE + addon;
+  var subtotal;
+  if (currentPlan === 'full') subtotal = fullTotal;
+  else if (currentPlan === 'half') subtotal = Math.ceil(fullTotal * 0.5);
+  else if (currentPlan === 'custom') {
+    var custom = parseFloat(document.getElementById('customAmountInput').value) || 0;
+    subtotal = Math.min(custom, fullTotal);
+  } else { subtotal = fullTotal; }
+  var fee = Math.ceil(subtotal * 0.037 * 100) / 100;
+  var total = Math.round((subtotal + fee) * 100) / 100;
+  var feeEl = document.getElementById('processingFeeDisplay');
+  if (feeEl) feeEl.textContent = '$' + fee.toFixed(2);
+  document.getElementById('totalAmount').textContent = '$' + total.toFixed(2);
+  document.getElementById('payBtnText').textContent = 'Pay $' + total.toFixed(2) + ' & Enroll';
+  document.getElementById('payAmountInput').value = total.toFixed(2);
 }
 
 function toggleUpload(boxId, checkbox) {
