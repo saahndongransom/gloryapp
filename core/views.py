@@ -230,6 +230,32 @@ def about(request):
 
 def contact(request):
     if request.method == 'POST':
+        name = request.POST.get('name', '')
+        email = request.POST.get('email', '')
+        phone = request.POST.get('phone', '')
+        subject = request.POST.get('subject', 'Contact Form Message')
+        message = request.POST.get('message', '')
+        try:
+            from django.core.mail import send_mail
+            send_mail(
+                subject=f'Contact Form: {subject} — {name}',
+                message=f"""New message from the Glory Nursing contact form.
+
+Name: {name}
+Email: {email}
+Phone: {phone}
+Subject: {subject}
+
+Message:
+{message}
+
+Glory Nursing Online Portal""",
+                from_email=None,
+                recipient_list=['glorynursing@yahoo.com'],
+                fail_silently=True,
+            )
+        except Exception:
+            pass
         messages.success(request, 'Thank you! Your message has been received. We will contact you shortly.')
     return render(request, 'core/contact.html', {'page': 'contact'})
 
@@ -237,7 +263,8 @@ def contact(request):
 def apply(request):
     if request.method == 'POST':
         messages.success(request, 'Application submitted! Our admissions team will reach out within 1–2 business days.')
-    return render(request, 'core/apply.html', {'page': 'apply'})
+    programs = Program.objects.filter(is_active=True)
+    return render(request, 'core/apply.html', {'page': 'apply', 'programs': programs})
 
 
 
@@ -298,19 +325,7 @@ def about_careers(request):
     return render(request, 'core/about/careers.html', {'page': 'about', 'about_page': 'careers'})
  
  
-def apply_cna(request):
-    if request.method == 'POST':
-        messages.success(request, '✅ CNA Application submitted! We will contact you within 1–2 business days. Please download and complete the required documents below.')
-        return redirect('apply_cna')  # ← add this line
-    return render(request, 'core/apply_cna.html', {'page': 'apply'})
- 
-from django.shortcuts import redirect  # add to top imports
 
-def apply_cma(request):
-    if request.method == 'POST':
-        messages.success(request, '✅ CMA Application submitted! We will contact you within 1–2 business days. Please download and complete the required documents below.')
-        return redirect('apply_cma')  # ← redirect to GET, prevents double-submit
-    return render(request, 'core/apply_cma.html', {'page': 'apply'})
 
 
 
@@ -326,6 +341,23 @@ from .pdf_prefill import prefill_cna_pdf, prefill_cma_pdf
 
 # ── Replace apply_cna with this ───────────────────────────────────────────────
 def apply_cna(request):
+    from lms.models import Course as LMSCourse
+    from core.models import Program as CoreProgram
+    program_slug = request.GET.get('program', '') or request.session.get('apply_program_slug', '')
+    if request.GET.get('program'):
+        request.session['apply_program_slug'] = request.GET.get('program')
+    selected_program = None
+    program_course = None
+    cna_slugs = ['cna', 'cna-day-class', 'cna-evening-class', 'weekend-certified-nursing-assistant-class', 'onlinehybrid-certified-nursing-assistant']
+    if program_slug and program_slug not in cna_slugs:
+        selected_program = CoreProgram.objects.filter(slug=program_slug, is_active=True).first()
+        if selected_program and selected_program.course:
+            program_course = selected_program.course
+    if program_course:
+        request.session['apply_enroll_id'] = program_course.id
+    elif not program_slug or program_slug in cna_slugs:
+        request.session.pop('apply_enroll_id', None)
+    cna_courses = LMSCourse.objects.filter(program='CNA', is_published=True).order_by('price')
     if request.method == 'POST':
         # Collect all form data into session so the download view can use it
         data = {
@@ -369,7 +401,7 @@ def apply_cna(request):
         request.session['cna_application_data'] = data
         messages.success(request, '✅ CNA Application submitted! Your pre-filled documents are ready to download, sign, and return.')
         return redirect('apply_cna')
-    return render(request, 'core/apply_cna.html', {'page': 'apply'})
+    return render(request, 'core/apply_cna.html', {'page': 'apply', 'cna_courses': cna_courses, 'selected_program': selected_program, 'program_course': program_course})
 
 
 def download_cna_pdf(request):
@@ -418,7 +450,9 @@ def apply_cma(request):
         request.session['cma_application_data'] = data
         messages.success(request, '✅ CMA Application submitted! Your pre-filled documents are ready to download, sign, and return.')
         return redirect('apply_cma')
-    return render(request, 'core/apply_cma.html', {'page': 'apply'})
+    from lms.models import Course as LMSCourse
+    cma_courses = LMSCourse.objects.filter(program='CMA', is_published=True).order_by('price')
+    return render(request, 'core/apply_cma.html', {'page': 'apply', 'cma_courses': cma_courses})
 
 
 def download_cma_pdf(request):
@@ -451,13 +485,16 @@ def fill_pdf_cna(request):
                             'static', 'core', 'documents', 'CNA_app.pdf')
     from pypdf import PdfReader
     page_count = len(PdfReader(pdf_path).pages)
+    enroll_id = request.session.get('apply_enroll_id', 1)
+    program_slug = request.session.get('apply_program_slug', '')
+    back_url = f'/apply/cna/?program={program_slug}' if program_slug else '/apply/cna/'
     return render(request, 'core/fill_pdf.html', {
         'pdf_name': 'CNA',
         'page_count': page_count,
         'render_url': '/apply/cna/render-page/',
         'save_url': '/apply/cna/save/',
-        'back_url': '/apply/cna/',
-        'enroll_id': 1,
+        'back_url': back_url,
+        'enroll_id': enroll_id,
     })
 
 def fill_pdf_cma(request):
@@ -624,6 +661,7 @@ Glory Nursing Healthcare Training School
         except Exception as e:
             print(f"Email error: {e}")
 
+        request.session['application_submitted'] = True
         return JsonResponse({'success': True, 'message': 'Application submitted successfully!'})
 
     # Default: download

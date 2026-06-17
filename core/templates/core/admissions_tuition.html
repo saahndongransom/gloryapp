@@ -38,10 +38,8 @@
         <thead>
           <tr>
             <th>Program</th>
-            <th>Duration</th>
-            <th>Hours</th>
             <th>Tuition</th>
-            <th>Includes</th>
+            <th>Additional Fees</th>
             <th></th>
           </tr>
         </thead>
@@ -51,15 +49,41 @@
               <div class="tuition-program-name">
                 <span class="tuition-icon">🏥</span>
                 <div>
-                  <strong>Certified Nursing Assistant (CNA)</strong>
+                  <strong>CNA Day / Online Hybrid</strong>
                   <span>Most Popular</span>
                 </div>
               </div>
             </td>
-            <td>2 Weeks</td>
-            <td>75 hrs</td>
-            <td class="tuition-price">Contact Us</td>
-            <td>Textbook, uniform, state exam prep</td>
+            <td class="tuition-price">$600</td>
+            <td>State exam $180 · TB test $35 · Background check $45</td>
+            <td><a href="{% url 'apply' %}" class="btn btn-primary btn-sm">Enroll</a></td>
+          </tr>
+          <tr>
+            <td>
+              <div class="tuition-program-name">
+                <span class="tuition-icon">🏥</span>
+                <div>
+                  <strong>CNA Evening Class</strong>
+                  <span></span>
+                </div>
+              </div>
+            </td>
+            <td class="tuition-price">$700</td>
+            <td>State exam $180 · TB test $35 · Background check $45</td>
+            <td><a href="{% url 'apply' %}" class="btn btn-primary btn-sm">Enroll</a></td>
+          </tr>
+          <tr>
+            <td>
+              <div class="tuition-program-name">
+                <span class="tuition-icon">🏥</span>
+                <div>
+                  <strong>CNA Weekend Class</strong>
+                  <span></span>
+                </div>
+              </div>
+            </td>
+            <td class="tuition-price">$850</td>
+            <td>State exam $180 · TB test $35 · Background check $45</td>
             <td><a href="{% url 'apply' %}" class="btn btn-primary btn-sm">Enroll</a></td>
           </tr>
           <tr>
@@ -67,15 +91,27 @@
               <div class="tuition-program-name">
                 <span class="tuition-icon">💊</span>
                 <div>
-                  <strong>Certified Medication Aide (CMA)</strong>
+                  <strong>CMA Online / Hybrid</strong>
                   <span>CNA Required</span>
                 </div>
               </div>
             </td>
-            <td>2–4 Weeks</td>
-            <td>80 hrs</td>
-            <td class="tuition-price">Contact Us</td>
-            <td>Course materials, exam prep</td>
+            <td class="tuition-price">$600</td>
+            <td>State exam $160 · TB test $35 · Background check $45</td>
+            <td><a href="{% url 'apply' %}" class="btn btn-primary btn-sm">Enroll</a></td>
+          </tr>
+          <tr>
+            <td>
+              <div class="tuition-program-name">
+                <span class="tuition-icon">💊</span>
+                <div>
+                  <strong>CMA Traditional</strong>
+                  <span>CNA Required</span>
+                </div>
+              </div>
+            </td>
+            <td class="tuition-price">$650</td>
+            <td>State exam $160 · TB test $35 · Background check $45</td>
             <td><a href="{% url 'apply' %}" class="btn btn-primary btn-sm">Enroll</a></td>
           </tr>
           <tr>
@@ -88,8 +124,6 @@
                 </div>
               </div>
             </td>
-            <td>1–2 Weeks</td>
-            <td>40 hrs</td>
             <td class="tuition-price">Contact Us</td>
             <td>Course materials, clinical hours</td>
             <td><a href="{% url 'apply' %}" class="btn btn-primary btn-sm">Enroll</a></td>
@@ -104,8 +138,6 @@
                 </div>
               </div>
             </td>
-            <td>1 Day</td>
-            <td>4–8 hrs</td>
             <td class="tuition-price">Contact Us</td>
             <td>AHA card, mannequin practice</td>
             <td><a href="{% url 'apply' %}" class="btn btn-primary btn-sm">Enroll</a></td>
@@ -120,8 +152,6 @@
                 </div>
               </div>
             </td>
-            <td>6–8 Weeks</td>
-            <td>120 hrs</td>
             <td class="tuition-price">Contact Us</td>
             <td>Lab kit, externship, exam prep</td>
             <td><a href="{% url 'apply' %}" class="btn btn-primary btn-sm">Enroll</a></td>
@@ -136,8 +166,6 @@
                 </div>
               </div>
             </td>
-            <td>4–6 Weeks</td>
-            <td>80 hrs</td>
             <td class="tuition-price">Contact Us</td>
             <td>Course materials, exam prep</td>
             <td><a href="{% url 'apply' %}" class="btn btn-primary btn-sm">Enroll</a></td>
@@ -152,8 +180,6 @@
                 </div>
               </div>
             </td>
-            <td>10–12 Weeks</td>
-            <td>160 hrs</td>
             <td class="tuition-price">Contact Us</td>
             <td>Textbook, clinical extern, exam prep</td>
             <td><a href="{% url 'apply' %}" class="btn btn-primary btn-sm">Enroll</a></td>
@@ -163,13 +189,11 @@
               <div class="tuition-program-name">
                 <span class="tuition-icon">💻</span>
                 <div>
-                  <strong>Medical Billing & Coding</strong>
+                  <strong>Medical Billing &amp; Coding</strong>
                   <span>Online Available</span>
                 </div>
               </div>
             </td>
-            <td>12–16 Weeks</td>
-            <td>180 hrs</td>
             <td class="tuition-price">Contact Us</td>
             <td>Software access, exam prep</td>
             <td><a href="{% url 'apply' %}" class="btn btn-primary btn-sm">Enroll</a></td>
@@ -180,7 +204,7 @@
 
     <div class="tuition-note">
       <i class="fas fa-info-circle"></i>
-      <p>Tuition rates are subject to change. Contact our admissions office at <a href="tel:4059685004">(405) 968-5004</a> or <a href="mailto:glorynursing@yahoo.com">glorynursing@yahoo.com</a> for current pricing and payment plan options.</p>
+      <p>Tuition rates are subject to change. Textbook and uniform available at extra cost upon request. Contact our admissions office at <a href="tel:4059685004">(405) 968-5004</a> or <a href="mailto:glorynursing@yahoo.com">glorynursing@yahoo.com</a> for current pricing and payment plan options.</p>
     </div>
   </div>
 </section>
@@ -197,7 +221,7 @@
       <div class="why-card">
         <div class="why-icon"><i class="fas fa-book-open"></i></div>
         <h3>Course Materials</h3>
-        <p>handouts are included in most programs so you don't pay extra for learning materials.</p>
+        <p>Handouts are included in most programs so you don't pay extra for learning materials.</p>
       </div>
       <div class="why-card">
         <div class="why-icon"><i class="fas fa-flask"></i></div>
@@ -241,7 +265,7 @@
           <li><i class="fas fa-check-circle"></i> Split payment — 50% at enrollment, 50% at course start</li>
           <li><i class="fas fa-check-circle"></i> Monthly installment plans available for longer programs</li>
           <li><i class="fas fa-check-circle"></i> Employer billing accepted — we invoice your employer directly</li>
-          <li><i class="fas fa-check-circle"></i> Oklahoma Workforce & tribal sponsorships accepted</li>
+          <li><i class="fas fa-check-circle"></i> Oklahoma Workforce &amp; tribal sponsorships accepted</li>
         </ul>
         <a href="{% url 'contact' %}" class="btn btn-primary" style="margin-top:1.5rem;display:inline-block">Ask About Payment Plans</a>
       </div>

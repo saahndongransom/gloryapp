@@ -1,5 +1,3 @@
-
-
 {% extends 'core/base.html' %}
 {% load static %}
 {% block title %}Apply Now – Glory Nursing{% endblock %}
@@ -21,49 +19,21 @@
     </div>
 
     <div class="apply-program-grid">
-
-      <!-- CNA -->
+      {% for program in programs %}
       <div class="apply-program-card">
-        <div class="apply-program-icon">🏥</div>
-        <h3>Certified Nursing Assistant (CNA)</h3>
-        <p>Complete your CNA certification in as little as 2 weeks. State-approved program recognized by the Oklahoma Board of Nursing.</p>
+        <h3>{{ program.title }}</h3>
+        <p>{{ program.description|truncatechars:160 }}</p>
         <ul class="check-list" style="margin:16px 0">
-          <li><i class="fas fa-check-circle"></i> Duration: 2–4 Weeks</li>
-          <li><i class="fas fa-check-circle"></i> 77 Clock Hours</li>
-          <li><i class="fas fa-check-circle"></i> OBN & OSDH-NAR Approved</li>
-          <li><i class="fas fa-check-circle"></i> Weekday, Evening & Weekend options</li>
+          <li><i class="fas fa-check-circle"></i> Duration: {{ program.duration }}</li>
+          <li><i class="fas fa-check-circle"></i> {{ program.hours }}</li>
         </ul>
-        <a href="{% url 'apply_cna' %}" class="btn btn-primary btn-lg" style="width:100%;text-align:center">Apply for CNA Program</a>
+        {% if program.slug == 'cma' %}
+        <a href="{% url 'apply_cma' %}" class="btn btn-primary btn-lg" style="width:100%;text-align:center">Apply for {{ program.short }} Program</a>
+        {% else %}
+        <a href="{% url 'apply_cna' %}" class="btn btn-primary btn-lg" style="width:100%;text-align:center">Apply for {{ program.short }} Program</a>
+        {% endif %}
       </div>
-
-      <!-- CMA -->
-      <div class="apply-program-card">
-        <div class="apply-program-icon">💊</div>
-        <h3>Certified Medication Aide (CMA)</h3>
-        <p>Advance your nursing career by becoming a Certified Medication Aide. Requires current CNA certification with 6 months experience.</p>
-        <ul class="check-list" style="margin:16px 0">
-          <li><i class="fas fa-check-circle"></i> Duration: 2–3 Weeks</li>
-          <li><i class="fas fa-check-circle"></i> 50 Clock Hours</li>
-          <li><i class="fas fa-check-circle"></i> OBN Approved</li>
-          <li><i class="fas fa-check-circle"></i> Requires active CNA certification</li>
-        </ul>
-        <a href="{% url 'apply_cma' %}" class="btn btn-primary btn-lg" style="width:100%;text-align:center">Apply for CMA Program</a>
-      </div>
-
-      <!-- Other Programs -->
-      <div class="apply-program-card apply-program-card-other">
-        <div class="apply-program-icon">📋</div>
-        <h3>Other Programs</h3>
-        <p>Applying for HHA, BLS/CPR, Phlebotomy, EKG, CCMA, or CBCS? Use our general application form and our admissions team will reach out.</p>
-        <ul class="check-list" style="margin:16px 0">
-          <li><i class="fas fa-check-circle"></i> HHA – Home Health Aide</li>
-          <li><i class="fas fa-check-circle"></i> BLS / CPR</li>
-          <li><i class="fas fa-check-circle"></i> Phlebotomy, EKG, CCMA, CBCS</li>
-          <li><i class="fas fa-check-circle"></i> Medical Billing & Coding</li>
-        </ul>
-        <a href="{% url 'contact' %}" class="btn btn-outline btn-lg" style="width:100%;text-align:center">Contact Admissions</a>
-      </div>
-
+      {% endfor %}
     </div>
 
     <!-- How it works -->

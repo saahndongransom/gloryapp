@@ -21,8 +21,8 @@ body{font-family:Arial,sans-serif;background:#2d2d44;overflow:hidden;height:100v
 .tbtn.on{background:#1a56db;color:#fff}
 .tlbl{font-size:9px;color:#64748b}
 .tsep{width:36px;height:1px;background:rgba(255,255,255,0.08);margin:2px 0}
-.cva{flex:1;overflow:auto;display:flex;justify-content:center;align-items:flex-start;padding:20px;background:#2d2d44}
-.pgwrap{position:relative;display:inline-block;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
+.cva{flex:1;overflow:auto;display:flex;flex-direction:column;align-items:center;padding:20px;background:#2d2d44}.pg-nav{position:fixed;bottom:0;left:0;right:0;z-index:999;display:flex;align-items:center;justify-content:center;gap:16px;padding:12px 20px;background:#1e1e35;border-top:1px solid rgba(255,255,255,0.1);color:#fff}.pg-nav button{padding:10px 28px;border-radius:7px;border:none;background:#4A4EA3;color:#fff;font-size:15px;font-weight:700;cursor:pointer}.pg-nav button:hover{background:#6366c1}.pg-nav .pg-info{font-size:14px;color:#94a3b8;min-width:120px;text-align:center}
+.pgwrap{position:relative;display:inline-block;box-shadow:0 8px 32px rgba(0,0,0,0.5);margin-bottom:70px}
 .pgwrap img{display:block}
 #annoLayer{position:absolute;top:0;left:0;cursor:crosshair}
 .rpanel{width:200px;background:#16213e;border-left:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;overflow:hidden}
@@ -53,6 +53,66 @@ body{font-family:Arial,sans-serif;background:#2d2d44;overflow:hidden;height:100v
 .spin{width:22px;height:22px;border:3px solid rgba(255,255,255,0.1);border-top-color:#1a56db;border-radius:50%;animation:sp .7s linear infinite;margin-right:8px}
 @keyframes sp{to{transform:rotate(360deg)}}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#059669;color:#fff;padding:9px 18px;border-radius:7px;font-size:13px;font-weight:600;display:none;z-index:9999}
+
+@media (max-width: 768px) {
+  /* Hide right panel completely */
+  .rpanel { display: none !important; }
+
+  /* Stack layout vertically on mobile */
+  .shell { flex-direction: column; }
+  .body-row { flex-direction: column; flex: 1; overflow: hidden; }
+
+  /* Top bar - compact 2 rows */
+  .topbar {
+    height: auto;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 10px;
+    min-height: unset;
+  }
+  .btn-back { order: 0; font-size: 16px; }
+  .topbar-title { font-size: 11px; order: 1; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pgind { font-size: 11px; order: 2; white-space: nowrap; }
+  #studentEmail { width: 100% !important; order: 3; font-size: 12px; }
+  .btn-dl { font-size: 11px; padding: 6px 10px; order: 4; }
+  .btn-dl:first-of-type { background: #1a56db; }
+
+  /* Toolbar - horizontal row at top of canvas area */
+  .toolbar {
+    width: 100%;
+    flex-direction: row;
+    height: 52px;
+    padding: 6px 10px;
+    gap: 4px;
+    overflow-x: auto;
+    border-right: none;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    justify-content: flex-start;
+    align-items: center;
+  }
+  .tbtn { width: 40px; height: 40px; font-size: 15px; flex-shrink: 0; }
+  .tlbl { display: none; }
+  .tsep { width: 1px; height: 28px; background: rgba(255,255,255,0.08); margin: 0 2px; }
+
+  /* Canvas - full width, scrollable */
+  .cva {
+    flex: 1;
+    padding: 10px 6px 80px;
+    overflow-x: auto;
+    overflow-y: auto;
+    align-items: flex-start;
+    justify-content: flex-start;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Page nav fixed at bottom */
+  .pg-nav {
+    border-radius: 0;
+    margin-top: 0;
+    padding: 10px 16px;
+  }
+  .pg-nav button { padding: 8px 18px; font-size: 14px; }
+}
 </style>
 </head>
 <body>
@@ -92,6 +152,11 @@ body{font-family:Arial,sans-serif;background:#2d2d44;overflow:hidden;height:100v
         <img id="pgimg" src="" alt="">
         <canvas id="annoLayer"></canvas>
         <div class="loading" id="loading"><div class="spin"></div>Loading...</div>
+      </div>
+      <div class="pg-nav">
+        <button onclick="prevPg()">&#8592; Prev Page</button>
+        <div class="pg-info" id="pg-nav-info">Page 1 of {{ page_count }}</div>
+        <button onclick="nextPg()">Next Page &#8594;</button>
       </div>
     </div>
     <div class="rpanel">
@@ -161,6 +226,7 @@ window.addEventListener('load', function() {
 function loadPg(n) {
   curPg = n;
   document.getElementById('pgind').textContent = 'Page '+n+' of '+PG_COUNT;
+  var ni=document.getElementById('pg-nav-info'); if(ni) ni.textContent='Page '+n+' of '+PG_COUNT;
   document.getElementById('loading').style.display = 'flex';
   document.querySelectorAll('.titem').forEach(function(el,i){ el.classList.toggle('on', i+1===n); });
   if (pimgs[n]) { renderPg(n); return; }

@@ -375,7 +375,7 @@ img { max-width: 100%; display: block; }
 .hero-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(0,60,25,0.88) 0%, rgba(0,100,45,0.65) 60%, rgba(0,0,0,0.45) 100%);
+  background: linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.35) 50%, rgba(0,0,0,0.6) 100%);
 }
 .hero-content {
   position: relative;
@@ -449,7 +449,7 @@ img { max-width: 100%; display: block; }
 .hero-stats-bar {
   position: relative;
   z-index: 10;
-  background: rgba(0,40,15,0.92);
+  background: rgba(26,26,50,0.95);
   backdrop-filter: blur(8px);
   border-top: 1px solid rgba(255,255,255,0.1);
 }
@@ -643,6 +643,21 @@ img { max-width: 100%; display: block; }
   color: var(--text);
   cursor: pointer;
 }
+.program-card-image {
+  width: 100%;
+  height: 200px;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+.program-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s ease;
+}
+.program-card:hover .program-card-image img { transform: scale(1.05); }
 .program-card:hover {
   border-color: var(--green-primary);
   box-shadow: var(--shadow-lg);
@@ -1075,7 +1090,7 @@ img { max-width: 100%; display: block; }
   background: var(--green-dark);
   aspect-ratio: 16/9;
 }
-.video-card.video-featured .video-thumb { aspect-ratio: unset; min-height: 340px; }
+.video-card.video-featured .video-thumb { aspect-ratio: 16/9; min-height: 400px; }
 .video-thumb img {
   width: 100%; height: 100%;
   object-fit: cover;
@@ -1166,6 +1181,12 @@ img { max-width: 100%; display: block; }
   position: absolute;
   top: 0; left: 0;
   width: 100%; height: 100%;
+}
+.video-modal-body video {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: #000;
 }
 
 /* =============================================
@@ -2429,18 +2450,16 @@ img { max-width: 100%; display: block; }
   .apply-how-it-works { padding: 24px 20px; }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+@media (max-width: 768px) {
+  .tuition-table-wrap { border-radius: 10px; }
+  .tuition-table { min-width: unset; font-size: 0.82rem; }
+  .tuition-table thead th:nth-child(3) { display: none; }
+  .tuition-table td:nth-child(3) { display: none; }
+  .tuition-table thead th { padding: 12px 10px; }
+  .tuition-table td { padding: 12px 10px; }
+  .tuition-program-name { gap: 8px; }
+  .tuition-icon { font-size: 1.1rem; }
+  .tuition-program-name strong { font-size: 0.82rem; }
+  .payment-plans-grid { grid-template-columns: 1fr; gap: 32px; }
+}
 

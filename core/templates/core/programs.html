@@ -22,7 +22,7 @@
         </div>
         <p class="program-desc">{{ program.description|truncatechars:120 }}</p>
         <div class="program-schedules">
-          {% for s in program.schedules %}<span class="badge">{{ s }}</span>{% endfor %}
+          <span class="badge" style="white-space:pre-line">{{ program.schedules }}</span>
         </div>
         <span class="program-link">Learn More <i class="fas fa-arrow-right"></i></span>
       </a>

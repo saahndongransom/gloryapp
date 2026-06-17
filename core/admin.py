@@ -1,14 +1,4 @@
 from django.contrib import admin
-
-# Register your models here.
-
-
-from django.contrib import admin
-from .models import Program
-
-
-
-from django.contrib import admin
 from .models import Program, BlogPost, Event
 
 
@@ -22,6 +12,7 @@ class ProgramAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Basic Info', {'fields': ('title', 'short', 'slug', 'icon', 'image', 'category')}),
         ('Details',    {'fields': ('duration', 'hours', 'description', 'schedules')}),
+        ('Enrollment', {'fields': ('course',), 'description': 'Link this program to an LMS course so students can enroll and pay directly.'}),
         ('Display',    {'fields': ('order', 'is_active')}),
     )
 

@@ -1233,6 +1233,13 @@ def lesson_discussion(request, lesson_id):
 
 def enroll_page(request, course_id):
     """Public enrollment page — student enters details and pays."""
+    if not request.session.get('application_submitted'):
+        from lms.models import Course as LMSCourse
+        course_obj = get_object_or_404(LMSCourse, id=course_id)
+        messages.warning(request, 'Please fill and submit your application form first before proceeding to payment.')
+        if course_obj.program == 'CMA':
+            return redirect('apply_cma')
+        return redirect('apply_cna')
     from dotenv import load_dotenv
     load_dotenv()
     course = get_object_or_404(Course, id=course_id, is_published=True)
@@ -1279,8 +1286,14 @@ def process_payment(request, course_id):
             token=os.environ.get('SQUARE_ACCESS_TOKEN'),
             environment=sq_env
         )
-
-        amount = int(float(course.price) * 100)  # Convert to cents
+        addon_total = float(request.POST.get("addon_total", 0) or 0)
+        pay_amount = float(request.POST.get("pay_amount", 0) or 0)
+        payment_plan = request.POST.get("payment_plan", "full")
+        # Use pay_amount if provided, otherwise fall back to full price + addon
+        if pay_amount > 0:
+            amount = int(pay_amount * 100)  # Convert to cents
+        else:
+            amount = int((float(course.price) + addon_total) * 100)
 
         result = client.payments.create(
             source_id=nonce,
@@ -1341,7 +1354,7 @@ Name: {first_name} {last_name}
 Email: {email}
 Phone: {phone}
 Course: {course.title} ({course.program})
-Amount Paid: ${course.price}
+Amount Paid: ${pay_amount if pay_amount > 0 else course.price} ({payment_plan} payment plan)
 Username: {username}
 
 Login to the admin dashboard to view their enrollment:

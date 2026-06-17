@@ -11,7 +11,7 @@
 <section class="section">
   <div class="container program-detail-grid">
     <div class="program-detail-main">
-      <div class="program-detail-icon">{{ program.icon }}</div>
+   
       <h2>{{ program.title }}</h2>
       <p class="lead">{{ program.description }}</p>
       <h3>Program Highlights</h3>
@@ -25,11 +25,13 @@
       </ul>
       <h3>Available Schedules</h3>
       <div class="schedules-list">
-        {% for s in program.schedules %}
-        <div class="schedule-item"><i class="fas fa-calendar-check"></i> {{ s }}</div>
-        {% endfor %}
+     <div class="schedule-item"><i class="fas fa-calendar-check"></i> {{ program.schedules|linebreaksbr }}</div>
       </div>
-      <a href="/apply/" class="btn btn-primary btn-lg" style="margin-top:2rem">Apply for This Program</a>
+      {% if program.slug == "cma" or program.slug == "cma-traditional" %}
+      <a href="{% url 'apply_cma' %}" class="btn btn-primary btn-lg" style="margin-top:2rem">Apply for This Program</a>
+      {% else %}
+      <a href="{% url 'apply_cna' %}?program={{ program.slug }}" class="btn btn-primary btn-lg" style="margin-top:2rem">Apply for This Program</a>
+      {% endif %}
     </div>
     <div class="program-detail-sidebar">
       <div class="sidebar-card">
