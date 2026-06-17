@@ -213,6 +213,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
       <div class="brand-logo"><i class="fas fa-layer-group"></i></div>
       <span class="brand-name">GloryLMS</span>
       <span class="admin-pill">Admin</span>
+      
     </div>
 
     <div class="nav-label">Platform</div>
@@ -239,6 +240,14 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
     <button class="nav-item" onclick="switchTab('discussions',this)"><i class="fas fa-comment-dots"></i>Discussions</button>
     <button class="nav-item" onclick="switchTab('support',this)"><i class="fas fa-comments"></i>Support Tickets</button>
     <button class="nav-item" onclick="switchTab('subscriptions',this)"><i class="fas fa-credit-card"></i>Subscriptions</button>
+
+
+<div class="nav-label">Website</div>
+    <button class="nav-item" onclick="switchTab('programs',this)"><i class="fas fa-graduation-cap"></i>Programs</button>
+    <button class="nav-item" onclick="switchTab('blog',this)"><i class="fas fa-newspaper"></i>Blog Posts</button>
+    <button class="nav-item" onclick="switchTab('events',this)"><i class="fas fa-calendar-alt"></i>Events</button>
+
+
 
     <div class="sidebar-footer">
       <div class="user-row">
@@ -1413,6 +1422,180 @@ CORRECT: B"></textarea>
         </div>
       </div>
 
+
+<!-- ══ PROGRAMS ══ -->
+      <div id="view-programs" class="view-section">
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-title"><i class="fas fa-plus-circle" style="color:var(--blue);margin-right:8px"></i>Add / Edit Program</div>
+            <form method="POST" action="{% url 'lms_dashboard' %}" enctype="multipart/form-data">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="save_program">
+              <input type="hidden" name="program_id" id="programIdField" value="">
+              <div class="form-group"><label class="form-label">Title</label><input type="text" name="prog_title" id="progTitle" class="form-control" placeholder="e.g. Certified Nursing Assistant (CNA)" required></div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Short Name</label><input type="text" name="prog_short" id="progShort" class="form-control" placeholder="CNA"></div>
+                <div class="form-group"><label class="form-label">Icon (emoji)</label><input type="text" name="prog_icon" id="progIcon" class="form-control" placeholder="🏥"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Duration</label><input type="text" name="prog_duration" id="progDuration" class="form-control" placeholder="2–4 Weeks"></div>
+                <div class="form-group"><label class="form-label">Hours</label><input type="text" name="prog_hours" id="progHours" class="form-control" placeholder="77 Clock Hours"></div>
+              </div>
+              <div class="form-group"><label class="form-label">Category</label>
+                <select name="prog_category" id="progCategory" class="form-control">
+                  <option value="nursing">Nursing</option>
+                  <option value="allied_health">Allied Health</option>
+                  <option value="life_support">Life Support</option>
+                </select>
+              </div>
+              <div class="form-group"><label class="form-label">Description</label><textarea name="prog_description" id="progDescription" class="form-control" rows="3" style="resize:vertical"></textarea></div>
+              <div class="form-group"><label class="form-label">Schedules (one per line)</label><textarea name="prog_schedules" id="progSchedules" class="form-control" rows="3" style="resize:vertical" placeholder="Weekday Classes&#10;Evening Classes&#10;Weekend Classes"></textarea></div>
+              <div class="form-group"><label class="form-label">Link to Course (for enrollment)</label>
+                <select name="prog_course" id="progCourse" class="form-control">
+                  <option value="">-- No course linked --</option>
+                  {% for cs in all_courses %}<option value="{{ cs.id }}">{{ cs.title }} (${{ cs.price }})</option>{% endfor %}
+                </select>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Order</label><input type="number" name="prog_order" id="progOrder" class="form-control" value="0"></div>
+                <div class="form-group" style="display:flex;align-items:center;gap:8px;padding-top:22px"><input type="checkbox" name="prog_active" id="progActive" checked> <label for="progActive" class="form-label" style="margin:0">Active</label></div>
+              </div>
+              <button type="submit" class="btn-submit green" id="progSubmitBtn">Add Program</button>
+              <button type="button" onclick="clearProgramForm()" style="background:none;border:1px solid var(--border);padding:9px 16px;border-radius:8px;font-size:13px;cursor:pointer;margin-top:8px;width:100%">Clear Form</button>
+            </form>
+          </div>
+          <div class="panel">
+            <div class="panel-title">All Programs</div>
+            <table class="data-table">
+              <thead><tr><th>Icon</th><th>Program</th><th>Course</th><th>Active</th><th></th></tr></thead>
+              <tbody>
+                {% for prog in all_programs %}
+                <tr>
+                  <td style="font-size:20px">{{ prog.icon }}</td>
+                  <td>
+                    <strong>{{ prog.short }}</strong>
+                    <div style="font-size:11px;color:var(--muted)">{{ prog.title|truncatechars:35 }}</div>
+                    <div style="font-size:11px;color:var(--muted)">{{ prog.duration }} · {{ prog.hours }}</div>
+                  </td>
+                  <td style="font-size:12px">{% if prog.course %}<span class="badge badge-active">${{ prog.course.price }}</span>{% else %}<span class="badge badge-warn">No course</span>{% endif %}</td>
+                  <td>{% if prog.is_active %}<span class="badge badge-active">Active</span>{% else %}<span class="badge badge-danger">Hidden</span>{% endif %}</td>
+                  <td style="display:flex;gap:6px;flex-wrap:wrap">
+                    <button onclick="editProgram({{ prog.id }},'{{ prog.title|escapejs }}','{{ prog.short|escapejs }}','{{ prog.icon }}','{{ prog.duration|escapejs }}','{{ prog.hours|escapejs }}','{{ prog.category }}','{{ prog.description|escapejs }}','{{ prog.schedules|escapejs }}',{% if prog.course %}{{ prog.course.id }}{% else %}''{% endif %},{{ prog.order }},{{ prog.is_active|yesno:'true,false' }})" style="background:var(--blue);color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer">Edit</button>
+                    <form method="POST" action="{% url 'lms_dashboard' %}" onsubmit="return confirm('Delete this program?')">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="delete_program">
+                      <input type="hidden" name="program_id" value="{{ prog.id }}">
+                      <button type="submit" class="btn-danger" style="font-size:11px;padding:5px 10px">Delete</button>
+                    </form>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">No programs yet.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ BLOG POSTS ══ -->
+      <div id="view-blog" class="view-section">
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-title">Add Blog Post</div>
+            <form method="POST" action="{% url 'lms_dashboard' %}" enctype="multipart/form-data">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="save_blog">
+              <div class="form-group"><label class="form-label">Title</label><input type="text" name="blog_title" class="form-control" required></div>
+              <div class="form-group"><label class="form-label">Excerpt (short summary)</label><textarea name="blog_excerpt" class="form-control" rows="2" style="resize:vertical"></textarea></div>
+              <div class="form-group"><label class="form-label">Content</label><textarea name="blog_content" class="form-control" rows="6" style="resize:vertical"></textarea></div>
+              <div class="form-group"><label class="form-label">Image</label><input type="file" name="blog_image" class="form-control" accept="image/*"></div>
+              <div class="form-group"><label class="form-label">Published Date</label><input type="date" name="blog_date" class="form-control"></div>
+              <div class="form-group" style="display:flex;align-items:center;gap:8px"><input type="checkbox" name="blog_published" checked> <label class="form-label" style="margin:0">Published</label></div>
+              <button type="submit" class="btn-submit green">Save Blog Post</button>
+            </form>
+          </div>
+          <div class="panel">
+            <div class="panel-title">All Blog Posts</div>
+            <table class="data-table">
+              <thead><tr><th>Title</th><th>Date</th><th>Status</th><th></th></tr></thead>
+              <tbody>
+                {% for post in all_blog_posts %}
+                <tr>
+                  <td><strong>{{ post.title|truncatechars:35 }}</strong></td>
+                  <td style="font-size:12px">{{ post.published_date|date:"M d, Y" }}</td>
+                  <td>{% if post.is_published %}<span class="badge badge-active">Published</span>{% else %}<span class="badge badge-warn">Draft</span>{% endif %}</td>
+                  <td>
+                    <form method="POST" action="{% url 'lms_dashboard' %}" onsubmit="return confirm('Delete this post?')">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="delete_blog">
+                      <input type="hidden" name="blog_id" value="{{ post.id }}">
+                      <button type="submit" class="btn-danger" style="font-size:11px;padding:5px 10px">Delete</button>
+                    </form>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">No blog posts yet.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ EVENTS ══ -->
+      <div id="view-events" class="view-section">
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-title">Add Event</div>
+            <form method="POST" action="{% url 'lms_dashboard' %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="save_event">
+              <div class="form-group"><label class="form-label">Title</label><input type="text" name="event_title" class="form-control" required></div>
+              <div class="form-group"><label class="form-label">Description</label><textarea name="event_description" class="form-control" rows="3" style="resize:vertical"></textarea></div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Date</label><input type="date" name="event_date" class="form-control" required></div>
+                <div class="form-group"><label class="form-label">Location</label><input type="text" name="event_location" class="form-control" placeholder="12032 N. Pennsylvania Ave"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Start Time</label><input type="time" name="event_start" class="form-control" required></div>
+                <div class="form-group"><label class="form-label">End Time</label><input type="time" name="event_end" class="form-control"></div>
+              </div>
+              <div class="form-group" style="display:flex;align-items:center;gap:8px"><input type="checkbox" name="event_registration" checked> <label class="form-label" style="margin:0">Registration Open</label></div>
+              <button type="submit" class="btn-submit green">Save Event</button>
+            </form>
+          </div>
+          <div class="panel">
+            <div class="panel-title">All Events</div>
+            <table class="data-table">
+              <thead><tr><th>Title</th><th>Date</th><th>Registration</th><th></th></tr></thead>
+              <tbody>
+                {% for event in all_events %}
+                <tr>
+                  <td><strong>{{ event.title|truncatechars:30 }}</strong></td>
+                  <td style="font-size:12px">{{ event.event_date|date:"M d, Y" }}</td>
+                  <td>{% if event.registration_open %}<span class="badge badge-active">Open</span>{% else %}<span class="badge badge-warn">Closed</span>{% endif %}</td>
+                  <td>
+                    <form method="POST" action="{% url 'lms_dashboard' %}" onsubmit="return confirm('Delete this event?')">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="delete_event">
+                      <input type="hidden" name="event_id" value="{{ event.id }}">
+                      <button type="submit" class="btn-danger" style="font-size:11px;padding:5px 10px">Delete</button>
+                    </form>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">No events yet.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+
+
+
     </main>
   </div>
 </div>
@@ -1473,6 +1656,45 @@ const uf=document.getElementById('uploadForm');
 if(uf){uf.addEventListener('submit',function(){if(window.quillInstance&&document.getElementById('selectedContentType').value==='text'){document.getElementById('textContentHidden').value=quillInstance.root.innerHTML;}});}
 
 </script>
+
+
+<script>
+function editProgram(id, title, short, icon, duration, hours, category, description, schedules, courseId, order, active) {
+  document.getElementById('programIdField').value = id;
+  document.getElementById('progTitle').value = title;
+  document.getElementById('progShort').value = short;
+  document.getElementById('progIcon').value = icon;
+  document.getElementById('progDuration').value = duration;
+  document.getElementById('progHours').value = hours;
+  document.getElementById('progCategory').value = category;
+  document.getElementById('progDescription').value = description;
+  document.getElementById('progSchedules').value = schedules;
+  document.getElementById('progCourse').value = courseId || '';
+  document.getElementById('progOrder').value = order;
+  document.getElementById('progActive').checked = active;
+  document.getElementById('progSubmitBtn').textContent = 'Update Program';
+  switchTab('programs', document.querySelector('[onclick*="programs"]'));
+  document.getElementById('progTitle').scrollIntoView({behavior:'smooth'});
+}
+function clearProgramForm() {
+  document.getElementById('programIdField').value = '';
+  document.getElementById('progTitle').value = '';
+  document.getElementById('progShort').value = '';
+  document.getElementById('progIcon').value = '';
+  document.getElementById('progDuration').value = '';
+  document.getElementById('progHours').value = '';
+  document.getElementById('progDescription').value = '';
+  document.getElementById('progSchedules').value = '';
+  document.getElementById('progCourse').value = '';
+  document.getElementById('progOrder').value = '0';
+  document.getElementById('progActive').checked = true;
+  document.getElementById('progSubmitBtn').textContent = 'Add Program';
+}
+</script>
+
+
+
+
 <script>
 // ── Tab switching ──
 const SECTION_NAMES = {
@@ -1480,7 +1702,8 @@ const SECTION_NAMES = {
   students:'Manage Students', media:'Upload Content',
   testing:'Assessments', enrollments:'Enrollments',
   credentials:'Certificates', support:'Support Tickets',
-  subscriptions:'Subscriptions'
+  subscriptions:'Subscriptions', programs:'Website Programs',
+  blog:'Blog Posts', events:'Events'
 };
 function switchTab(tabId, clickedEl) {
   document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));

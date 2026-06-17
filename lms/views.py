@@ -388,6 +388,105 @@ def lms_dashboard_view(request):
                 messages.success(request, "Announcement deleted.")
                 return redirect('lms_dashboard')
 
+            # --- WEBSITE PROGRAMS ---
+            elif action == 'save_program':
+                from core.models import Program as CoreProgram
+                prog_id = request.POST.get('program_id')
+                title = request.POST.get('prog_title', '').strip()
+                if title:
+                    course_id = request.POST.get('prog_course') or None
+                    course_obj = Course.objects.filter(id=course_id).first() if course_id else None
+                    data = {
+                        'title': title,
+                        'short': request.POST.get('prog_short', ''),
+                        'icon': request.POST.get('prog_icon', '🏥'),
+                        'duration': request.POST.get('prog_duration', ''),
+                        'hours': request.POST.get('prog_hours', ''),
+                        'category': request.POST.get('prog_category', 'nursing'),
+                        'description': request.POST.get('prog_description', ''),
+                        'schedules': request.POST.get('prog_schedules', ''),
+                        'order': int(request.POST.get('prog_order', 0)),
+                        'is_active': 'prog_active' in request.POST,
+                        'course': course_obj,
+                    }
+                    if prog_id:
+                        CoreProgram.objects.filter(id=prog_id).update(**{k:v for k,v in data.items() if k != 'course'})
+                        CoreProgram.objects.filter(id=prog_id).update(course=course_obj)
+                        messages.success(request, f"Program '{title}' updated.")
+                    else:
+                        from django.utils.text import slugify
+                        data['slug'] = slugify(title)
+                        CoreProgram.objects.create(**data)
+                        messages.success(request, f"Program '{title}' created.")
+                return redirect('lms_dashboard')
+
+            elif action == 'delete_program':
+                from core.models import Program as CoreProgram
+                prog = CoreProgram.objects.filter(id=request.POST.get('program_id')).first()
+                if prog:
+                    prog.delete()
+                    messages.success(request, "Program deleted.")
+                return redirect('lms_dashboard')
+
+            # --- WEBSITE BLOG POSTS ---
+            elif action == 'save_blog':
+                from core.models import BlogPost
+                title = request.POST.get('blog_title', '').strip()
+                if title:
+                    from django.utils.text import slugify
+                    slug = slugify(title)
+                    # Make unique slug
+                    base_slug = slug
+                    counter = 1
+                    while BlogPost.objects.filter(slug=slug).exists():
+                        slug = f"{base_slug}-{counter}"
+                        counter += 1
+                    BlogPost.objects.create(
+                        title=title,
+                        slug=slug,
+                        excerpt=request.POST.get('blog_excerpt', ''),
+                        content=request.POST.get('blog_content', ''),
+                        image=request.FILES.get('blog_image'),
+                        published_date=request.POST.get('blog_date') or None,
+                        is_published='blog_published' in request.POST,
+                    )
+                    messages.success(request, f"Blog post '{title}' saved.")
+                return redirect('lms_dashboard')
+
+            elif action == 'delete_blog':
+                from core.models import BlogPost
+                post = BlogPost.objects.filter(id=request.POST.get('blog_id')).first()
+                if post:
+                    post.delete()
+                    messages.success(request, "Blog post deleted.")
+                return redirect('lms_dashboard')
+
+            # --- WEBSITE EVENTS ---
+            elif action == 'save_event':
+                from core.models import Event
+                title = request.POST.get('event_title', '').strip()
+                if title:
+                    Event.objects.create(
+                        title=title,
+                        description=request.POST.get('event_description', ''),
+                        event_date=request.POST.get('event_date'),
+                        start_time=request.POST.get('event_start'),
+                        end_time=request.POST.get('event_end') or None,
+                        location=request.POST.get('event_location', ''),
+                        registration_open='event_registration' in request.POST,
+                        is_active=True,
+                    )
+                    messages.success(request, f"Event '{title}' saved.")
+                return redirect('lms_dashboard')
+
+            elif action == 'delete_event':
+                from core.models import Event
+                event = Event.objects.filter(id=request.POST.get('event_id')).first()
+                if event:
+                    event.delete()
+                    messages.success(request, "Event deleted.")
+                return redirect('lms_dashboard')
+
 
             elif action == 'delete_content':
                 ci = get_object_or_404(ContentItem, id=request.POST.get('content_id'))
@@ -405,7 +504,8 @@ def lms_dashboard_view(request):
                 program = request.POST.get('program', '').strip()
                 structure_json = request.POST.get('structure', '[]')
                 if title and program:
-                    course = Course.objects.create(title=title, program=program)
+                    price = float(request.POST.get('price', 0) or 0)
+                    course = Course.objects.create(title=title, program=program, price=price, is_published=True)
                     try:
                         structure = json.loads(structure_json)
                         for mod_order, mod_data in enumerate(structure, start=1):
@@ -466,7 +566,10 @@ def lms_dashboard_view(request):
             'all_courses': Course.objects.prefetch_related('modules__lessons'),
             'all_interactive_elements': InteractiveElement.objects.select_related('lesson').order_by('-id'),
             'approved_reviews': CourseReview.objects.filter(is_approved=True).select_related('student', 'course'),
-            'page': 'lms_admin_dashboard'
+            'page': 'lms_admin_dashboard',
+            'all_programs': __import__('core.models', fromlist=['Program']).Program.objects.filter(is_active=True).order_by('order'),
+            'all_blog_posts': __import__('core.models', fromlist=['BlogPost']).BlogPost.objects.all().order_by('-published_date'),
+            'all_events': __import__('core.models', fromlist=['Event']).Event.objects.all().order_by('event_date'),
         }
         return render(request, 'lms/admin_dashboard.html', context)
 

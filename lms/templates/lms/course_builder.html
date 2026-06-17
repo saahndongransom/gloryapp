@@ -253,6 +253,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
           >
           <div class="course-meta-row">
             <input type="text" name="program" id="courseProgram" class="meta-input" placeholder="Program code e.g. CNA" style="max-width:160px" required>
+            <input type="number" name="price" id="coursePrice" class="meta-input" placeholder="Price e.g. 600" style="max-width:120px" min="0" step="0.01">
             <input type="text" class="meta-input" placeholder="Description (optional)" id="courseDesc">
           </div>
         </form>
@@ -504,6 +505,7 @@ function saveCourse(publish = false) {
     action: 'create_full_course',
     title: title,
     program: program,
+    price: document.getElementById('coursePrice').value || '0',
     structure: JSON.stringify(modules.map(m => ({
       title: m.title,
       lessons: m.lessons.map(l => ({ title: l.title }))

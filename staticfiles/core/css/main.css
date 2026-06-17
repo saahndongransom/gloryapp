@@ -1523,11 +1523,14 @@ img { max-width: 100%; display: block; }
     margin-top: 4px;
     min-width: unset !important;
     width: 100%;
+    max-height: 320px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .dropdown li a { padding: 10px 16px 10px 20px; gap: 10px; }
   .dropdown-icon { font-size: 1rem; width: 22px; }
   .dropdown-text span { display: none; }
-  .dropdown-footer { display: none; }
+  /* .dropdown-footer { display: none; } */
 
   /* Layout */
   .welcome-grid { grid-template-columns: 1fr; }
