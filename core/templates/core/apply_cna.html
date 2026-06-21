@@ -45,7 +45,7 @@
           <div style="flex:1">
             <div style="font-weight:700;font-size:15px;margin-bottom:4px">Fill &amp; Sign the Application</div>
             <div style="font-size:13px;color:#64748b;margin-bottom:14px">Open the application form in our online editor. Fill in all fields, sign digitally, and download your completed PDF.</div>
-            <a href="/apply/cna/fill/" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px">
+            <a href="/apply/cna/form/" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px">
               <i class="fas fa-edit"></i> Open Application Editor
             </a>
           </div>
@@ -59,8 +59,52 @@
           </div>
         </div>
 
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;display:flex;align-items:flex-start;gap:16px">
+          <div style="width:36px;height:36px;background:#7c3aed;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:16px;flex-shrink:0">3</div>
+          <div style="flex:1;width:100%">
+            <div style="font-weight:700;font-size:15px;margin-bottom:4px">Upload Supporting Documents <span style="font-weight:400;color:#94a3b8;font-size:12px">(optional, can also be done later)</span></div>
+            <div style="font-size:13px;color:#64748b;margin-bottom:14px">Securely upload your National ID, Social Security Card, diploma, or immunization records. Files are encrypted in transit and only visible to Glory Nursing staff.</div>
+
+            <div id="docUploadGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+              <label class="doc-upload-box" data-doctype="national_id">
+                <i class="fas fa-id-card"></i>
+                <span>National ID Card</span>
+                <input type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none">
+              </label>
+              <label class="doc-upload-box" data-doctype="ssn_card">
+                <i class="fas fa-id-badge"></i>
+                <span>Social Security Card</span>
+                <input type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none">
+              </label>
+              <label class="doc-upload-box" data-doctype="diploma">
+                <i class="fas fa-graduation-cap"></i>
+                <span>HS Diploma / GED</span>
+                <input type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none">
+              </label>
+              <label class="doc-upload-box" data-doctype="immunization">
+                <i class="fas fa-syringe"></i>
+                <span>Immunization Records</span>
+                <input type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none">
+              </label>
+              <label class="doc-upload-box" data-doctype="tb_test">
+                <i class="fas fa-lungs"></i>
+                <span>TB Test Results</span>
+                <input type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none">
+              </label>
+              <label class="doc-upload-box" data-doctype="background_check">
+                <i class="fas fa-shield-alt"></i>
+                <span>Background Check</span>
+                <input type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none">
+              </label>
+            </div>
+
+            <div id="docUploadList" style="display:flex;flex-direction:column;gap:6px"></div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:8px"><i class="fas fa-lock"></i> PDF, JPG or PNG · Max 10MB per file</div>
+          </div>
+        </div>
+
         <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:14px;padding:20px;display:flex;align-items:flex-start;gap:16px">
-          <div style="width:36px;height:36px;background:#059669;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:16px;flex-shrink:0">3</div>
+          <div style="width:36px;height:36px;background:#059669;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:16px;flex-shrink:0">4</div>
           <div style="flex:1">
             <div style="font-weight:700;font-size:15px;margin-bottom:4px">Complete Payment &amp; Get Instant Access</div>
             <div style="font-size:13px;color:#64748b;margin-bottom:14px">Select your program below and pay securely online. Your LMS account will be created instantly and login credentials emailed to you.</div>
@@ -140,5 +184,106 @@
   });
 </script>
 {% endif %}
+
+<script>
+function getCookie(name) {
+  var m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+  return m ? m.pop() : '';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.doc-upload-box').forEach(function(box) {
+    var input = box.querySelector('input[type=file]');
+    var docType = box.getAttribute('data-doctype');
+
+    input.addEventListener('change', function() {
+      var file = input.files[0];
+      if (!file) return;
+
+      if (file.size > 10 * 1024 * 1024) {
+        alert('File too large. Max 10MB.');
+        input.value = '';
+        return;
+      }
+
+      var icon = box.querySelector('i');
+      var label = box.querySelector('span');
+      var originalIcon = icon.className;
+      var originalLabel = label.textContent;
+      icon.className = 'fas fa-spinner fa-spin';
+      label.textContent = 'Uploading...';
+
+      var fd = new FormData();
+      fd.append('file', file);
+      fd.append('document_type', docType);
+      fd.append('program', 'CNA');
+
+      fetch('{% url "upload_application_document" %}', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        body: fd
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.success) {
+          box.classList.add('uploaded');
+          icon.className = 'fas fa-check-circle';
+          label.textContent = 'Uploaded!';
+          addUploadedItem(data.id, file.name, data.document_type, box);
+        } else {
+          icon.className = originalIcon;
+          label.textContent = originalLabel;
+          alert(data.error || 'Upload failed. Please try again.');
+        }
+      })
+      .catch(function() {
+        icon.className = originalIcon;
+        label.textContent = originalLabel;
+        alert('Upload failed. Please check your connection and try again.');
+      });
+    });
+  });
+});
+
+function addUploadedItem(id, filename, docTypeLabel, box) {
+  var list = document.getElementById('docUploadList');
+  var item = document.createElement('div');
+  item.className = 'doc-upload-item';
+  item.id = 'doc-item-' + id;
+  item.innerHTML =
+    '<i class="fas fa-check-circle"></i>' +
+    '<span class="doc-name">' + docTypeLabel + ': ' + filename + '</span>' +
+    '<button type="button" onclick="removeUploadedDoc(' + id + ', this)"><i class="fas fa-times"></i></button>';
+  list.appendChild(item);
+  box.dataset.docId = id;
+}
+
+function removeUploadedDoc(id, btn) {
+  fetch('/apply/delete-document/' + id + '/', {
+    method: 'POST',
+    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.success) {
+      var item = document.getElementById('doc-item-' + id);
+      if (item) item.remove();
+      var box = document.querySelector('[data-doc-id="' + id + '"]');
+      if (box) {
+        box.classList.remove('uploaded');
+        box.querySelector('i').className = 'fas ' + (
+          box.dataset.doctype === 'national_id' ? 'fa-id-card' :
+          box.dataset.doctype === 'ssn_card' ? 'fa-id-badge' :
+          box.dataset.doctype === 'diploma' ? 'fa-graduation-cap' :
+          box.dataset.doctype === 'immunization' ? 'fa-syringe' :
+          box.dataset.doctype === 'tb_test' ? 'fa-lungs' : 'fa-shield-alt'
+        );
+        box.querySelector('span').textContent = box.querySelector('input').accept ? box.getAttribute('data-doctype').replace('_',' ') : 'Upload';
+        box.querySelector('input').value = '';
+      }
+    }
+  });
+}
+</script>
 
 {% endblock %}

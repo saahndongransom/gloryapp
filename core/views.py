@@ -497,6 +497,489 @@ def fill_pdf_cna(request):
         'enroll_id': enroll_id,
     })
 
+
+def fill_form_cna(request):
+    from lms.models import Course as LMSCourse
+    enroll_id = request.session.get('apply_enroll_id', 1)
+    program_slug = request.session.get('apply_program_slug', '')
+    back_url = f'/apply/cna/?program={program_slug}' if program_slug else '/apply/cna/'
+    cna_courses = LMSCourse.objects.filter(program='CNA', is_published=True).order_by('price')
+    return render(request, 'core/fill_form_cna.html', {
+        'enroll_id': enroll_id,
+        'back_url': back_url,
+        'cna_courses': cna_courses,
+    })
+
+
+@csrf_exempt
+def submit_form_cna(request):
+    import json
+    import io
+    import base64
+    from django.http import JsonResponse
+    from django.core.mail import EmailMessage
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.units import inch
+    from reportlab.lib.colors import HexColor
+    from reportlab.pdfgen import canvas as rl_canvas
+    from reportlab.lib.utils import ImageReader
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=400)
+
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'error': 'Invalid data'}, status=400)
+
+    student_email = data.get('student_email', '').strip()
+    if not student_email:
+        return JsonResponse({'error': 'Email is required'}, status=400)
+
+    def get(key, default=''):
+        v = data.get(key, default)
+        return v if v else default
+
+    def draw_sig(c, key, x, y, w, h):
+        img_data = data.get(key, '')
+        if img_data and img_data.startswith('data:image'):
+            try:
+                header, b64 = img_data.split(',', 1)
+                img_bytes = base64.b64decode(b64)
+                img_reader = ImageReader(io.BytesIO(img_bytes))
+                c.drawImage(img_reader, x, y, width=w, height=h, mask='auto')
+            except Exception:
+                pass
+
+    import os as _os
+    full_name = f"{get('first_name')} {get('last_name')}".strip() or 'Applicant'
+
+    buf = io.BytesIO()
+    c = rl_canvas.Canvas(buf, pagesize=letter)
+    width, height = letter
+
+    logo_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'static', 'core', 'images', 'glorylogo.png')
+
+    def header(title):
+        c.setFillColor(HexColor('#ffffff'))
+        c.rect(0, height - 75, width, 75, fill=1, stroke=0)
+        try:
+            if _os.path.exists(logo_path):
+                c.drawImage(logo_path, 40, height - 68, width=160, height=58, mask='auto', preserveAspectRatio=True)
+        except Exception:
+            pass
+        c.setFillColor(HexColor('#0f172a'))
+        c.setFont('Helvetica', 9)
+        c.drawRightString(width - 40, height - 22, '12032 N Pennsylvania Ave')
+        c.drawRightString(width - 40, height - 34, 'Oklahoma City, OK 73120')
+        c.drawRightString(width - 40, height - 46, 'Call/text: 405-968-5004')
+        c.drawRightString(width - 40, height - 58, 'Email: glorynursing@yahoo.com')
+        c.setStrokeColor(HexColor('#1a56db'))
+        c.setLineWidth(2)
+        c.line(40, height - 78, width - 40, height - 78)
+        c.setFillColor(HexColor('#0f172a'))
+        c.setFont('Helvetica-Bold', 14)
+        c.drawString(40, height - 100, title)
+        c.setStrokeColor(HexColor('#e2e8f0'))
+        c.setLineWidth(1)
+        c.line(40, height - 107, width - 40, height - 107)
+
+    def field_line(label, value, x, y, label_w=140):
+        c.setFont('Helvetica-Bold', 9)
+        c.setFillColor(HexColor('#475569'))
+        c.drawString(x, y, label)
+        c.setFont('Helvetica', 10)
+        c.setFillColor(HexColor('#0f172a'))
+        c.drawString(x + label_w, y, str(value))
+
+    def wrap_text(text, font='Helvetica', size=9.5, max_width=520):
+        from reportlab.pdfbase.pdfmetrics import stringWidth
+        lines = []
+        for paragraph in text.split('\n'):
+            if not paragraph.strip():
+                lines.append('')
+                continue
+            words = paragraph.split(' ')
+            cur = ''
+            for word in words:
+                test = (cur + ' ' + word).strip()
+                if stringWidth(test, font, size) <= max_width:
+                    cur = test
+                else:
+                    if cur:
+                        lines.append(cur)
+                    cur = word
+            if cur:
+                lines.append(cur)
+        return lines
+
+    def draw_paragraph(text, x, y, max_width=520, size=9.5, line_height=13):
+        lines = wrap_text(text, size=size, max_width=max_width)
+        c.setFont('Helvetica', size)
+        c.setFillColor(HexColor('#334155'))
+        for line in lines:
+            if y < 60:
+                c.showPage()
+                y = height - 50
+                c.setFont('Helvetica', size)
+                c.setFillColor(HexColor('#334155'))
+            c.drawString(x, y, line)
+            y -= line_height
+        return y
+
+    # PAGE 1 — Application Information
+    header('CNA Enrollment Application')
+    y = height - 130
+    field_line('Last Name:', get('last_name'), 40, y); field_line('First Name:', get('first_name'), 310, y)
+    y -= 22
+    field_line('M.I.:', get('middle_initial'), 40, y); field_line('Date of Birth:', get('dob'), 310, y)
+    y -= 22
+    field_line('SSN:', get('ssn'), 40, y); field_line('Phone:', get('phone'), 310, y)
+    y -= 22
+    field_line('Street Address:', get('street'), 40, y)
+    y -= 22
+    field_line('City:', get('city'), 40, y); field_line('State:', get('state'), 310, y)
+    y -= 22
+    field_line('Zip:', get('zip'), 40, y); field_line('How heard:', get('how_heard'), 310, y)
+    y -= 22
+    field_line('Course Applied For:', get('course_applied'), 40, y, label_w=150)
+    y -= 35
+
+    c.setFont('Helvetica-Bold', 12)
+    c.setFillColor(HexColor('#1a56db'))
+    c.drawString(40, y, 'Emergency Contact')
+    y -= 20
+    field_line('Contact Name:', get('emergency_name'), 40, y); field_line('Phone:', get('emergency_phone'), 310, y)
+    y -= 22
+    field_line('Address:', get('emergency_address'), 40, y); field_line('Relationship:', get('emergency_relationship'), 310, y)
+    y -= 35
+
+    c.setFont('Helvetica-Bold', 12)
+    c.setFillColor(HexColor('#1a56db'))
+    c.drawString(40, y, 'Education')
+    y -= 20
+    field_line('High School:', get('hs_name'), 40, y); field_line('Address:', get('hs_address'), 310, y)
+    y -= 22
+    field_line('Years:', f"{get('hs_from')} - {get('hs_to')}", 40, y)
+    field_line('Graduated:', get('hs_graduated'), 310, y)
+    y -= 22
+    field_line('Diploma/GED:', get('hs_diploma'), 40, y)
+    y -= 30
+    field_line('College/Other:', get('college_name'), 40, y); field_line('Address:', get('college_address'), 310, y)
+    y -= 22
+    field_line('Years:', f"{get('college_from')} - {get('college_to')}", 40, y)
+    field_line('Graduated:', get('college_graduated'), 310, y)
+    y -= 22
+    field_line('Degree:', get('degree'), 40, y)
+
+    c.showPage()
+
+    # PAGE 2 — Affidavit of Lawful Presence
+    header('Affidavit of Lawful Presence')
+    y = height - 130
+    presence = 'United States Citizen' if get('lawful_presence') == 'us_citizen' else 'Qualified Alien Lawfully Present'
+    field_line('Status:', presence, 40, y, label_w=110)
+    y -= 22
+    if get('alien_number'):
+        field_line('Alien/Admission #:', get('alien_number'), 40, y, label_w=150)
+    c.showPage()
+
+    # PAGE 3 — Clinical Tasks Policy
+    header('Authorized Tasks at Clinical Sites')
+    y = height - 125
+    clinical_text = '''As a student enrolled in the Certified Nursing Assistant (CNA) program, your education and safety, as well as the safety of patients, are of utmost importance. Therefore, students are only permitted to perform tasks and procedures at clinical sites that have been explicitly taught and practiced during classroom and lab training at Glory Nursing CNA School.
+
+Important Guidelines
+
+1. No Unapproved Tasks: Under no circumstances should you attempt or perform any clinical task or procedure that has not been covered in your coursework. This includes tasks that you may observe staff or other healthcare professionals performing. If you are asked to perform such tasks, respectfully inform the staff that it is outside your current scope of training.
+
+2. Supervised Tasks: All tasks performed at the clinical site must be done under the supervision of a qualified preceptor. This ensures both the correct application of skills and adherence to patient safety standards.
+
+3. Ask for Clarification: If you are ever unsure whether a task is within your scope of training, do not hesitate to ask your clinical instructor for clarification. It is better to seek confirmation than to risk patient safety or your own performance.
+
+4. Student Responsibility: Students are expected to always demonstrate professionalism and ethical responsibility. Engaging in unauthorized tasks could result in disciplinary action and may impact your standing in the program.
+
+Consequences of Non-Compliance
+
+Any student found performing unauthorized tasks will be subject to the following disciplinary actions:
+- Immediate suspension from the clinical site
+- Review of the incident by school administration
+- Possible removal from the CNA program
+
+Commitment to Safety and Learning
+
+The clinical experience is designed to complement your education and provide a safe learning environment for practical application. Adhering to the tasks you have been taught ensures that you develop skills progressively and in a manner that protects the well-being of all involved.
+
+Please remember that patient safety, as well as your professional integrity, depend on your adherence to these guidelines.'''
+    y = draw_paragraph(clinical_text, 40, y)
+    y -= 20
+    if y < 110:
+        c.showPage()
+        header('Authorized Tasks at Clinical Sites - Acknowledgment')
+        y = height - 130
+    c.setFont('Helvetica-Bold', 11)
+    c.setFillColor(HexColor('#1a56db'))
+    c.drawString(40, y, 'Acknowledgment of Policy')
+    y -= 18
+    field_line('Agreement:', 'I have read and agree to follow this policy.' if get('agree_clinical_tasks') else 'Not agreed', 40, y, label_w=110)
+    y -= 50
+    c.setFont('Helvetica-Bold', 9)
+    c.setFillColor(HexColor('#475569'))
+    c.drawString(40, y, 'Signature:')
+    draw_sig(c, 'sig_clinical_tasks', 40, y - 60, 220, 50)
+    c.showPage()
+
+    # PAGE 4 — Media Release
+    header('Photograph and Media Release Waiver')
+    y = height - 125
+    field_line('Student Name:', full_name_placeholder if False else f"{get('first_name')} {get('last_name')}", 40, y, label_w=110)
+    y -= 18
+    field_line('Date of Birth:', get('dob'), 40, y, label_w=110)
+    y -= 18
+    field_line('Phone Number:', get('phone'), 40, y, label_w=110)
+    y -= 18
+    field_line('Email:', student_email, 40, y, label_w=110)
+    y -= 25
+    media_text = '''As a student at Glory Nursing CNA School, I understand that photographs, videos, and other forms of media may be taken during my time at the school for educational, promotional, and marketing purposes. These images may be used in various formats including, but not limited to: websites and social media platforms (e.g., Facebook, Instagram), print and digital advertising materials, newsletters, brochures, and other promotional materials, and training materials and educational presentations.
+
+I Consent: I, the undersigned, grant permission to Glory Nursing CNA School to use photographs, video recordings, and/or other media that may include my image, voice, or likeness for the purposes outlined above. I understand that these images may be used without compensation and will remain the property of Glory Nursing CNA School.
+
+I Decline: I, the undersigned, do not grant permission to Glory Nursing CNA School to use photographs, video recordings, and/or other media that may include my image, voice, or likeness. I understand that if I decline, every effort will be made to exclude me from media content, and my decision will not affect my participation in school activities.
+
+I understand that:
+1. My participation is voluntary, and I may revoke or modify this consent at any time by providing written notice to the school.
+2. My personal information (e.g., name, contact details) will not be disclosed in the use of such materials unless explicitly permitted by me.'''
+    y = draw_paragraph(media_text, 40, y)
+    y -= 15
+    if y < 110:
+        c.showPage()
+        header('Photograph and Media Release Waiver (continued)')
+        y = height - 130
+    consent_label = 'I Consent' if get('media_consent') == 'Yes' else ('I Decline' if get('media_consent') == 'No' else 'Not specified')
+    field_line('Selection:', consent_label, 40, y, label_w=110)
+    y -= 50
+    c.setFont('Helvetica-Bold', 9)
+    c.setFillColor(HexColor('#475569'))
+    c.drawString(40, y, 'Signature:')
+    draw_sig(c, 'sig_media_release', 40, y - 60, 220, 50)
+    c.showPage()
+
+    # PAGE 5 — Background Check
+    header('Background Check Requirement')
+    y = height - 125
+    bg_text = '''All students enrolled in the Certified Nursing Assistant (CNA) program at Glory Nursing CNA School are required to undergo a criminal background check before participating in clinical training or graduating from the program. This background check is mandated to ensure compliance with healthcare facility policies and state regulations.
+
+By signing this waiver, you acknowledge and agree to the following:
+
+1. Clean Background Requirement: In order to qualify for clinical placement and graduation, students must pass a criminal background check per state and facility requirements.
+
+5. Background Check Process:
+- The background check will be conducted by an authorized third-party agency. You will be responsible for submitting all necessary information and payment for the background check as part of the enrollment process.
+- You will be notified of the results, and any disqualifying findings may result in removal from the program.
+
+Acknowledgment of Policy: By signing below, you acknowledge that you understand and agree to the terms of this waiver, including the requirement for a clean background check and the lack of any guarantee of employment after program completion.'''
+    y = draw_paragraph(bg_text, 40, y)
+    y -= 15
+    if y < 110:
+        c.showPage()
+        header('Background Check Requirement (continued)')
+        y = height - 130
+    bg = 'Yes - Glory Nursing will conduct my background check' if get('background_check') == 'glory_conducts' else 'No - I will provide my own background check'
+    field_line('Preference:', bg, 40, y, label_w=110)
+    y -= 50
+    c.setFont('Helvetica-Bold', 9)
+    c.setFillColor(HexColor('#475569'))
+    c.drawString(40, y, 'Signature:')
+    draw_sig(c, 'sig_background_check', 40, y - 60, 220, 50)
+    c.showPage()
+
+    # PAGE 6 — Grievance & Refund Policy
+    header('Grievance & Refund Policy')
+    y = height - 125
+    refund_text = '''At Glory Nursing, we are committed to fostering a supportive and fair learning environment. Students who have concerns or complaints related to any aspect of their experience at the school are encouraged to follow the grievance process.
+
+No Refund Policy
+
+1. Tuition and Fees: All payments made for tuition, registration fees, materials, and any other associated costs are non-refundable.
+
+2. Course Withdrawals or Cancellations: Payments will not be refunded under the following circumstances: voluntary withdrawal by the student, dismissal for academic or behavioral reasons, or schedule changes or conflicts. In the event of medical or serious family reasons, Glory Nursing will work with students to make up lost classes by joining the next available classes.
+
+3. Non-Attendance: Failure to attend classes does not entitle the student to a refund. Students are encouraged to assess their availability before enrolling.
+
+4. Payment Plans: Students enrolled in a payment plan are required to complete all scheduled payments, regardless of course completion or attendance.
+
+5. Course Cancellations by Glory Nursing: If a course is canceled, students will be offered the option to reschedule or apply their payments toward another program. No refunds will be issued.
+
+6. Disputes: All disputes regarding payments or the no-refund policy must be submitted in writing to the school administration within 30 days of the payment in question.
+
+7. Acknowledgment: By enrolling in Glory Nursing CNA School, you acknowledge and agree to the terms of this No Refund Policy. Your enrollment and payment of tuition or fees serve as confirmation of your understanding and acceptance of this policy.'''
+    y = draw_paragraph(refund_text, 40, y)
+    y -= 15
+    if y < 110:
+        c.showPage()
+        header('Grievance & Refund Policy (continued)')
+        y = height - 130
+    field_line('Agreement:', 'I have read and agree to the No Refund Policy.' if get('agree_refund_policy') else 'Not agreed', 40, y, label_w=110)
+    y -= 50
+    c.setFont('Helvetica-Bold', 9)
+    c.setFillColor(HexColor('#475569'))
+    c.drawString(40, y, 'Signature:')
+    draw_sig(c, 'sig_refund_policy', 40, y - 60, 220, 50)
+    c.showPage()
+
+    # PAGE 7 — NAR Rules
+    header('OSDH / Nurse Aide Registry Rules - Acknowledgment')
+    y = height - 130
+    c.setFont('Helvetica-Bold', 9)
+    c.setFillColor(HexColor('#475569'))
+    c.drawString(40, y, 'Signature:')
+    draw_sig(c, 'sig_nar_rules', 40, y - 60, 220, 50)
+    c.showPage()
+
+    # PAGE 8 — Final Signature
+    header('Final Acknowledgment & Signature')
+    y = height - 130
+    c.setFont('Helvetica', 10)
+    c.setFillColor(HexColor('#334155'))
+    c.drawString(40, y, 'I confirm that all information provided in this application is true and accurate,')
+    y -= 14
+    c.drawString(40, y, 'and that I agree to all policies outlined in this application.')
+    y -= 50
+    c.setFont('Helvetica-Bold', 9)
+    c.setFillColor(HexColor('#475569'))
+    c.drawString(40, y, 'Final Signature:')
+    draw_sig(c, 'sig_final', 40, y - 60, 220, 50)
+    field_line('Date:', get('signature_date'), 320, y, label_w=50)
+    c.showPage()
+
+    c.save()
+    buf.seek(0)
+
+    # Merge in original state-issued pages (Affidavit + Nurse Aide Registry) with signature overlay
+    from pypdf import PdfReader, PdfWriter
+    import os as _os
+
+    generated_reader = PdfReader(buf)
+    original_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'static', 'core', 'documents', 'CNA_app.pdf')
+    original_reader = PdfReader(original_path)
+
+    writer = PdfWriter()
+
+    # Page 1 of generated = our Enrollment Application
+    writer.add_page(generated_reader.pages[0])
+
+    # State page: Affidavit of Lawful Presence (original page index 1) — overlay status/date/signature
+    affidavit_page = original_reader.pages[1]
+    overlay_buf = io.BytesIO()
+    oc = rl_canvas.Canvas(overlay_buf, pagesize=(float(affidavit_page.mediabox[2]), float(affidavit_page.mediabox[3])))
+    ph = float(affidavit_page.mediabox[3])
+    oc.setFont('Helvetica-Bold', 11)
+    oc.setFillColor(HexColor('#000000'))
+    if get('lawful_presence') == 'us_citizen':
+        oc.setFont('Helvetica-Bold', 13)
+        oc.drawString(44, ph - 182, '\u2713')
+    elif get('lawful_presence') == 'qualified_alien':
+        oc.setFont('Helvetica-Bold', 13)
+        oc.drawString(44, ph - 202, '\u2713')
+    if get('alien_number'):
+        oc.setFont('Helvetica', 10)
+        oc.drawString(195, ph - 230, get('alien_number'))
+    oc.setFont('Helvetica', 10)
+    oc.drawString(72, ph - 305, get('signature_date'))
+    draw_sig(oc, 'sig_final', 335, ph - 308, 170, 18)
+    oc.drawString(100, ph - 332, f"{get('city')}, {get('state')}")
+    oc.drawString(375, ph - 332, full_name)
+    if get('renewal_number'):
+        oc.setFont('Helvetica', 10)
+        oc.drawString(395, ph - 364, get('renewal_number'))
+    oc.save()
+    overlay_buf.seek(0)
+    overlay_reader = PdfReader(overlay_buf)
+    affidavit_page.merge_page(overlay_reader.pages[0])
+    writer.add_page(affidavit_page)
+
+    # Glory pages 2-7 of generated (Clinical Tasks, Media Release, Background Check, Grievance/Refund)
+    for i in range(1, 6):
+        if i < len(generated_reader.pages):
+            writer.add_page(generated_reader.pages[i])
+
+    # State pages: Nurse Aide Registry (original page indices 6-13, 8 pages of regulations)
+    for i in range(6, 14):
+        nar_page = original_reader.pages[i]
+        if i == 13:
+            # Page 14 has the signature/date/printed name/training program section
+            nar_overlay_buf = io.BytesIO()
+            noc = rl_canvas.Canvas(nar_overlay_buf, pagesize=(float(nar_page.mediabox[2]), float(nar_page.mediabox[3])))
+            nph = float(nar_page.mediabox[3])
+            noc.setFont('Helvetica', 10)
+            noc.setFillColor(HexColor('#000000'))
+            draw_sig(noc, 'sig_nar_rules', 17, nph - 478, 160, 18)
+            noc.drawString(266, nph - 472, get('signature_date'))
+            noc.drawString(365, nph - 472, full_name)
+            noc.drawString(25, nph - 503, get('course_applied') or 'Certified Nursing Assistant (CNA)')
+            noc.save()
+            nar_overlay_buf.seek(0)
+            nar_overlay_reader = PdfReader(nar_overlay_buf)
+            nar_page.merge_page(nar_overlay_reader.pages[0])
+        writer.add_page(nar_page)
+
+    # Glory final page (Final Signature)
+    if len(generated_reader.pages) > 6:
+        writer.add_page(generated_reader.pages[6])
+
+    final_buf = io.BytesIO()
+    writer.write(final_buf)
+    final_buf.seek(0)
+    pdf_bytes = final_buf.read()
+
+
+    email_error = None
+    try:
+        msg = EmailMessage(
+            subject=f'New CNA Application Received - {full_name}',
+            body=f'''A student has submitted their CNA application through the Glory Nursing website.
+
+Student: {full_name}
+Email: {student_email}
+Phone: {get("phone")}
+
+The completed application is attached.
+
+Glory Nursing Online Portal''',
+            from_email=None,
+            to=['glorynursing@yahoo.com'],
+        )
+        msg.attach('CNA_Application.pdf', pdf_bytes, 'application/pdf')
+        msg.send()
+
+        EmailMessage(
+            subject='Your Glory Nursing CNA Application Received',
+            body=f'''Thank you for submitting your CNA application to Glory Nursing!
+
+We have received your completed application. Our admissions team will review it and contact you within 1-2 business days.
+
+Next step: Complete your enrollment payment at glorynursing.com
+
+Questions? Call us at (405) 968-5004 or email glorynursing@yahoo.com
+
+Glory Nursing Healthcare Training School
+12032 N Pennsylvania Ave, Oklahoma City, OK 73120''',
+            from_email=None,
+            to=[student_email],
+        ).send()
+    except Exception as e:
+        email_error = str(e)
+        print(f"Email error: {e}")
+
+    request.session['application_submitted'] = True
+
+    from django.http import HttpResponse
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="CNA_Application_{full_name.replace(" ", "_")}.pdf"'
+    if email_error:
+        response['X-Email-Error'] = email_error[:200]
+    return response
+
 def fill_pdf_cma(request):
     import os
     pdf_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -538,18 +1021,41 @@ def save_filled_pdf(request):
 def save_filled_pdf_cma(request):
     return _save_pdf_with_annotations(request, 'CMA_app.pdf', 'CMA_Application_Filled.pdf')
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def _save_pdf_with_annotations(request, pdf_filename, output_filename):
     import os
+    import io
+    import json
+    import base64
     from pypdf import PdfReader, PdfWriter
     from reportlab.pdfgen import canvas as rl_canvas
-    from reportlab.lib.pagesizes import letter
     from reportlab.lib.utils import ImageReader
+    from django.http import HttpResponse, JsonResponse
+    from django.core.mail import EmailMessage
 
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=400)
 
     data = json.loads(request.body)
-    annotations = data.get('annotations', {})  # {page_num: [{type, x, y, text/imgData, fontSize, color}]}
+    annotations = data.get('annotations', {})  
     render_dpi = data.get('dpi', 120)
 
     pdf_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -559,7 +1065,7 @@ def _save_pdf_with_annotations(request, pdf_filename, output_filename):
     writer = PdfWriter()
     writer.append(reader)
 
-    # PDF points per pixel at render_dpi
+    # Standard scale mapping factor between high-res display pixels and raw PDF points
     scale = 72.0 / render_dpi
 
     for page_str, annots in annotations.items():
@@ -567,7 +1073,6 @@ def _save_pdf_with_annotations(request, pdf_filename, output_filename):
         if page_idx < 0 or page_idx >= len(writer.pages):
             continue
 
-        page = writer.pages[page_idx]
         page_height = float(reader.pages[page_idx].mediabox[3])
         page_width = float(reader.pages[page_idx].mediabox[2])
 
@@ -575,37 +1080,48 @@ def _save_pdf_with_annotations(request, pdf_filename, output_filename):
         c = rl_canvas.Canvas(overlay_buf, pagesize=(page_width, page_height))
 
         for annot in annots:
-            # Convert canvas pixel coords to PDF points
-            # Canvas: origin top-left, PDF: origin bottom-left
+            # Map structural browser overlay data back to exact native vector points
             pdf_x = annot['x'] * scale
             pdf_y = page_height - (annot['y'] * scale)
 
             if annot['type'] == 'text':
-                font_size = annot.get('fontSize', 11)
+                font_size = annot.get('fontSize', 12)
                 color = annot.get('color', '#000000')
-                # Parse hex color
-                r = int(color[1:3], 16) / 255
-                g = int(color[3:5], 16) / 255
-                b = int(color[5:7], 16) / 255
+                
+                try:
+                    r = int(color[1:3], 16) / 255.0
+                    g = int(color[3:5], 16) / 255.0
+                    b = int(color[5:7], 16) / 255.0
+                except Exception:
+                    r, g, b = 0.0, 0.0, 0.0
+                
                 c.setFillColorRGB(r, g, b)
-                c.setFont("Helvetica", font_size)
-                c.drawString(pdf_x, pdf_y - font_size, annot.get('text', ''))
+                c.setFont("Times-Bold", font_size)
+                # Keep font text resting evenly centered on the actual structural fill line
+                c.drawString(pdf_x, pdf_y, annot.get('text', ''))
 
-            elif annot['type'] == 'signature':
-                img_data = annot.get('imgData', '')
+            elif annot['type'] == 'sig':
+                img_data = annot.get('data', '')
                 if img_data and img_data.startswith('data:image'):
-                    header, b64 = img_data.split(',', 1)
-                    img_bytes = base64.b64decode(b64)
-                    img_buf = io.BytesIO(img_bytes)
-                    img_reader = ImageReader(img_buf)
-                    w = annot.get('width', 150) * scale
-                    h = annot.get('height', 40) * scale
-                    c.drawImage(img_reader, pdf_x, pdf_y - h, width=w, height=h, mask='auto')
+                    try:
+                        header, b64 = img_data.split(',', 1)
+                        img_bytes = base64.b64decode(b64)
+                        img_buf = io.BytesIO(img_bytes)
+                        img_reader = ImageReader(img_buf)
+                        
+                        w = annot.get('w', 180) * scale
+                        h = annot.get('h', 50) * scale
+                        
+                        # Signatures must drop down vertically based on image rendering coordinates
+                        c.drawImage(img_reader, pdf_x, pdf_y - h, width=w, height=h, mask='auto')
+                    except Exception as e:
+                        print(f"Signature render exception: {e}")
 
-            elif annot['type'] == 'checkmark':
+            elif annot['type'] == 'check':
                 c.setFont("Helvetica-Bold", 14)
                 c.setFillColorRGB(0, 0, 0)
-                c.drawString(pdf_x, pdf_y - 14, '✓')
+                # Aligns check glyph directly inside checkbox layout grids
+                c.drawString(pdf_x - 3, pdf_y - 4, '✓')
 
         c.save()
         overlay_buf.seek(0)
@@ -617,57 +1133,47 @@ def _save_pdf_with_annotations(request, pdf_filename, output_filename):
     output_buf.seek(0)
     pdf_bytes = output_buf.read()
 
-    # Email the filled PDF to Glory Nursing
-    action = data.get('action', 'download')  # 'submit' or 'download'
+    action = data.get('action', 'download')  
 
     if action == 'submit':
         try:
-            from django.core.mail import EmailMessage
             student_email = data.get('student_email', '')
             program = data.get('program', 'Program')
             msg = EmailMessage(
                 subject=f'New {program} Application Received',
-                body=f'''A student has submitted their {program} application through the Glory Nursing website.
-
-Student Email: {student_email if student_email else "Not provided"}
-
-The completed application is attached.
-
-Glory Nursing Online Portal''',
+                body=f'A student has submitted their {program} application through the Glory Nursing website.\n\nStudent Email: {student_email if student_email else "Not provided"}\n\nGlory Nursing Online Portal',
                 from_email=None,
                 to=['glorynursing@yahoo.com'],
             )
             msg.attach(output_filename, pdf_bytes, 'application/pdf')
             msg.send()
 
-            # Also send confirmation to student
             if student_email:
                 EmailMessage(
                     subject=f'Your Glory Nursing {program} Application Received',
-                    body=f'''Thank you for submitting your {program} application to Glory Nursing!
-
-We have received your completed application. Our admissions team will review it and contact you within 1-2 business days.
-
-Next step: Complete your enrollment payment at glorynursing.com
-
-Questions? Call us at (405) 968-5004 or email glorynursing@yahoo.com
-
-Glory Nursing Healthcare Training School
-12032 N Pennsylvania Ave, Oklahoma City, OK 73120''',
+                    body=f'Thank you for submitting your {program} application to Glory Nursing!\n\nWe have received your completed application.\n\nGlory Nursing School',
                     from_email=None,
                     to=[student_email],
                 ).send()
-
         except Exception as e:
-            print(f"Email error: {e}")
+            print(f"Email routing error: {e}")
 
-        request.session['application_submitted'] = True
         return JsonResponse({'success': True, 'message': 'Application submitted successfully!'})
 
-    # Default: download
     response = HttpResponse(pdf_bytes, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{output_filename}"'
     return response
+
+
+
+
+
+
+
+
+
+
+
 
 
 def glory_nursing_bot(msg):
@@ -854,3 +1360,64 @@ def privacy_policy(request):
 
 def terms_of_service(request):
     return render(request, 'core/legal/terms.html', {'page': 'legal'})
+
+
+@csrf_exempt
+def upload_application_document(request):
+    """AJAX endpoint — securely upload a single applicant document."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=400)
+
+    from .models import ApplicationDocument
+
+    file_obj = request.FILES.get('file')
+    doc_type = request.POST.get('document_type', 'other')
+    full_name = request.POST.get('full_name', '').strip()
+    email = request.POST.get('email', '').strip()
+    program = request.POST.get('program', '').strip()
+
+    if not file_obj:
+        return JsonResponse({'error': 'No file provided'}, status=400)
+
+    allowed_ext = ('.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx')
+    if not file_obj.name.lower().endswith(allowed_ext):
+        return JsonResponse({'error': 'File type not allowed. Use PDF, JPG, PNG, or Word.'}, status=400)
+
+    if file_obj.size > 10 * 1024 * 1024:
+        return JsonResponse({'error': 'File too large. Max 10MB.'}, status=400)
+
+    if not request.session.session_key:
+        request.session.save()
+
+    doc = ApplicationDocument.objects.create(
+        full_name=full_name,
+        email=email,
+        program=program,
+        document_type=doc_type,
+        file=file_obj,
+        session_key=request.session.session_key,
+    )
+
+    # Store uploaded doc ids in session so we know what this applicant submitted
+    uploaded = request.session.get('uploaded_doc_ids', [])
+    uploaded.append(doc.id)
+    request.session['uploaded_doc_ids'] = uploaded
+
+    return JsonResponse({
+        'success': True,
+        'id': doc.id,
+        'filename': file_obj.name,
+        'document_type': doc.get_document_type_display(),
+    })
+
+
+def delete_application_document(request, doc_id):
+    """Remove an uploaded document (only if it belongs to this session)."""
+    from .models import ApplicationDocument
+    uploaded = request.session.get('uploaded_doc_ids', [])
+    if doc_id in uploaded:
+        ApplicationDocument.objects.filter(id=doc_id).delete()
+        uploaded.remove(doc_id)
+        request.session['uploaded_doc_ids'] = uploaded
+        return JsonResponse({'success': True})
+    return JsonResponse({'error': 'Not found'}, status=404)

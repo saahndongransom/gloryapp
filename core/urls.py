@@ -14,6 +14,8 @@ urlpatterns = [
     path('apply/', views.apply, name='apply'),
     path('apply/cna/', views.apply_cna, name='apply_cna'),
     path('apply/cna/fill/', views.fill_pdf_cna, name='fill_pdf_cna'),
+    path('apply/cna/form/', views.fill_form_cna, name='fill_form_cna'),
+    path('apply/cna/submit-form/', views.submit_form_cna, name='submit_form_cna'),
     path('apply/cna/render-page/', views.render_pdf_page, name='render_pdf_page_cna'),
     path('apply/cna/save/', views.save_filled_pdf, name='save_filled_pdf_cna'),
     path('apply/cma/fill/', views.fill_pdf_cma, name='fill_pdf_cma'),
@@ -32,6 +34,8 @@ urlpatterns = [
     path('about/team/', views.about_team, name='about_team'),
     path('about/accreditations/', views.about_accreditations, name='about_accreditations'),
     path('about/careers/', views.about_careers, name='about_careers'),
+    path('apply/upload-document/', views.upload_application_document, name='upload_application_document'),
+    path('apply/delete-document/<int:doc_id>/', views.delete_application_document, name='delete_application_document'),
 ]
 
 

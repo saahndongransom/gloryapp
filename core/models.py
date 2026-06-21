@@ -81,3 +81,30 @@ class Event(models.Model):
 
     def __str__(self):
         return f"{self.title} – {self.event_date}"
+
+class ApplicationDocument(models.Model):
+    DOCUMENT_TYPES = [
+        ('national_id', 'National ID Card'),
+        ('ssn_card', 'Social Security Card'),
+        ('diploma', 'High School Diploma / GED'),
+        ('immunization', 'Immunization Records'),
+        ('tb_test', 'TB Test Results'),
+        ('background_check', 'Background Check'),
+        ('other', 'Other Document'),
+    ]
+
+    full_name = models.CharField(max_length=200, blank=True)
+    email = models.EmailField(blank=True)
+    program = models.CharField(max_length=20, blank=True, help_text="e.g. CNA, CMA")
+    document_type = models.CharField(max_length=30, choices=DOCUMENT_TYPES)
+    file = models.FileField(upload_to='applicant_documents/%Y/%m/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    session_key = models.CharField(max_length=64, blank=True, db_index=True)
+
+    class Meta:
+        ordering = ['-uploaded_at']
+        verbose_name = 'Application Document'
+        verbose_name_plural = 'Application Documents'
+
+    def __str__(self):
+        return f"{self.full_name or 'Anonymous'} – {self.get_document_type_display()}"

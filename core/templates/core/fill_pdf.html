@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Fill {{ pdf_name }} Application | Glory Nursing</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Arial,sans-serif;background:#2d2d44;overflow:hidden;height:100vh}
+body{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;background:#2d2d44;overflow:hidden;height:100vh}
 .shell{display:flex;height:100vh;flex-direction:column}
 .topbar{height:52px;background:#16213e;border-bottom:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0}
 .topbar-title{font-size:14px;font-weight:700;color:#fff;flex:1}
@@ -21,10 +21,91 @@ body{font-family:Arial,sans-serif;background:#2d2d44;overflow:hidden;height:100v
 .tbtn.on{background:#1a56db;color:#fff}
 .tlbl{font-size:9px;color:#64748b}
 .tsep{width:36px;height:1px;background:rgba(255,255,255,0.08);margin:2px 0}
-.cva{flex:1;overflow:auto;display:flex;flex-direction:column;align-items:center;padding:20px;background:#2d2d44}.pg-nav{position:fixed;bottom:0;left:0;right:0;z-index:999;display:flex;align-items:center;justify-content:center;gap:16px;padding:12px 20px;background:#1e1e35;border-top:1px solid rgba(255,255,255,0.1);color:#fff}.pg-nav button{padding:10px 28px;border-radius:7px;border:none;background:#4A4EA3;color:#fff;font-size:15px;font-weight:700;cursor:pointer}.pg-nav button:hover{background:#6366c1}.pg-nav .pg-info{font-size:14px;color:#94a3b8;min-width:120px;text-align:center}
-.pgwrap{position:relative;display:inline-block;box-shadow:0 8px 32px rgba(0,0,0,0.5);margin-bottom:70px}
-.pgwrap img{display:block}
-#annoLayer{position:absolute;top:0;left:0;cursor:crosshair}
+.cva{flex:1;overflow:auto;display:flex;flex-direction:column;align-items:center;padding:20px;background:#2d2d44}
+.pg-nav{position:fixed;bottom:0;left:0;right:0;z-index:999;display:flex;align-items:center;justify-content:center;gap:16px;padding:12px 20px;background:#1e1e35;border-top:1px solid rgba(255,255,255,0.1);color:#fff}
+.pg-nav button{padding:10px 28px;border-radius:7px;border:none;background:#4A4EA3;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+.pg-nav button:hover{background:#6366c1}
+.pg-nav .pg-info{font-size:14px;color:#94a3b8;min-width:120px;text-align:center}
+
+.pgwrap{position:relative;display:inline-block;box-shadow:0 8px 32px rgba(0,0,0,0.5);margin-bottom:70px;z-index:1}
+.pgwrap img{display:block;width:100%;height:auto;position:relative;z-index:2}
+#annoLayer{position:absolute;top:0;left:0;width:100%;height:100%;z-index:10;pointer-events:none}
+
+.interactive-form-layer {
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  z-index:30;
+  pointer-events:none;
+}
+
+/* MODIFIED: Seamless styling to look like native text entries */
+.form-field {
+  position:absolute;
+  border:1px solid transparent;
+  background:transparent !important;
+  color:#111111 !important;
+  font-family:"Times New Roman",Times,serif;
+  font-weight:600;
+  padding:0px 2px !important;
+  margin:0 !important;
+  outline:none;
+  box-sizing:border-box;
+  line-height:1.2 !important;
+  pointer-events:auto !important;
+}
+/* Highlight lightly only when the user intends to edit */
+.form-field:hover {
+  background:rgba(26, 86, 219, 0.05) !important;
+  border:1px dashed rgba(26, 86, 219, 0.3);
+}
+.form-field:focus { 
+  background:#ffffff !important; 
+  border:1px solid #1a56db !important; 
+  box-shadow:0 0 4px rgba(26,86,219,0.4); 
+}
+.form-field::placeholder {
+  color: rgba(0, 0, 0, 0.35);
+  font-weight: 400;
+  font-style: italic;
+}
+.form-field.field-sig-trigger {
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#1a56db;
+  font-weight:bold;
+  border:1px dashed rgba(26, 86, 219, 0.4);
+  background:rgba(26, 86, 219, 0.04) !important;
+}
+.form-field.field-sig-trigger:hover {
+  background:rgba(26, 86, 219, 0.1) !important;
+}
+.form-field[type="checkbox"] {
+  appearance:none;
+  -webkit-appearance:none;
+  cursor:pointer;
+  padding:0 !important;
+  border: 1px solid rgba(0,0,0,0.2);
+}
+.form-field[type="checkbox"]:checked {
+  background:transparent !important;
+  border:1px solid transparent !important;
+}
+.form-field[type="checkbox"]:checked::before {
+  content:'\2713';
+  display:block;
+  text-align:center;
+  color:#000000;
+  font-weight:bold;
+  font-size:16px;
+  line-height:1;
+}
+
+.finput{position:absolute;border:1px solid #1a56db;border-radius:2px;padding:0px 4px;outline:none;background:#ffffff;color:#000000;font-family:"Times New Roman",Times,serif;font-weight:600;z-index:100;min-width:80px;box-shadow:0 2px 6px rgba(0,0,0,0.2);line-height:1;height:auto}
 .rpanel{width:200px;background:#16213e;border-left:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;overflow:hidden}
 .rpsec{padding:12px;border-bottom:1px solid rgba(255,255,255,0.08)}
 .rptitle{font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
@@ -41,7 +122,7 @@ body{font-family:Arial,sans-serif;background:#2d2d44;overflow:hidden;height:100v
 .titem.on{border-color:#1a56db}
 .titem img{width:100%;display:block}
 .tnum{position:absolute;bottom:3px;right:5px;font-size:9px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8)}
-.finput{position:absolute;border:2px solid #1a56db;border-radius:3px;padding:1px 4px;outline:none;background:rgba(255,255,255,0.95);color:#000000;font-family:"Times New Roman",Times,serif;font-weight:normal;z-index:100;min-width:60px}
+
 .smodal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center}
 .smodal.open{display:flex}
 .sbox{background:#1e293b;border-radius:12px;padding:20px;width:500px}
@@ -52,85 +133,32 @@ body{font-family:Arial,sans-serif;background:#2d2d44;overflow:hidden;height:100v
 .loading{position:absolute;inset:0;background:rgba(45,45,68,0.85);display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px}
 .spin{width:22px;height:22px;border:3px solid rgba(255,255,255,0.1);border-top-color:#1a56db;border-radius:50%;animation:sp .7s linear infinite;margin-right:8px}
 @keyframes sp{to{transform:rotate(360deg)}}
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#059669;color:#fff;padding:9px 18px;border-radius:7px;font-size:13px;font-weight:600;display:none;z-index:9999}
-.mobile-input-bar{display:none;position:fixed;bottom:0;left:0;right:0;z-index:2000;background:#1e293b;border-top:2px solid #1a56db;padding:8px 12px;gap:8px;align-items:center}
-.mobile-input-bar input{flex:1;background:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:16px;font-family:"Times New Roman",Times,serif;color:#000;outline:none}
-.mobile-input-bar button{background:#1a56db;color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:18px;font-weight:700;cursor:pointer;flex-shrink:0}
-.mobile-input-bar .mib-cancel{background:#475569}
-.tap-marker{position:absolute;width:4px;height:20px;background:rgba(26,86,219,0.5);pointer-events:none;z-index:50}
-@media(max-width:768px){
-  .mobile-input-bar{display:none}
-  .finput{display:none !important}
-}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#059669;color:#fff;padding:12px 24px;border-radius:7px;font-size:13px;font-weight:600;display:none;z-index:9999;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.3)}
 
 @media (max-width: 768px) {
   body { overflow: hidden; }
   .rpanel { display: none !important; }
   .shell { flex-direction: column; height: 100vh; }
   .body-row { flex-direction: column; flex: 1; overflow: hidden; min-height: 0; }
-
-  /* Compact top bar - single row */
-  .topbar {
-    height: auto;
-    flex-wrap: wrap;
-    gap: 5px;
-    padding: 6px 8px;
-    min-height: unset;
-  }
-  .btn-back { order: 0; font-size: 18px; padding: 4px; }
-  .topbar-title { font-size: 11px; order: 1; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .pgind { font-size: 11px; order: 2; white-space: nowrap; }
-  #studentEmail { width: 100% !important; order: 3; font-size: 12px; padding: 6px 10px; }
-  .btn-dl { font-size: 11px; padding: 6px 10px; order: 4; }
-
-  /* Horizontal toolbar */
-  .toolbar {
-    width: 100%;
-    flex-direction: row;
-    height: 48px;
-    padding: 4px 8px;
-    gap: 2px;
-    overflow-x: auto;
-    border-right: none;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-    justify-content: flex-start;
-    align-items: center;
-    flex-shrink: 0;
-    scrollbar-width: none;
-  }
+  .topbar { height: auto; flex-wrap: wrap; gap: 8px; padding: 10px 12px; min-height: unset; background: #111a2e; }
+  .btn-back { order: 0; font-size: 20px; padding-right: 4px; }
+  .topbar-title { font-size: 13px; order: 1; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pgind { font-size: 11px; order: 2; white-space: nowrap; font-weight: 500; color: #94a3b8; }
+  #studentEmail { width: 100% !important; order: 3; font-size: 14px !important; padding: 10px 12px !important; margin-top: 2px; }
+  .topbar .btn-dl { font-size: 12px; padding: 10px 14px; flex: 1; text-align: center; justify-content: center; display: inline-flex; order: 4; }
+  .toolbar { width: 100%; flex-direction: row; height: 54px; padding: 0 12px; gap: 8px; overflow-x: auto; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.1); justify-content: space-between; align-items: center; flex-shrink: 0; scrollbar-width: none; background: #16213e; }
   .toolbar::-webkit-scrollbar { display: none; }
-  .tbtn { width: 38px; height: 38px; font-size: 14px; flex-shrink: 0; }
+  .tbtn { width: 40px; height: 40px; font-size: 16px; flex-shrink: 0; }
   .tlbl { display: none; }
-  .tsep { width: 1px; height: 26px; background: rgba(255,255,255,0.08); margin: 0 2px; flex-shrink: 0; }
-
-  /* Canvas area - fill remaining space, scrollable */
-  .cva {
-    flex: 1;
-    padding: 8px 0 70px 0;
-    overflow-x: auto;
-    overflow-y: auto;
-    align-items: flex-start;
-    justify-content: flex-start;
-    -webkit-overflow-scrolling: touch;
-    min-height: 0;
-  }
-
-  /* PDF page fits screen width */
-  .pgwrap { margin: 0 auto 70px; }
-  .pgwrap img { width: 100vw !important; height: auto !important; display: block; }
-  #annoLayer { width: 100vw !important; }
-
-  /* Bottom nav */
-  .pg-nav {
-    padding: 8px 12px;
-    gap: 10px;
-  }
-  .pg-nav button { padding: 8px 16px; font-size: 13px; font-weight: 700; }
-  .pg-nav .pg-info { font-size: 12px; min-width: 80px; }
-
-  /* Signature modal */
-  .sbox { width: 95vw; padding: 14px; }
-  #sigC { width: 100% !important; height: 120px; }
+  .tsep { width: 1px; height: 24px; background: rgba(255,255,255,0.15); margin: 0 2px; flex-shrink: 0; }
+  .cva { flex: 1; padding: 12px; overflow-x: auto; overflow-y: auto; align-items: center; justify-content: flex-start; -webkit-overflow-scrolling: touch; min-height: 0; background: #252538; }
+  .pgwrap { margin: 0 auto 90px; max-width: 100%; }
+  .pgwrap img { width: 90vw !important; height: auto !important; display: block; }
+  .pg-nav { padding: 12px 16px; gap: 12px; background: #16213e; box-shadow: 0 -4px 16px rgba(0,0,0,0.25); }
+  .pg-nav button { padding: 10px 20px; font-size: 13px; flex: 1; }
+  .pg-nav .pg-info { font-size: 13px; min-width: auto; flex: 1; }
+  .sbox { width: 92vw; padding: 16px; }
+  #sigC { width: 100% !important; height: 140px; }
 }
 </style>
 </head>
@@ -138,51 +166,45 @@ body{font-family:Arial,sans-serif;background:#2d2d44;overflow:hidden;height:100v
 <div class="shell">
   <div class="topbar">
     <a href="{{ back_url }}" class="btn-back">&#8592;</a>
-    <div class="topbar-title">{{ pdf_name }} Application &mdash; Fill &amp; Sign</div>
+    <div class="topbar-title">{{ pdf_name }} Application</div>
     <div class="pgind" id="pgind">Page 1 of {{ page_count }}</div>
     <input type="email" id="studentEmail" placeholder="Your email address" style="padding:7px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:#fff;font-size:12px;outline:none;width:200px">
-    <button class="btn-dl" style="background:#1a56db" onclick="submitPDF()">&#10003; Submit Application</button>
+    <button class="btn-dl" style="background:#1a56db" onclick="submitPDF()">&#10003; Submit</button>
     <button class="btn-dl" onclick="dlPDF()">&#8681; Download</button>
   </div>
   <div class="body-row">
     <div class="toolbar">
       <button class="tbtn on" id="tb-text" onclick="setTool('text')"><b>T</b></button>
-      <div class="tlbl">Text</div>
       <div class="tsep"></div>
       <button class="tbtn" id="tb-sign" onclick="openSig()"><i class="fas fa-signature"></i></button>
-      <div class="tlbl">Sign</div>
       <div class="tsep"></div>
       <button class="tbtn" id="tb-check" onclick="setTool('check')">&#10003;</button>
-      <div class="tlbl">Check</div>
       <div class="tsep"></div>
       <button class="tbtn" id="tb-erase" onclick="setTool('erase')"><i class="fas fa-eraser"></i></button>
-      <div class="tlbl">Erase</div>
       <div class="tsep"></div>
       <button class="tbtn" onclick="doUndo()">&#8617;</button>
-      <div class="tlbl">Undo</div>
       <div class="tsep"></div>
       <button class="tbtn" onclick="prevPg()">&#8593;</button>
-      <div class="tlbl">Prev</div>
       <button class="tbtn" onclick="nextPg()">&#8595;</button>
-      <div class="tlbl">Next</div>
     </div>
     <div class="cva" id="cva">
       <div class="pgwrap" id="pgwrap">
         <img id="pgimg" src="" alt="">
         <canvas id="annoLayer"></canvas>
+        <div class="interactive-form-layer" id="formLayer"></div>
         <div class="loading" id="loading"><div class="spin"></div>Loading...</div>
       </div>
       <div class="pg-nav">
-        <button onclick="prevPg()">&#8592; Prev Page</button>
+        <button onclick="prevPg()">&#8592; Prev</button>
         <div class="pg-info" id="pg-nav-info">Page 1 of {{ page_count }}</div>
-        <button onclick="nextPg()">Next Page &#8594;</button>
+        <button onclick="nextPg()">Next &#8594;</button>
       </div>
     </div>
     <div class="rpanel">
       <div class="rpsec">
         <div class="rptitle">Properties</div>
         <div class="rplbl">Font Size</div>
-        <input type="number" class="rpinp" id="fsinp" value="22" min="6" max="36">
+        <input type="number" class="rpinp" id="fsinp" value="14" min="6" max="36">
         <div class="rplbl" style="margin-top:8px">Color</div>
         <div class="crow">
           <div class="cdot on" style="background:#000" onclick="setClr('#000000',this)"></div>
@@ -200,13 +222,6 @@ body{font-family:Arial,sans-serif;background:#2d2d44;overflow:hidden;height:100v
       <div class="thumbs" id="thumbs"></div>
     </div>
   </div>
-</div>
-
-<!-- Mobile bottom input bar -->
-<div class="mobile-input-bar" id="mobileInputBar">
-  <button class="mib-cancel" onclick="cancelMobileInput()">✕</button>
-  <input type="text" id="mobileInputField" placeholder="Type here then tap ✓" autocomplete="off">
-  <button onclick="confirmMobileInput()">✓</button>
 </div>
 
 <div class="smodal" id="smodal">
@@ -230,27 +245,114 @@ var DPI = 120;
 var curPg = 1;
 var curTool = 'text';
 var curClr = '#000000';
-var curFS = window.innerWidth <= 768 ? 16 : 12;
+var curFS = window.innerWidth <= 768 ? 16 : 14; 
 var zoom = 100;
 var pimgs = {};
 var pdims = {};
 var ann = {};
+var formValues = {};
+var activeSigFieldId = null;
 var ainput = null;
 var sigPending = false;
 var sigData = null;
 var sdrawing = false;
 var sctx = null;
 
+var formTemplatesByPage = {
+  1: [
+    { id: "last_name", type: "text", x: 121, y: 254, w: 110, h: 16, placeholder: "" },
+    { id: "first_name", type: "text", x: 256, y: 254, w: 70, h: 16, placeholder: "" },
+    { id: "middle_name", type: "text", x: 338, y: 254, w: 90, h: 16, placeholder: "" },
+    { id: "how_heard", type: "text", x: 441, y: 254, w: 140, h: 16, placeholder: "" },
+    { id: "dob", type: "text", x: 121, y: 289, w: 290, h: 16, placeholder: "" },
+    { id: "ssn", type: "text", x: 415, y: 289, w: 165, h: 16, placeholder: "" },
+    { id: "address_street", type: "text", x: 121, y: 320, w: 310, h: 16, placeholder: "" },
+    { id: "phone", type: "text", x: 441, y: 320, w: 140, h: 16, placeholder: "" },
+    { id: "address_city", type: "text", x: 121, y: 355, w: 200, h: 16, placeholder: "" },
+    { id: "address_state", type: "text", x: 330, y: 355, w: 60, h: 16, placeholder: "" },
+    { id: "address_zip", type: "text", x: 400, y: 355, w: 40, h: 16, placeholder: "" },
+    { id: "email", type: "text", x: 441, y: 355, w: 140, h: 16, placeholder: "" },
+    { id: "course_applied", type: "text", x: 126, y: 400, w: 270, h: 16, placeholder: "" },
+    { id: "emergency_name", type: "text", x: 191, y: 429, w: 220, h: 16, placeholder: "" },
+    { id: "emergency_phone", type: "text", x: 421, y: 429, w: 160, h: 16, placeholder: "" },
+    { id: "emergency_address", type: "text", x: 100, y: 454, w: 290, h: 16, placeholder: "" },
+    { id: "emergency_relation", type: "text", x: 440, y: 454, w: 130, h: 16, placeholder: "" },
+    { id: "hs_name", type: "text", x: 126, y: 519, w: 195, h: 16, placeholder: "" },
+    { id: "hs_address", type: "text", x: 340, y: 519, w: 195, h: 16, placeholder: "" },
+    { id: "hs_from", type: "text", x: 137, y: 550, w: 60, h: 16, placeholder: "" },
+    { id: "hs_to", type: "text", x: 214, y: 550, w: 60, h: 16, placeholder: "" },
+    { id: "hs_grad_yes", type: "checkbox", x: 355, y: 545, w: 12, h: 12 },
+    { id: "hs_grad_no", type: "checkbox", x: 389, y: 545, w: 12, h: 12 },
+    { id: "hs_diploma", type: "text", x: 461, y: 550, w: 110, h: 16, placeholder: "" },
+    { id: "college_name", type: "text", x: 126, y: 575, w: 195, h: 16, placeholder: "" },
+    { id: "college_address", type: "text", x: 340, y: 575, w: 195, h: 16, placeholder: "" },
+    { id: "college_from", type: "text", x: 137, y: 603, w: 60, h: 16, placeholder: "" },
+    { id: "college_to", type: "text", x: 214, y: 603, w: 60, h: 16, placeholder: "" },
+    { id: "college_grad_yes", type: "checkbox", x: 355, y: 598, w: 12, h: 12 },
+    { id: "college_grad_no", type: "checkbox", x: 389, y: 598, w: 12, h: 12 },
+    { id: "degree", type: "text", x: 461, y: 603, w: 110, h: 16, placeholder: "" },
+    { id: "p1_signature", type: "signature", x: 121, y: 666, w: 195, h: 22, placeholder: "* Click to Sign" },
+    { id: "p1_sign_date", type: "text", x: 340, y: 666, w: 270, h: 16, placeholder: "" }
+  ], 
+  2: [
+    { id: "affidavit_citizen", type: "checkbox", x: 95, y: 240, w: 16, h: 16 },
+    { id: "affidavit_alien", type: "checkbox", x: 95, y: 260, w: 16, h: 16 },
+    { id: "alien_number", type: "text", x: 300, y: 280, w: 410, h: 22, placeholder: "" },
+    { id: "affidavit_date", type: "text", x: 150, y: 650, w: 160, h: 24, placeholder: "" },
+    { id: "affidavit_city_state", type: "text", x: 400, y: 650, w: 310, h: 24, placeholder: "" },
+    { id: "affidavit_sig", type: "signature", x: 150, y: 700, w: 350, h: 30, placeholder: "* Click to Sign Affidavit" },
+    { id: "affidavit_printed_name", type: "text", x: 150, y: 750, w: 560, h: 24, placeholder: "" },
+    { id: "renew_number", type: "text", x: 450, y: 790, w: 260, h: 22, placeholder: "" }
+  ],
+  4: [
+    { id: "tasks_student_name", type: "text", x: 200, y: 400, w: 510, h: 24, placeholder: "" },
+    { id: "tasks_signature", type: "signature", x: 200, y: 450, w: 510, h: 30, placeholder: "* Click to Sign" },
+    { id: "tasks_date", type: "text", x: 200, y: 500, w: 510, h: 24, placeholder: "" }
+  ],
+  5: [
+    { id: "media_name", type: "text", x: 200, y: 120, w: 510, h: 22, placeholder: "" },
+    { id: "media_dob", type: "text", x: 200, y: 150, w: 510, h: 22, placeholder: "" },
+    { id: "media_phone", type: "text", x: 200, y: 180, w: 510, h: 22, placeholder: "" },
+    { id: "media_email", type: "text", x: 200, y: 210, w: 510, h: 22, placeholder: "" },
+    { id: "media_consent_yes", type: "checkbox", x: 110, y: 298, w: 16, h: 16 },
+    { id: "media_consent_no", type: "checkbox", x: 110, y: 320, w: 16, h: 16 },
+    { id: "media_student_sig", type: "signature", x: 220, y: 450, w: 490, h: 30, placeholder: "* Student Signature" },
+    { id: "media_student_date", type: "text", x: 220, y: 490, w: 490, h: 22, placeholder: "" },
+    { id: "media_parent_sig", type: "signature", x: 220, y: 530, w: 490, h: 30, placeholder: "* Parent Signature" },
+    { id: "media_parent_date", type: "text", x: 220, y: 570, w: 490, h: 22, placeholder: "" }
+  ],
+  13: [
+    { id: "nar_signature", type: "signature", x: 150, y: 350, w: 400, h: 30, placeholder: "* Signature of Trainee" },
+    { id: "nar_date", type: "text", x: 570, y: 350, w: 140, h: 24, placeholder: "" },
+    { id: "nar_printed_name", type: "text", x: 150, y: 390, w: 560, h: 24, placeholder: "" },
+    { id: "nar_program_name", type: "text", x: 150, y: 430, w: 560, h: 24, placeholder: "" }
+  ],
+  14: [
+    { id: "refund_printed_name", type: "text", x: 200, y: 400, w: 510, h: 24, placeholder: "" },
+    { id: "refund_signature", type: "signature", x: 200, y: 440, w: 510, h: 30, placeholder: "* Click to Sign Acceptance" },
+    { id: "refund_date", type: "text", x: 200, y: 480, w: 510, h: 24, placeholder: "" }
+  ],
+  15: [
+    { id: "bg_check_conduct_yes", type: "checkbox", x: 120, y: 320, w: 16, h: 16 },
+    { id: "bg_check_conduct_no", type: "checkbox", x: 120, y: 350, w: 16, h: 16 },
+    { id: "bg_student_name", type: "text", x: 200, y: 450, w: 510, h: 24, placeholder: "" },
+    { id: "bg_signature", type: "signature", x: 200, y: 490, w: 510, h: 30, placeholder: "* Click to Sign Authorization" },
+    { id: "bg_date", type: "text", x: 200, y: 530, w: 510, h: 24, placeholder: "" }
+  ],
+  21: [
+    { id: "policy_student_name", type: "text", x: 220, y: 350, w: 490, h: 24, placeholder: "" },
+    { id: "policy_signature", type: "signature", x: 220, y: 410, w: 490, h: 30, placeholder: "* Click to Sign Agreement" },
+    { id: "policy_date", type: "text", x: 220, y: 470, w: 490, h: 24, placeholder: "" }
+  ]
+};
+
 window.addEventListener('load', function() {
-  // On mobile, use higher DPI for sharp text
-  if (window.innerWidth <= 768) {
-    DPI = 180;
-  }
+  if (window.innerWidth <= 768) { DPI = 180; }
   loadPg(1);
   buildThumbs();
   initSig();
-  document.getElementById('fsinp').onchange = function(){ curFS = parseInt(this.value)||12; };
-  document.getElementById('annoLayer').addEventListener('click', onCanvasClick);
+  document.getElementById('fsinp').onchange = function(){ curFS = parseInt(this.value)||14; };
+  document.getElementById('formLayer').addEventListener('click', onLayerClick);
 });
 
 function loadPg(n) {
@@ -268,18 +370,78 @@ function loadPg(n) {
 function renderPg(n) {
   var img = document.getElementById('pgimg');
   var cv = document.getElementById('annoLayer');
+  var fl = document.getElementById('formLayer');
   var s = zoom/100;
   var dw = Math.round(pdims[n].w*s);
   var dh = Math.round(pdims[n].h*s);
+  
   img.src = 'data:image/png;base64,'+pimgs[n];
   img.style.width = dw+'px'; img.style.height = dh+'px';
   cv.width=dw; cv.height=dh; cv.style.width=dw+'px'; cv.style.height=dh+'px';
+  fl.style.width = dw+'px'; fl.style.height = dh+'px';
+  
   document.getElementById('loading').style.display='none';
-  redraw();
+  setTimeout(function() {
+    generateFormLayout(n);
+    redraw();
+  }, 100);
 }
+
+function generateFormLayout(pageIndex) {
+  var formLayer = document.getElementById('formLayer');
+  formLayer.innerHTML = ""; 
+  var templateFields = formTemplatesByPage[pageIndex] || [];
+  
+  var img = document.getElementById('pgimg');
+  var PDF_WIDTH = 611;
+  var PDF_HEIGHT = 792;
+  var scaleX = img.clientWidth / PDF_WIDTH;
+  var scaleY = img.clientHeight / PDF_HEIGHT;
+  
+  templateFields.forEach(function(f) {
+    var fieldEl;
+    if (f.type === 'signature') {
+      fieldEl = document.createElement('div');
+      fieldEl.className = 'form-field field-sig-trigger';
+      if (formValues[f.id]) {
+        fieldEl.innerHTML = '<img src="' + formValues[f.id] + '" style="max-height:100%; max-width:100%; object-fit:contain;">';
+      } else {
+        fieldEl.textContent = f.placeholder;
+      }
+      fieldEl.onclick = function(e) { e.stopPropagation(); triggerSignatureOverlay(f.id); };
+    } 
+    else if (f.type === 'checkbox') {
+      fieldEl = document.createElement('input');
+      fieldEl.type = 'checkbox';
+      fieldEl.className = 'form-field';
+      fieldEl.checked = !!formValues[f.id];
+      fieldEl.onchange = function() { formValues[f.id] = fieldEl.checked; };
+    } 
+    else {
+      fieldEl = document.createElement('input');
+      fieldEl.type = 'text';
+      fieldEl.className = 'form-field';
+      if (f.placeholder) fieldEl.placeholder = f.placeholder;
+      fieldEl.value = formValues[f.id] || "";
+      fieldEl.oninput = function() { formValues[f.id] = fieldEl.value; };
+    }
+    
+    fieldEl.style.left = Math.round(f.x * scaleX) + 'px';
+    fieldEl.style.top = Math.round(f.y * scaleY) + 'px';
+    fieldEl.style.width = Math.round(f.w * scaleX) + 'px';
+    fieldEl.style.height = Math.round(f.h * scaleY) + 'px';
+    if (f.type !== 'checkbox') {
+      fieldEl.style.fontSize = Math.max(10, Math.round(12 * scaleY)) + 'px';
+    }
+    formLayer.appendChild(fieldEl);
+  });
+}
+
+function triggerSignatureOverlay(fieldId) { activeSigFieldId = fieldId; openSig(); }
 
 function buildThumbs() {
   var list = document.getElementById('thumbs');
+  if(!list) return;
   for (var i=1;i<=PG_COUNT;i++) {
     (function(n){
       var el=document.createElement('div');
@@ -294,7 +456,8 @@ function buildThumbs() {
   }
 }
 
-function onCanvasClick(e) {
+function onLayerClick(e) {
+  if (e.target !== document.getElementById('formLayer')) return;
   if (sigPending) { placeSigAt(e); return; }
   commitInput();
   if (curTool==='text') spawnInput(e);
@@ -303,67 +466,35 @@ function onCanvasClick(e) {
 }
 
 function spawnInput(e) {
-  var cv=document.getElementById('annoLayer');
-  var r=cv.getBoundingClientRect();
+  var fl = document.getElementById('formLayer');
+  var r = fl.getBoundingClientRect();
+  var cv = document.getElementById('annoLayer');
   var scaleX = cv.width / r.width;
   var scaleY = cv.height / r.height;
+  
   var xCSS = e.clientX - r.left;
   var yCSS = e.clientY - r.top;
+  
   var x = xCSS * scaleX;
   var y = yCSS * scaleY;
-
-  if (window.innerWidth <= 768) {
-    // Mobile: use bottom input bar
-    pendingX = x;
-    pendingY = y;
-    // Show tap marker
-    document.querySelectorAll('.tap-marker').forEach(function(m){m.remove();});
-    var marker = document.createElement('div');
-    marker.className = 'tap-marker';
-    marker.style.left = xCSS + 'px';
-    marker.style.top = (yCSS - 10) + 'px';
-    document.getElementById('pgwrap').appendChild(marker);
-    // Show bottom input bar
-    var bar = document.getElementById('mobileInputBar');
-    bar.style.display = 'flex';
-    var field = document.getElementById('mobileInputField');
-    field.value = '';
-    field.focus();
-    return;
-  }
-
-  // Desktop: floating input
-  commitInput();
-  var inp=document.createElement('input');
-  inp.type='text'; inp.className='finput';
-  inp.style.left=xCSS+'px';
-  inp.style.top=(yCSS - curFS - 2)+'px';
-  inp.style.fontSize=curFS+'px';
-  inp.style.color=curClr;
-  document.getElementById('pgwrap').appendChild(inp);
-  inp.focus();
-  ainput={el:inp,x:x,y:y};
-  inp.onkeydown=function(e){if(e.key==='Enter')commitInput();if(e.key==='Escape'){inp.remove();ainput=null;}};
-  inp.onblur=function(){setTimeout(commitInput,150);};
-}
-
-var pendingX = 0;
-var pendingY = 0;
-
-function confirmMobileInput() {
-  var txt = document.getElementById('mobileInputField').value.trim();
-  if (txt) {
-    if (!ann[curPg]) ann[curPg] = [];
-    ann[curPg].push({type:'text', x:pendingX, y:pendingY, text:txt, fs:curFS, clr:curClr});
-    redraw();
-  }
-  cancelMobileInput();
-}
-
-function cancelMobileInput() {
-  document.getElementById('mobileInputBar').style.display = 'none';
-  document.getElementById('mobileInputField').value = '';
-  document.querySelectorAll('.tap-marker').forEach(function(m){m.remove();});
+  var dispFS = window.innerWidth <= 768 ? 16 : Math.round(curFS / scaleY);
+  
+  var inp = document.createElement('input');
+  inp.type = 'text';
+  inp.className = 'finput';
+  inp.style.fontSize = dispFS + 'px';
+  inp.style.left = xCSS + 'px';
+  inp.style.top = (yCSS - dispFS) + 'px'; 
+  inp.style.color = curClr;
+  fl.appendChild(inp);
+  
+  setTimeout(function() { inp.focus(); }, 50);
+  ainput = {el: inp, x: x, y: y, fs: window.innerWidth <= 768 ? 18 : curFS};
+  inp.onkeydown = function(ev) {
+    if (ev.key === 'Enter') commitInput();
+    if (ev.key === 'Escape') { inp.remove(); ainput = null; }
+  };
+  inp.onblur = function() { setTimeout(commitInput, 300); };
 }
 
 function commitInput() {
@@ -371,26 +502,27 @@ function commitInput() {
   var txt=ainput.el.value.trim();
   if (txt) {
     if (!ann[curPg]) ann[curPg]=[];
-    ann[curPg].push({type:'text',x:ainput.x,y:ainput.y,text:txt,fs:curFS,clr:curClr});
+    ann[curPg].push({type:'text',x:ainput.x,y:ainput.y,text:txt,fs:ainput.fs,clr:curClr});
     redraw();
   }
   ainput.el.remove(); ainput=null;
 }
 
 function placeCheck(e) {
-  var cv=document.getElementById('annoLayer'); var r=cv.getBoundingClientRect();
-  var scaleX=cv.width/r.width; var scaleY=cv.height/r.height;
+  var fl=document.getElementById('formLayer'); var r=fl.getBoundingClientRect();
+  var cv=document.getElementById('annoLayer'); var scaleX=cv.width/r.width; var scaleY=cv.height/r.height;
   if (!ann[curPg]) ann[curPg]=[];
   ann[curPg].push({type:'check',x:(e.clientX-r.left)*scaleX,y:(e.clientY-r.top)*scaleY});
   redraw();
 }
 
 function eraseAt(e) {
-  if (!ann[curPg]) return;
-  var cv=document.getElementById('annoLayer'); var r=cv.getBoundingClientRect();
-  var scaleX=cv.width/r.width; var scaleY=cv.height/r.height;
+  var fl=document.getElementById('formLayer'); var r=fl.getBoundingClientRect();
+  var cv=document.getElementById('annoLayer'); var scaleX=cv.width/r.width; var scaleY=cv.height/r.height;
   var x=(e.clientX-r.left)*scaleX; var y=(e.clientY-r.top)*scaleY;
-  ann[curPg]=ann[curPg].filter(function(a){return Math.abs(a.x-x)>25||Math.abs(a.y-y)>25;});
+  if(ann[curPg]){
+    ann[curPg]=ann[curPg].filter(function(a){return Math.abs(a.x-x)>25||Math.abs(a.y-y)>25;});
+  }
   redraw();
 }
 
@@ -398,35 +530,65 @@ function doUndo() { if (ann[curPg]&&ann[curPg].length){ann[curPg].pop();redraw()
 
 function redraw() {
   var cv=document.getElementById('annoLayer'); var ctx=cv.getContext('2d');
+  if(!ctx) return;
   ctx.clearRect(0,0,cv.width,cv.height);
   (ann[curPg]||[]).forEach(function(a){
-    if (a.type==='text'){ctx.font=a.fs+'px "Times New Roman",Times,serif';ctx.fillStyle=a.clr||'#000000';ctx.textBaseline='top';ctx.fillText(a.text,a.x,a.y);}
-    else if(a.type==='check'){ctx.font='bold 16px Helvetica,Arial';ctx.fillStyle='#000';ctx.fillText('\u2713',a.x,a.y);}
-    else if(a.type==='sig'){var i=new Image();i.onload=function(){ctx.drawImage(i,a.x,a.y,a.w,a.h);};i.src=a.data;}
+    if (a.type==='text'){
+      ctx.font='600 '+a.fs+'px "Times New Roman",Times,serif';
+      ctx.fillStyle=a.clr||'#000000';
+      ctx.textBaseline='alphabetic';
+      ctx.fillText(a.text,a.x,a.y);
+    }
+    else if(a.type==='check'){
+      ctx.font='bold 22px Helvetica,Arial';
+      ctx.fillStyle='#000';
+      ctx.textBaseline='middle';
+      ctx.fillText('\u2713',a.x,a.y);
+    }
+    else if(a.type==='sig'){
+      var i=new Image();
+      i.onload=function(){ctx.drawImage(i,a.x,a.y - 25,a.w,a.h);};
+      i.src=a.data;
+    }
   });
 }
 
 function initSig() {
-  var c=document.getElementById('sigC'); sctx=c.getContext('2d');
-  sctx.strokeStyle='#000'; sctx.lineWidth=2; sctx.lineCap='round';
-  function gp(e){var r=c.getBoundingClientRect();if(e.touches)return{x:e.touches[0].clientX-r.left,y:e.touches[0].clientY-r.top};return{x:e.clientX-r.left,y:e.clientY-r.top};}
+  var c=document.getElementById('sigC'); if(!c) return; sctx=c.getContext('2d');
+  sctx.strokeStyle='#000'; sctx.lineWidth=3; sctx.lineCap='round';
+  function gp(e){var r=c.getBoundingClientRect();if(e.touches && e.touches.length > 0)return{x:e.touches[0].clientX-r.left,y:e.touches[0].clientY-r.top};return{x:e.clientX-r.left,y:e.clientY-r.top};}
   c.onmousedown=function(e){sdrawing=true;var p=gp(e);sctx.beginPath();sctx.moveTo(p.x,p.y);};
   c.onmousemove=function(e){if(!sdrawing)return;var p=gp(e);sctx.lineTo(p.x,p.y);sctx.stroke();};
   c.onmouseup=function(){sdrawing=false;};
-  c.ontouchstart=function(e){e.preventDefault();sdrawing=true;var p=gp(e);sctx.beginPath();sctx.moveTo(p.x,p.y);};
-  c.ontouchmove=function(e){e.preventDefault();if(!sdrawing)return;var p=gp(e);sctx.lineTo(p.x,p.y);sctx.stroke();};
-  c.ontouchend=function(){sdrawing=false;};
+  c.ontouchstart=function(e){var p=gp(e);sdrawing=true;sctx.beginPath();sctx.moveTo(p.x,p.y);};
+  c.ontouchmove=function(e){if(!sdrawing)return;var p=gp(e);sctx.lineTo(p.x,p.y);sctx.stroke();};
+  c.ontouechen=function(){sdrawing=false;};
 }
 
-function openSig(){document.getElementById('smodal').classList.add('open');}
+function openSig(){document.getElementById('smodal').classList.add('open'); if(sctx) clearSigCanvas();}
 function closeSig(){document.getElementById('smodal').classList.remove('open');sigPending=false;}
-function clearSigCanvas(){sctx.clearRect(0,0,460,150);}
-function confirmSig(){sigData=document.getElementById('sigC').toDataURL('image/png');closeSig();sigPending=true;showToast('Click on the PDF where you want your signature');}
+function clearSigCanvas(){if(sctx) { var c=document.getElementById('sigC'); sctx.clearRect(0,0,c.width,c.height); }}
+
+function confirmSig() {
+  var base64Data = document.getElementById('sigC').toDataURL('image/png');
+  if (activeSigFieldId) {
+    formValues[activeSigFieldId] = base64Data;
+    activeSigFieldId = null;
+    closeSig();
+    generateFormLayout(curPg, document.getElementById('pgimg').clientWidth);
+  } else {
+    sigData = base64Data;
+    closeSig();
+    sigPending = true;
+    showToast('Tap on the document where you want your signature');
+  }
+}
+
 function placeSigAt(e){
-  var cv=document.getElementById('annoLayer');var r=cv.getBoundingClientRect();
-  var scaleX=cv.width/r.width; var scaleY=cv.height/r.height;
+  var fl=document.getElementById('formLayer');var r=fl.getBoundingClientRect();
+  var cv=document.getElementById('annoLayer');var scaleX=cv.width/r.width; var scaleY=cv.height/r.height;
   if(!ann[curPg])ann[curPg]=[];
-  ann[curPg].push({type:'sig',x:(e.clientX-r.left)*scaleX,y:(e.clientY-r.top)*scaleY,data:sigData,w:180,h:50});
+  ann[curPg].push({type:'sig',x:(e.clientX-r.left)*scaleX,y:(e.clientY-r.top)*scaleY,data:sigData,w:window.innerWidth<=768?220:180,h:window.innerWidth<=768?65:50});
   sigPending=false;redraw();showToast('Signature placed!');
 }
 
@@ -435,50 +597,50 @@ function setClr(c,el){curClr=c;document.querySelectorAll('.cdot').forEach(functi
 function doZoom(d){zoom=Math.max(50,Math.min(200,zoom+d));document.getElementById('zlbl').textContent=zoom+'%';if(pimgs[curPg])renderPg(curPg);}
 function prevPg(){if(curPg>1){commitInput();loadPg(curPg-1);}}
 function nextPg(){if(curPg<PG_COUNT){commitInput();loadPg(curPg+1);}}
-
 function getCk(n){var m=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return m?m.pop():'';}
-function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.style.display='block';setTimeout(function(){t.style.display='none';},3000);}
+function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.style.display='block';setTimeout(function(){t.style.display='none';},4000);}
 
-function submitPDF(){
-  commitInput();
-  var email = document.getElementById('studentEmail').value.trim();
-  if (!email) { showToast('Please enter your email address first'); return; }
-  var sc=zoom/100; var sa={};
-  Object.keys(ann).forEach(function(pg){
-    sa[pg]=ann[pg].map(function(a){return Object.assign({},a,{x:a.x/sc,y:a.y/sc,w:(a.w||180)/sc,h:(a.h||50)/sc,fontSize:a.fs,color:a.clr});});
+function preparePayload() {
+  var layoutScaleFactor = DPI / 72.0;
+  var zoomFactor = zoom / 100.0;
+  var sa = {};
+
+  Object.keys(ann).forEach(function(pg) {
+    sa[pg] = ann[pg].map(function(a) {
+      return {
+        type: a.type,
+        x: a.x / (zoomFactor * layoutScaleFactor),
+        y: a.y / (zoomFactor * layoutScaleFactor),
+        w: (a.w || 180) / zoomFactor,
+        h: (a.h || 50) / zoomFactor,
+        fontSize: Math.round(a.fs / layoutScaleFactor),
+        color: a.clr || '#000000',
+        text: a.text || ''
+      };
+    });
   });
-  showToast('Submitting your application...');
-  fetch(SU,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCk('csrftoken')},
-    body:JSON.stringify({annotations:sa,dpi:DPI,action:'submit',student_email:email,program:'{{ pdf_name }}'})})
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(d.success){
-        document.querySelector('.shell').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:20px;background:#16213e;color:#fff"><div style="font-size:64px">🎉</div><h2 style="font-size:24px;font-weight:800">Application Submitted!</h2><p style="color:#94a3b8;font-size:14px;text-align:center;max-width:400px">Your completed application has been sent to Glory Nursing. We will contact you within 1-2 business days.<br><br>Check your email for confirmation.</p><a href="/lms/enroll/{{ enroll_id }}/" style="background:#059669;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:800;margin-top:10px">&#128274; Pay &amp; Complete Enrollment</a><a href="/" style="color:#64748b;font-size:13px">Return to Home</a></div>';
-      } else {
-        showToast('Submission failed. Please try again.');
+
+  for (var pgNum in formTemplatesByPage) {
+    if (!sa[pgNum]) sa[pgNum] = [];
+    var templates = formTemplatesByPage[pgNum];
+    templates.forEach(function(f) {
+      var val = formValues[f.id];
+      if (val !== undefined && val !== null && val !== "") {
+        var pointX = f.x * layoutScaleFactor;
+        var pointY = f.y * layoutScaleFactor;
+        
+        if (f.type === 'text') {
+          sa[pgNum].push({ type: 'text', x: pointX, y: pointY + 13, text: val, fontSize: 12, color: '#000000' });
+        } else if (f.type === 'checkbox' && val === true) {
+          sa[pgNum].push({ type: 'check', x: pointX + 2, y: pointY + 8 });
+        } else if (f.type === 'signature') {
+          sa[pgNum].push({ type: 'sig', x: pointX, y: pointY, data: val, w: f.w, h: f.h });
+        }
       }
-    })
-    .catch(function(e){showToast('Error: '+e.message);});
+    });
+  }
+  return sa;
 }
-
-function dlPDF(){
-  commitInput();
-  var sc=zoom/100; var sa={};
-  Object.keys(ann).forEach(function(pg){
-    sa[pg]=ann[pg].map(function(a){return Object.assign({},a,{x:a.x/sc,y:a.y/sc,w:(a.w||180)/sc,h:(a.h||50)/sc,fontSize:a.fs,color:a.clr});});
-  });
-  showToast('Generating PDF...');
-  fetch(SU,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCk('csrftoken')},body:JSON.stringify({annotations:sa,dpi:DPI})})
-    .then(function(r){if(!r.ok)throw new Error('Failed');return r.blob();})
-    .then(function(b){var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download='{{ pdf_name }}_Application_Filled.pdf';a.click();URL.revokeObjectURL(u);showToast('Downloaded!');})
-    .catch(function(e){showToast('Error: '+e.message);});
-}
-
-document.addEventListener('keydown',function(e){if(e.key==='Escape'){commitInput();closeSig();}if((e.ctrlKey||e.metaKey)&&e.key==='z')doUndo();});
-document.getElementById('mobileInputField').addEventListener('keydown', function(e){
-  if (e.key === 'Enter') confirmMobileInput();
-  if (e.key === 'Escape') cancelMobileInput();
-});
 </script>
 </body>
 </html>
