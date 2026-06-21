@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CNA Application Form | Glory Nursing</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#f1f5f9;color:#0f172a}
+.topbar{height:56px;background:#16213e;display:flex;align-items:center;padding:0 18px;gap:12px;position:sticky;top:0;z-index:50}
+.topbar a{color:#94a3b8;font-size:20px;text-decoration:none}
+.topbar .title{color:#fff;font-weight:700;font-size:15px;flex:1}
+.topbar .step-ind{color:#94a3b8;font-size:13px}
+.wrap{max-width:720px;margin:0 auto;padding:24px 16px 100px}
+.progress-rail{height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;margin-bottom:24px}
+.progress-fill{height:100%;background:#1a56db;transition:width .3s}
+.section{display:none;background:#fff;border-radius:14px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:16px}
+.section.active{display:block}
+.section h2{font-size:18px;font-weight:800;margin-bottom:4px;color:#0f172a}
+.section .sub{font-size:13px;color:#64748b;margin-bottom:20px}
+.policy-text{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;font-size:13px;line-height:1.7;color:#334155;max-height:360px;overflow-y:auto;margin-bottom:18px;white-space:pre-wrap}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.form-row.three{grid-template-columns:1fr 1fr 1fr}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12.5px;font-weight:700;color:#334155;margin-bottom:5px}
+.form-group label .req{color:#dc2626}
+.form-control{width:100%;padding:11px 13px;border:1.5px solid #cbd5e1;border-radius:9px;font-size:14px;outline:none;font-family:inherit;background:#fff}
+.form-control:focus{border-color:#1a56db;box-shadow:0 0 0 3px rgba(26,86,219,.1)}
+.radio-row{display:flex;gap:18px;align-items:center;margin-top:6px}
+.radio-row label{display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:500;color:#334155}
+.check-row{display:flex;align-items:flex-start;gap:10px;padding:12px;background:#f8fafc;border-radius:9px;margin-bottom:12px}
+.check-row input{margin-top:2px;flex-shrink:0;width:18px;height:18px}
+.check-row label{font-size:13px;color:#334155;line-height:1.5}
+.sig-pad-wrap{border:2px dashed #cbd5e1;border-radius:10px;overflow:hidden;background:#fafafa}
+.sig-pad-wrap.signed{border-color:#059669;border-style:solid}
+#sigCanvasContainer canvas{display:block;width:100%;touch-action:none;cursor:crosshair;background:#fff}
+.sig-actions{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#f1f5f9;border-top:1px solid #e2e8f0}
+.sig-actions span{font-size:11.5px;color:#64748b}
+.sig-actions button{background:none;border:none;color:#dc2626;font-size:12px;font-weight:700;cursor:pointer}
+.nav-buttons{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e2e8f0;padding:14px 16px;display:flex;gap:10px;z-index:60}
+.btn{flex:1;padding:13px;border-radius:10px;font-size:14.5px;font-weight:700;border:none;cursor:pointer;text-align:center}
+.btn-prev{background:#f1f5f9;color:#334155}
+.btn-next{background:#1a56db;color:#fff}
+.btn-submit{background:#059669;color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.error-msg{background:#fee2e2;color:#991b1b;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#059669;color:#fff;padding:12px 22px;border-radius:8px;font-size:13px;font-weight:600;display:none;z-index:999}
+.email-field{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px;margin-bottom:16px}
+.email-field label{font-size:12.5px;font-weight:700;color:#1e40af;margin-bottom:6px;display:block}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="{{ back_url }}"><i class="fas fa-arrow-left"></i></a>
+  <div class="title">CMA Enrollment Application</div>
+  <div class="step-ind" id="stepInd">Step 1 of 22</div>
+</div>
+
+<div class="wrap">
+  <div class="progress-rail"><div class="progress-fill" id="progressFill" style="width:4.5%"></div></div>
+
+  <div class="error-msg" id="errorMsg"></div>
+
+  <div class="section active" data-section="0">
+    <h2>Let's Get Started</h2>
+    <div class="sub">Enter your email — we'll send a confirmation once your application is submitted.</div>
+    <div class="email-field">
+      <label>Your Email Address <span class="req">*</span></label>
+      <input type="email" class="form-control" id="studentEmail" placeholder="you@example.com" required>
+    </div>
+  </div>
+
+  <div class="section" data-section="1">
+    <h2>CMA Attestation</h2>
+    <div class="sub">Required by the Oklahoma State Department of Health.</div>
+    <div class="policy-text">Please be certain that the information you provide is correct. The Oklahoma State Department of Health may deny, suspend, withdraw or not renew the certificate of a medication aide who intentionally provides false or misleading information to a training program, a facility, or the Oklahoma State Department of Health.
+
+Prerequisites for certification as a medication aide:
+1. Minimum age: 18
+2. Minimum education: high school or general equivalency diploma
+3. Current Oklahoma nurse aide certification with no abuse notations
+4. Experience working as a certified nurse aide for six months
+5. Physical and mental capability to safely perform duties
+
+By your signature, you certify that the foregoing is true, correct and complete to the best of your knowledge and belief.</div>
+
+    <div class="form-group">
+      <label>I am a minimum of 18 years of age. <span class="req">*</span></label>
+      <div class="radio-row">
+        <label><input type="radio" name="cma_age" value="Yes" data-field="cma_age" required> Yes</label>
+        <label><input type="radio" name="cma_age" value="No" data-field="cma_age"> No</label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>I have a minimum education of high school or GED. <span class="req">*</span></label>
+      <div class="radio-row">
+        <label><input type="radio" name="cma_education" value="Yes" data-field="cma_education" required> Yes</label>
+        <label><input type="radio" name="cma_education" value="No" data-field="cma_education"> No</label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>I have worked as a Certified Nurse Aide for at least 6 months. <span class="req">*</span></label>
+      <div class="radio-row">
+        <label><input type="radio" name="cma_experience" value="Yes" data-field="cma_experience" required> Yes</label>
+        <label><input type="radio" name="cma_experience" value="No" data-field="cma_experience"> No</label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>I have a current Oklahoma nurse aide certification with no abuse notations. <span class="req">*</span></label>
+      <div class="radio-row">
+        <label><input type="radio" name="cma_cert" value="Yes" data-field="cma_cert" required> Yes</label>
+        <label><input type="radio" name="cma_cert" value="No" data-field="cma_cert"> No</label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>I have the physical and mental capability to safely perform the duties. <span class="req">*</span></label>
+      <div class="radio-row">
+        <label><input type="radio" name="cma_capability" value="Yes" data-field="cma_capability" required> Yes</label>
+        <label><input type="radio" name="cma_capability" value="No" data-field="cma_capability"> No</label>
+      </div>
+    </div>
+
+    <div class="form-group"><label>Sign Below <span class="req">*</span></label></div>
+    <div class="sig-pad-wrap" data-sigtarget="sig_cma_attestation">
+      <div class="sig-canvas-mount" data-key="sig_cma_attestation"></div>
+    </div>
+  </div>
+
+  <div class="section" data-section="2">
+    <h2>Application Information</h2>
+    <div class="sub">Tell us a bit about yourself.</div>
+
+    <div class="form-row three">
+      <div class="form-group"><label>Last Name <span class="req">*</span></label><input type="text" class="form-control" data-field="last_name" required></div>
+      <div class="form-group"><label>First Name <span class="req">*</span></label><input type="text" class="form-control" data-field="first_name" required></div>
+      <div class="form-group"><label>M.I.</label><input type="text" class="form-control" data-field="middle_initial" maxlength="2"></div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group"><label>Date of Birth <span class="req">*</span></label><input type="date" class="form-control" data-field="dob" required></div>
+      <div class="form-group"><label>Social Security # <span class="req">*</span></label><input type="text" class="form-control" data-field="ssn" placeholder="000-00-0000" required maxlength="11" oninput="formatSSN(this)"></div>
+    </div>
+
+    <div class="form-group"><label>Street Address <span class="req">*</span></label><input type="text" class="form-control" data-field="street" required></div>
+
+    <div class="form-row three">
+      <div class="form-group"><label>City <span class="req">*</span></label><input type="text" class="form-control" data-field="city" required></div>
+      <div class="form-group"><label>State <span class="req">*</span></label><input type="text" class="form-control" data-field="state" value="OK" required></div>
+      <div class="form-group"><label>Zip <span class="req">*</span></label><input type="text" class="form-control" data-field="zip" required maxlength="10" oninput="this.value=this.value.replace(/[^0-9-]/g,'')"></div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group"><label>Phone <span class="req">*</span></label><input type="tel" class="form-control" data-field="phone" placeholder="(555) 123-4567" required oninput="formatPhone(this)"></div>
+      <div class="form-group"><label>How did you hear about us?</label><input type="text" class="form-control" data-field="how_heard"></div>
+    </div>
+
+    <div class="form-group"><label>Course Applied For <span class="req">*</span></label>
+      <select class="form-control" data-field="course_applied" required>
+        <option value="">-- Select a schedule --</option>
+        {% for course in cma_courses %}
+        <option value="{{ course.title }}">{{ course.title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div class="section" data-section="3">
+    <h2>Emergency Contact</h2>
+    <div class="sub">Someone we can reach in case of an emergency.</div>
+
+    <div class="form-row">
+      <div class="form-group"><label>Contact Person Name <span class="req">*</span></label><input type="text" class="form-control" data-field="emergency_name" required></div>
+      <div class="form-group"><label>Phone Number <span class="req">*</span></label><input type="tel" class="form-control" data-field="emergency_phone" placeholder="(555) 123-4567" required oninput="formatPhone(this)"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Address <span class="req">*</span></label><input type="text" class="form-control" data-field="emergency_address" required></div>
+      <div class="form-group"><label>Relationship <span class="req">*</span></label>
+      <select class="form-control" data-field="emergency_relationship" required>
+        <option value="">-- Select --</option>
+        <option value="Parent">Parent</option>
+        <option value="Spouse">Spouse</option>
+        <option value="Sibling">Sibling</option>
+        <option value="Child">Child</option>
+        <option value="Friend">Friend</option>
+        <option value="Relative">Other Relative</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    </div>
+  </div>
+
+  <div class="section" data-section="4">
+    <h2>Education History</h2>
+    <div class="sub">High school and any college/other education.</div>
+
+    <div class="form-row">
+      <div class="form-group"><label>High School Name <span class="req">*</span></label><input type="text" class="form-control" data-field="hs_name" required></div>
+      <div class="form-group"><label>High School Address</label><input type="text" class="form-control" data-field="hs_address"></div>
+    </div>
+    <div class="form-row three">
+      <div class="form-group"><label>Years From</label><input type="text" class="form-control" data-field="hs_from" placeholder="2015"></div>
+      <div class="form-group"><label>Years To</label><input type="text" class="form-control" data-field="hs_to" placeholder="2019"></div>
+      <div class="form-group"><label>Diploma/GED #</label><input type="text" class="form-control" data-field="hs_diploma"></div>
+    </div>
+    <div class="form-group">
+      <label>Did You Graduate? <span class="req">*</span></label>
+      <div class="radio-row">
+        <label><input type="radio" name="hs_graduated_cma" value="Yes" data-field="hs_graduated_cma" required> Yes</label>
+        <label><input type="radio" name="hs_graduated_cma" value="No" data-field="hs_graduated_cma"> No</label>
+      </div>
+    </div>
+
+    <hr style="border:none;border-top:1px solid #e2e8f0;margin:18px 0">
+
+    <div class="form-row">
+      <div class="form-group"><label>College / Other School</label><input type="text" class="form-control" data-field="college_name"></div>
+      <div class="form-group"><label>College Address</label><input type="text" class="form-control" data-field="college_address"></div>
+    </div>
+    <div class="form-row three">
+      <div class="form-group"><label>Years From</label><input type="text" class="form-control" data-field="college_from"></div>
+      <div class="form-group"><label>Years To</label><input type="text" class="form-control" data-field="college_to"></div>
+      <div class="form-group"><label>Degree</label><input type="text" class="form-control" data-field="degree"></div>
+    </div>
+    <div class="form-group">
+      <label>Did You Graduate?</label>
+      <div class="radio-row">
+        <label><input type="radio" name="college_graduated" value="Yes" data-field="college_graduated"> Yes</label>
+        <label><input type="radio" name="college_graduated" value="No" data-field="college_graduated"> No</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="section" data-section="5">
+    <h2>Affidavit of Lawful Presence</h2>
+    <div class="sub">Required by Oklahoma state law.</div>
+    <div class="policy-text">AFFIDAVIT OF LAWFUL PRESENCE BY PERSON MAKING APPLICATION FOR A LICENSE, PERMIT, OR CERTIFICATE
+
+I, the undersigned applicant, being of lawful age, state that one of the following statements is true and correct (check which of the following statements apply):
+
+I state under penalty of perjury under the laws of Oklahoma that the foregoing is true and correct and that I have read and understand this form and executed it in my own hand.
+
+Qualified Aliens: State law requires the Oklahoma State Department of Health to verify the immigration status (lawful presence) of all non-U.S. citizens upon initial license/certification and renewal. Qualified aliens must attach a copy (front and back) of the documents that support their status as shown above with their Affidavit of Lawful Presence. A license, permit, or certification will not be issued until the appropriate documentation is submitted.</div>
+
+    <div class="form-group">
+      <label>Lawful Presence Status <span class="req">*</span></label>
+      <div class="radio-row" style="flex-direction:column;align-items:flex-start;gap:10px">
+        <label><input type="radio" name="lawful_presence" value="us_citizen" data-field="lawful_presence" required> I am a United States citizen</label>
+        <label><input type="radio" name="lawful_presence" value="qualified_alien" data-field="lawful_presence"> I am a qualified alien lawfully present in the U.S.</label>
+      </div>
+    </div>
+    <div class="form-group" id="alienNumberGroup" style="display:none">
+      <label>Admission/Registration Number</label>
+      <input type="text" class="form-control" data-field="alien_number">
+      <label style="margin-top:10px">Authorizing Document (e.g. INS Form I-551, I-94)</label>
+      <input type="text" class="form-control" data-field="authorizing_document">
+    </div>
+    <div class="form-group">
+      <label>If applying to renew a license, permit, or certificate, please write the number (leave blank if not applicable)</label>
+      <input type="text" class="form-control" data-field="renewal_number">
+    </div>
+  </div>
+
+  <div class="section" data-section="6">
+    <h2>Authorized Tasks at Clinical Sites</h2>
+    <div class="sub">Please read carefully before signing.</div>
+    <div class="policy-text">As a student enrolled in the Certified Nursing Assistant (CNA) program, your education and safety, as well as the safety of patients, are of utmost importance. Therefore, students are only permitted to perform tasks and procedures at clinical sites that have been explicitly taught and practiced during classroom and lab training at Glory Nursing CNA School.
+
+Important Guidelines
+
+1. No Unapproved Tasks: Under no circumstances should you attempt or perform any clinical task or procedure that has not been covered in your coursework. This includes tasks that you may observe staff or other healthcare professionals performing. If you are asked to perform such tasks, respectfully inform the staff that it is outside your current scope of training.
+
+2. Supervised Tasks: All tasks performed at the clinical site must be done under the supervision of a qualified preceptor. This ensures both the correct application of skills and adherence to patient safety standards.
+
+3. Ask for Clarification: If you are ever unsure whether a task is within your scope of training, do not hesitate to ask your clinical instructor for clarification. It is better to seek confirmation than to risk patient safety or your own performance.
+
+4. Student Responsibility: Students are expected to always demonstrate professionalism and ethical responsibility. Engaging in unauthorized tasks could result in disciplinary action and may impact your standing in the program.
+
+Consequences of Non-Compliance
+
+Any student found performing unauthorized tasks will be subject to the following disciplinary actions:
+- Immediate suspension from the clinical site
+- Review of the incident by school administration
+- Possible removal from the CNA program
+
+Commitment to Safety and Learning
+
+The clinical experience is designed to complement your education and provide a safe learning environment for practical application. Adhering to the tasks you have been taught ensures that you develop skills progressively and in a manner that protects the well-being of all involved.
+
+Please remember that patient safety, as well as your professional integrity, depend on your adherence to these guidelines.
+
+Acknowledgment of Policy: By signing below, you acknowledge that you understand and agree to follow the guidelines outlined in this document.</div>
+
+    <div class="check-row">
+      <input type="checkbox" id="agreeClinical" data-field="agree_clinical_tasks" required>
+      <label for="agreeClinical">I have read and agree to follow the Authorized Tasks at Clinical Sites policy.</label>
+    </div>
+
+    <div class="form-group"><label>Sign Below <span class="req">*</span></label></div>
+    <div class="sig-pad-wrap" data-sigtarget="sig_clinical_tasks">
+      <div id="sigCanvasContainer_clinical" class="sig-canvas-mount" data-key="sig_clinical_tasks"></div>
+    </div>
+  </div>
+
+  <div class="section" data-section="7">
+    <h2>Photograph and Media Release Waiver</h2>
+    <div class="policy-text">As a student at Glory Nursing CNA School, I understand that photographs, videos, and other forms of media may be taken during my time at the school for educational, promotional, and marketing purposes. These images may be used in various formats including, but not limited to:
+- Websites and social media platforms (e.g., Facebook, Instagram)
+- Print and digital advertising materials
+- Newsletters, brochures, and other promotional materials
+- Training materials and educational presentations
+
+I Consent: I, the undersigned, grant permission to Glory Nursing CNA School to use photographs, video recordings, and/or other media that may include my image, voice, or likeness for the purposes outlined above. I understand that these images may be used without compensation and will remain the property of Glory Nursing CNA School.
+
+I Decline: I, the undersigned, do not grant permission to Glory Nursing CNA School to use photographs, video recordings, and/or other media that may include my image, voice, or likeness. I understand that if I decline, every effort will be made to exclude me from media content, and my decision will not affect my participation in school activities.
+
+I understand that:
+1. My participation is voluntary, and I may revoke or modify this consent at any time by providing written notice to the school.
+2. My personal information (e.g., name, contact details) will not be disclosed in the use of such materials unless explicitly permitted by me.</div>
+
+    <div class="form-group">
+      <label>Do you consent to photo/media release? <span class="req">*</span></label>
+      <div class="radio-row">
+        <label><input type="radio" name="media_consent" value="Yes" data-field="media_consent" required> Yes, I consent</label>
+        <label><input type="radio" name="media_consent" value="No" data-field="media_consent"> No, I do not consent</label>
+      </div>
+    </div>
+
+    <div class="form-group"><label>Sign Below <span class="req">*</span></label></div>
+    <div class="sig-pad-wrap" data-sigtarget="sig_media_release">
+      <div class="sig-canvas-mount" data-key="sig_media_release"></div>
+    </div>
+  </div>
+
+  <div class="section" data-section="8">
+    <h2>Background Check Requirement</h2>
+    <div class="policy-text">All students enrolled in the Certified Nursing Assistant (CNA) program at Glory Nursing CNA School are required to undergo a criminal background check before participating in clinical training or graduating from the program. This background check is mandated to ensure compliance with healthcare facility policies and state regulations.
+
+By signing this waiver, you acknowledge and agree to the following:
+1. Clean Background Requirement: In order to qualify for clinical placement and graduation, students must pass a criminal background check per state and facility requirements.
+
+Please let Glory Nursing management know if you would like Glory Nursing to conduct your background check by checking one of the boxes below.
+
+5. Background Check Process:
+- The background check will be conducted by an authorized third-party agency. You will be responsible for submitting all necessary information and payment for the background check as part of the enrollment process.
+- You will be notified of the results, and any disqualifying findings may result in removal from the program.
+
+Acknowledgment of Policy: By signing below, you acknowledge that you understand and agree to the terms of this waiver, including the requirement for a clean background check and the lack of any guarantee of employment after program completion.</div>
+
+    <div class="form-group">
+      <label>Background Check Preference <span class="req">*</span></label>
+      <div class="radio-row" style="flex-direction:column;align-items:flex-start;gap:10px">
+        <label><input type="radio" name="background_check" value="glory_conducts" data-field="background_check" required> Yes, Glory Nursing should conduct my background check</label>
+        <label><input type="radio" name="background_check" value="self_provide" data-field="background_check"> No, I will provide my own background check</label>
+      </div>
+    </div>
+
+    <div class="form-group"><label>Sign Below <span class="req">*</span></label></div>
+    <div class="sig-pad-wrap" data-sigtarget="sig_background_check">
+      <div class="sig-canvas-mount" data-key="sig_background_check"></div>
+    </div>
+  </div>
+
+  <div class="section" data-section="9">
+    <h2>Grievance &amp; Refund Policy</h2>
+    <div class="policy-text">At Glory Nursing, we are committed to fostering a supportive and fair learning environment. Students who have concerns or complaints related to any aspect of their experience at the school—including instruction, facilities, administrative services, or interactions with faculty/staff—are encouraged to follow the grievance process outlined below.
+
+No Refund Policy
+
+1. Tuition and Fees: All payments made for tuition, registration fees, materials, and any other associated costs are non-refundable.
+
+2. Course Withdrawals or Cancellations: Payments will not be refunded under the following circumstances:
+- Voluntary withdrawal by the student
+- Dismissal for academic or behavioral reasons
+- Schedule changes or conflicts
+
+In the event of medical or serious family reasons, Glory Nursing will work with students to make up lost classes by joining the next available classes.
+
+3. Non-Attendance: Failure to attend classes—whether due to personal choice, illness, emergencies, or other reasons—does not entitle the student to a refund. Students are encouraged to assess their availability before enrolling.
+
+4. Payment Plans: Students enrolled in a payment plan are required to complete all scheduled payments, regardless of course completion or attendance.
+
+5. Course Cancellations by Glory Nursing: If a course is canceled due to unforeseen circumstances, students will be offered the option to reschedule or apply their payments toward another program. In such cases, no refunds will be issued.
+
+6. Disputes: All disputes regarding payments or the no-refund policy must be submitted in writing to the school administration within 30 days of the payment in question.
+
+7. Acknowledgment: By enrolling in Glory Nursing CNA School, you acknowledge and agree to the terms of this No Refund Policy. Your enrollment and payment of tuition or fees serve as confirmation of your understanding and acceptance of this policy.</div>
+
+    <div class="check-row">
+      <input type="checkbox" id="agreeRefund" data-field="agree_refund_policy" required>
+      <label for="agreeRefund">I have read and agree to the Grievance & Refund Policy, including the No Refund Policy.</label>
+    </div>
+
+    <div class="form-group"><label>Sign Below <span class="req">*</span></label></div>
+    <div class="sig-pad-wrap" data-sigtarget="sig_refund_policy">
+      <div class="sig-canvas-mount" data-key="sig_refund_policy"></div>
+    </div>
+  </div>
+
+  <div class="section" data-section="10">
+    <h2>OSDH / Nurse Aide Registry Rules &amp; Regulations</h2>
+    <div class="policy-text">Nurse Aide Registry — PO Box 268816, Oklahoma City, OK 73126-8816 — Ph. 405-426-8150
+
+Required Information for Trainees (Effective July 23, 2015): HB2582 and Background Checks for Certified Nurse Aides (63 O.S. Section 1-1950.1).
+
+By signing below, I acknowledge that I have received, read, and understand the Nurse Aide Registry rules and regulations regarding background checks, certification, recertification, and reporting requirements as outlined by the Oklahoma State Department of Health.</div>
+
+    <div class="form-group"><label>Sign Below <span class="req">*</span></label></div>
+    <div class="sig-pad-wrap" data-sigtarget="sig_nar_rules">
+      <div class="sig-canvas-mount" data-key="sig_nar_rules"></div>
+    </div>
+  </div>
+
+  <div class="section" data-section="11">
+    <h2>Final Acknowledgment &amp; Signature</h2>
+    <div class="sub">By signing below, you confirm that all information provided in this application is true and accurate to the best of your knowledge, and that you agree to all policies outlined above.</div>
+
+    <div class="form-group"><label>Full Legal Signature <span class="req">*</span></label></div>
+    <div class="sig-pad-wrap" data-sigtarget="sig_final">
+      <div class="sig-canvas-mount" data-key="sig_final"></div>
+    </div>
+
+    <div class="form-group" style="margin-top:16px"><label>Date <span class="req">*</span></label><input type="date" class="form-control" data-field="signature_date" required></div>
+  </div>
+
+</div>
+
+<div class="nav-buttons">
+  <button class="btn btn-prev" id="prevBtn" onclick="prevSection()" style="display:none">Back</button>
+  <button class="btn btn-next" id="nextBtn" onclick="nextSection()">Continue</button>
+  <button class="btn btn-submit" id="submitBtn" onclick="submitApplication()" style="display:none">
+    <i class="fas fa-paper-plane"></i> Submit Application
+  </button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var TOTAL_SECTIONS = 12;
+var currentSection = 0;
+var formData = {};
+var sigPads = {};
+
+function formatPhone(input) {
+  var digits = input.value.replace(/\D/g, '').slice(0, 10);
+  var formatted = digits;
+  if (digits.length > 6) {
+    formatted = '(' + digits.slice(0,3) + ') ' + digits.slice(3,6) + '-' + digits.slice(6);
+  } else if (digits.length > 3) {
+    formatted = '(' + digits.slice(0,3) + ') ' + digits.slice(3);
+  } else if (digits.length > 0) {
+    formatted = '(' + digits;
+  }
+  input.value = formatted;
+}
+
+function formatSSN(input) {
+  var digits = input.value.replace(/\D/g, '').slice(0, 9);
+  var formatted = digits;
+  if (digits.length > 5) {
+    formatted = digits.slice(0,3) + '-' + digits.slice(3,5) + '-' + digits.slice(5);
+  } else if (digits.length > 3) {
+    formatted = digits.slice(0,3) + '-' + digits.slice(3);
+  }
+  input.value = formatted;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.sig-canvas-mount').forEach(function(mount) {
+    initSignaturePad(mount);
+  });
+
+  document.querySelectorAll('input[name="lawful_presence"]').forEach(function(r) {
+    r.addEventListener('change', function() {
+      document.getElementById('alienNumberGroup').style.display = this.value === 'qualified_alien' ? 'block' : 'none';
+    });
+  });
+
+  updateUI();
+});
+
+function initSignaturePad(mount) {
+  var key = mount.getAttribute('data-key');
+  var canvas = document.createElement('canvas');
+  canvas.width = mount.clientWidth || 600;
+  canvas.height = 140;
+  mount.appendChild(canvas);
+
+  var actions = document.createElement('div');
+  actions.className = 'sig-actions';
+  actions.innerHTML = '<span>Draw your signature above</span><button type="button">Clear</button>';
+  mount.parentElement.appendChild(actions);
+
+  var ctx = canvas.getContext('2d');
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 2.2;
+  ctx.lineCap = 'round';
+  var drawing = false;
+  var hasSig = false;
+
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    if (e.touches && e.touches.length) {
+      return { x: (e.touches[0].clientX - r.left) * (canvas.width / r.width), y: (e.touches[0].clientY - r.top) * (canvas.height / r.height) };
+    }
+    return { x: (e.clientX - r.left) * (canvas.width / r.width), y: (e.clientY - r.top) * (canvas.height / r.height) };
+  }
+
+  function start(e) { e.preventDefault(); drawing = true; var p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }
+  function move(e) { if (!drawing) return; e.preventDefault(); var p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); hasSig = true; mount.parentElement.classList.add('signed'); formData[key] = canvas.toDataURL('image/png'); }
+  function end() { drawing = false; }
+
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  canvas.addEventListener('mouseup', end);
+  canvas.addEventListener('mouseleave', end);
+  canvas.addEventListener('touchstart', start);
+  canvas.addEventListener('touchmove', move);
+  canvas.addEventListener('touchend', end);
+
+  actions.querySelector('button').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    hasSig = false;
+    mount.parentElement.classList.remove('signed');
+    delete formData[key];
+  });
+
+  sigPads[key] = { canvas: canvas, hasSig: function() { return hasSig; } };
+}
+
+function collectFieldsInSection(idx) {
+  var section = document.querySelector('[data-section="' + idx + '"]');
+  if (!section) return;
+  section.querySelectorAll('[data-field]').forEach(function(el) {
+    if (el.type === 'radio') {
+      if (el.checked) formData[el.getAttribute('data-field')] = el.value;
+    } else if (el.type === 'checkbox') {
+      formData[el.getAttribute('data-field')] = el.checked;
+    } else {
+      formData[el.getAttribute('data-field')] = el.value;
+    }
+  });
+}
+
+function validateSection(idx) {
+  var section = document.querySelector('[data-section="' + idx + '"]');
+  var errorEl = document.getElementById('errorMsg');
+  errorEl.style.display = 'none';
+
+  if (idx === 0) {
+    var email = document.getElementById('studentEmail').value.trim();
+    if (!email || !email.includes('@')) {
+      errorEl.textContent = 'Please enter a valid email address.';
+      errorEl.style.display = 'block';
+      return false;
+    }
+    formData.student_email = email;
+    return true;
+  }
+
+  var requiredEls = section.querySelectorAll('[required]');
+  for (var i = 0; i < requiredEls.length; i++) {
+    var el = requiredEls[i];
+    if (el.type === 'radio') {
+      var name = el.name;
+      var group = section.querySelectorAll('input[name="' + name + '"]');
+      var checked = Array.from(group).some(function(g) { return g.checked; });
+      if (!checked) {
+        errorEl.textContent = 'Please answer all required questions before continuing.';
+        errorEl.style.display = 'block';
+        return false;
+      }
+    } else if (el.type === 'checkbox') {
+      if (!el.checked) {
+        errorEl.textContent = 'Please check the agreement box to continue.';
+        errorEl.style.display = 'block';
+        return false;
+      }
+    } else if (!el.value.trim()) {
+      errorEl.textContent = 'Please fill in all required fields before continuing.';
+      errorEl.style.display = 'block';
+      el.focus();
+      return false;
+    }
+  }
+
+  var sigWrap = section.querySelector('.sig-pad-wrap');
+  if (sigWrap) {
+    var key = sigWrap.getAttribute('data-sigtarget');
+    if (sigPads[key] && !sigPads[key].hasSig()) {
+      errorEl.textContent = 'Please sign before continuing.';
+      errorEl.style.display = 'block';
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function nextSection() {
+  if (!validateSection(currentSection)) return;
+  collectFieldsInSection(currentSection);
+  if (currentSection < TOTAL_SECTIONS - 1) {
+    currentSection++;
+    updateUI();
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  }
+}
+
+function prevSection() {
+  if (currentSection > 0) {
+    currentSection--;
+    updateUI();
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  }
+}
+
+function updateUI() {
+  document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
+  document.querySelector('[data-section="' + currentSection + '"]').classList.add('active');
+
+  var pct = ((currentSection + 1) / TOTAL_SECTIONS) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('stepInd').textContent = 'Step ' + (currentSection + 1) + ' of ' + TOTAL_SECTIONS;
+
+  document.getElementById('prevBtn').style.display = currentSection > 0 ? 'block' : 'none';
+  document.getElementById('nextBtn').style.display = currentSection < TOTAL_SECTIONS - 1 ? 'block' : 'none';
+  document.getElementById('submitBtn').style.display = currentSection === TOTAL_SECTIONS - 1 ? 'block' : 'none';
+}
+
+function getCk(n) { var m = document.cookie.match('(^|;)\\s*' + n + '\\s*=\\s*([^;]+)'); return m ? m.pop() : ''; }
+
+function submitApplication() {
+  if (!validateSection(currentSection)) return;
+  collectFieldsInSection(currentSection);
+
+  var btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+
+  fetch('/apply/cma/submit-form/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCk('csrftoken') }
+,
+    body: JSON.stringify(formData)
+  })
+  .then(function(r) { return r.blob(); })
+  .then(function(blob) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'CNA_Application_' + (formData.last_name || 'student') + '.pdf';
+    a.click();
+    URL.revokeObjectURL(url);
+    var d = { success: true };
+    if (d.success) {
+      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:20px;background:#16213e;color:#fff;padding:24px;text-align:center;"><div style="font-size:64px">🎉</div><h2 style="font-size:24px;font-weight:800">Application Submitted!</h2><p style="color:#94a3b8;font-size:14px;max-width:400px">Your completed application has been sent to Glory Nursing. We will contact you within 1-2 business days.<br><br>Check your email for confirmation.</p><a href="/lms/enroll/{{ enroll_id }}/" style="background:#059669;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:800;margin-top:10px">&#128274; Pay &amp; Complete Enrollment</a><a href="/" style="color:#64748b;font-size:13px">Return to Home</a></div>';
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Application';
+      var t = document.getElementById('toast');
+      t.textContent = d.error || 'Submission failed. Please try again.';
+      t.style.display = 'block';
+      setTimeout(function() { t.style.display = 'none'; }, 4000);
+    }
+  })
+  .catch(function(e) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Application';
+    var t = document.getElementById('toast');
+    t.textContent = 'Connection error. Please try again.';
+    t.style.display = 'block';
+    setTimeout(function() { t.style.display = 'none'; }, 4000);
+  });
+}
+</script>
+</body>
+</html>

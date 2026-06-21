@@ -532,6 +532,12 @@ def submit_form_cna(request):
     except Exception:
         return JsonResponse({'error': 'Invalid data'}, status=400)
 
+    print("=== CMA FORM DATA RECEIVED ===")
+    for k, v in data.items():
+        if not str(v).startswith('data:image'):
+            print(f"{k}: {v}")
+    print("=== END ===")
+
     student_email = data.get('student_email', '').strip()
     if not student_email:
         return JsonResponse({'error': 'Email is required'}, status=400)
@@ -994,6 +1000,376 @@ def fill_pdf_cma(request):
         'back_url': '/apply/cma/',
         'enroll_id': 2,
     })
+
+
+def fill_form_simple(request, program_code):
+    from lms.models import Course as LMSCourse
+    program_names = {
+        'BLS': 'Basic Life Support (BLS) / CPR',
+        'HHA': 'Home Health Aide (HHA)',
+        'PHLEBOTOMY': 'Phlebotomy Technician',
+        'EKG': 'EKG Technician',
+        'CCMA': 'Certified Clinical Medical Assistant (CCMA)',
+    }
+    program_name = program_names.get(program_code.upper(), program_code)
+    course = LMSCourse.objects.filter(program__iexact=program_code, is_published=True).order_by('price').first()
+    course_id = course.id if course else ''
+    return render(request, 'core/fill_form_simple.html', {
+        'program_name': program_name,
+        'program_code': program_code.upper(),
+        'course_id': course_id,
+        'back_url': '/contact/',
+        'submit_url': f'/apply/simple/{program_code}/submit/',
+    })
+
+
+@csrf_exempt
+def submit_form_simple(request, program_code):
+    import json
+    from django.http import JsonResponse
+    from django.core.mail import EmailMessage
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=400)
+
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'error': 'Invalid data'}, status=400)
+
+    student_email = data.get('student_email', '').strip()
+    if not student_email:
+        return JsonResponse({'error': 'Email is required'}, status=400)
+
+    full_name = f"{data.get('first_name','')} {data.get('last_name','')}".strip() or 'Applicant'
+    program_name = data.get('program_name', program_code)
+
+    try:
+        msg = EmailMessage(
+            subject=f'New {program_name} Application Received - {full_name}',
+            body=f"""A student has submitted an application for {program_name} through the Glory Nursing website.
+
+Name: {full_name}
+Email: {student_email}
+Phone: {data.get('phone','')}
+DOB: {data.get('dob','')}
+SSN: {data.get('ssn','')}
+Address: {data.get('street','')}, {data.get('city','')}, {data.get('state','')} {data.get('zip','')}
+How heard: {data.get('how_heard','')}
+
+Glory Nursing Online Portal""",
+            from_email=None,
+            to=['glorynursing@yahoo.com'],
+        )
+        msg.send()
+
+        EmailMessage(
+            subject=f'Your Glory Nursing {program_name} Application Received',
+            body=f"""Thank you for submitting your {program_name} application to Glory Nursing!
+
+We have received your application. Our admissions team will review it and contact you within 1-2 business days.
+
+Questions? Call us at (405) 968-5004 or email glorynursing@yahoo.com
+
+Glory Nursing Healthcare Training School
+12032 N Pennsylvania Ave, Oklahoma City, OK 73120""",
+            from_email=None,
+            to=[student_email],
+        ).send()
+    except Exception as e:
+        print(f"Email error: {e}")
+
+    request.session['application_submitted'] = True
+    return JsonResponse({'success': True})
+
+
+def fill_form_cma(request):
+    from lms.models import Course as LMSCourse
+    enroll_id = request.session.get('apply_enroll_id', 2)
+    program_slug = request.session.get('apply_program_slug', '')
+    back_url = f'/apply/cma/?program={program_slug}' if program_slug else '/apply/cma/'
+    cma_courses = LMSCourse.objects.filter(program='CMA', is_published=True).order_by('price')
+    return render(request, 'core/fill_form_cma.html', {
+        'enroll_id': enroll_id,
+        'back_url': back_url,
+        'cma_courses': cma_courses,
+    })
+
+
+@csrf_exempt
+def submit_form_cma(request):
+    import json
+    import io
+    import base64
+    from django.http import JsonResponse, HttpResponse
+    from django.core.mail import EmailMessage
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.colors import HexColor
+    from reportlab.pdfgen import canvas as rl_canvas
+    from reportlab.lib.utils import ImageReader
+    from pypdf import PdfReader, PdfWriter
+    from pypdf.generic import NameObject
+    import os as _os
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=400)
+
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'error': 'Invalid data'}, status=400)
+
+    student_email = data.get('student_email', '').strip()
+    if not student_email:
+        return JsonResponse({'error': 'Email is required'}, status=400)
+
+    def get(key, default=''):
+        v = data.get(key, default)
+        return v if v else default
+
+    def draw_sig_img(target_canvas, key, x, y, w, h):
+        img_data = data.get(key, '')
+        if img_data and img_data.startswith('data:image'):
+            try:
+                header, b64 = img_data.split(',', 1)
+                img_bytes = base64.b64decode(b64)
+                img_reader = ImageReader(io.BytesIO(img_bytes))
+                target_canvas.drawImage(img_reader, x, y, width=w, height=h, mask='auto')
+            except Exception:
+                pass
+
+    full_name = f"{get('first_name')} {get('last_name')}".strip() or 'Applicant'
+
+    original_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'static', 'core', 'documents', 'CMA_app.pdf')
+    original_reader = PdfReader(original_path)
+    writer = PdfWriter()
+    writer.append(original_reader)
+
+    # ---- Fill real AcroForm text fields ----
+    field_values = {
+        # Page 1: CMA Attestation
+        'Typed or Printed Name of Applicant': full_name,
+        'Social Security Number of Applicant': get('ssn'),
+        'Signature Field 10': '',
+        'Date of Signing 6': get('signature_date'),
+
+        # Page 7: Photograph and Media Release Waiver
+        'Text Field 28': full_name,
+        'Date Field 3': get('dob'),
+        'Number Field 1': get('phone'),
+        'Text Field 29': student_email,
+        'Date of Signing 2': get('signature_date'),
+        'Date of Signing 3': get('signature_date'),
+        'Text Field 30': full_name,
+        'Text Field 32': full_name,
+        'Date of Signing 5': get('signature_date'),
+        'Text Field 27': full_name,
+        'Date of Signing 1': get('signature_date'),
+
+        # Page 4: Enrollment Application
+        'Text Field 3': get('last_name'),
+        'Text Field 1': get('first_name'),
+        'Text Field 4': get('middle_initial'),
+        'Text Field 2': get('how_heard'),
+        'Date Field 1': get('dob'),
+        'Text Field 5': get('ssn'),
+        'Text Field 6': get('street'),
+        'Text Field 11': get('phone'),
+        'Text Field 7': get('city'),
+        'Text Field 8': get('state'),
+        'Text Field 9': get('zip'),
+        'Text Field 10': student_email,
+        'Text Field 12': get('course_applied'),
+        'Text Field 13': get('emergency_name'),
+        'Text Field 14': get('emergency_phone'),
+        'Text Field 15': get('emergency_address'),
+        'Text Field 16': get('emergency_relationship'),
+        'Text Field 17': get('hs_name'),
+        'Text Field 18': get('hs_address'),
+        'Text Field 19': get('hs_from'),
+        'Text Field 20': get('hs_to'),
+        'Text Field 21': get('hs_diploma'),
+        'Text Field 23': get('college_name'),
+        'Text Field 22': get('college_address'),
+        'Text Field 24': get('college_from'),
+        'Text Field 25': get('college_to'),
+        'Text Field 26': get('degree'),
+        'Date Field 2': get('signature_date'),
+    }
+
+    checkbox_values = {}
+    if get('hs_graduated_cma') == 'Yes':
+        checkbox_values['Checkbox 1'] = '/Yes'
+    elif get('hs_graduated_cma') == 'No':
+        checkbox_values['Checkbox 2'] = '/Yes'
+    if get('college_graduated') == 'Yes':
+        checkbox_values['Checkbox 6'] = '/Yes'
+    elif get('college_graduated') == 'No':
+        checkbox_values['Checkbox 5'] = '/Yes'
+
+    # Note: attestation Yes/No checkboxes share field names across all 5 questions
+    # in this PDF's form design, so we cannot set them independently via AcroForm.
+    # We overlay X marks at known coordinates instead (see below).
+
+    for page in writer.pages:
+        writer.update_page_form_field_values(page, {**field_values, **checkbox_values}, auto_regenerate=False)
+
+    # Overlay attestation Yes/No marks (shared field names can't represent 5 independent answers)
+    att_page = writer.pages[0]
+    att_ph = float(original_reader.pages[0].mediabox[3])
+    att_pw = float(original_reader.pages[0].mediabox[2])
+    att_overlay_buf = io.BytesIO()
+    atc = rl_canvas.Canvas(att_overlay_buf, pagesize=(att_pw, att_ph))
+    atc.setFont('Helvetica-Bold', 10)
+    atc.setFillColor(HexColor('#000000'))
+    qy_positions = [
+        ('cma_age', 376),
+        ('cma_education', 363),
+        ('cma_experience', 345),
+        ('cma_cert', 333),
+        ('cma_capability', 320),
+    ]
+    for field_key, y_pt in qy_positions:
+        ans = get(field_key)
+        if ans == 'Yes':
+            atc.drawString(426, y_pt, '\u2713')
+        elif ans == 'No':
+            atc.drawString(480, y_pt, '\u2713')
+    atc.save()
+    att_overlay_buf.seek(0)
+    att_overlay_reader = PdfReader(att_overlay_buf)
+    att_page.merge_page(att_overlay_reader.pages[0])
+
+    # Force form field appearances to render
+    try:
+        writer.set_need_appearances_writer(True)
+    except Exception:
+        pass
+
+    # ---- Overlay signatures (image-based, AcroForm text fields can't hold images) ----
+    sig_targets = [
+        (0, 'sig_cma_attestation', 321, 158, 170, 30),       # Page 1 attestation signature
+        (3, 'sig_final', 126, 114, 140, 24),                  # Page 4 enrollment signature
+        (5, 'sig_clinical_tasks', 129, 485, 200, 24),         # Page 6 clinical tasks
+        (6, 'sig_final', 186, 141, 150, 18),                  # Page 7 media release student sig (reuse final signature)
+        (15, 'sig_nar_rules', 52, 318, 200, 22),              # Page 16 NAR signature
+        (17, 'sig_refund_policy', 366, 116, 110, 18),         # Page 18 refund acknowledgment
+        (19, 'sig_background_check', 132, 246, 200, 26),      # Page 20 background check signature
+        (21, 'sig_clinical_tasks', 129, 485, 200, 24),        # Page 22 duplicate clinical tasks ack
+    ]
+    for page_idx, sig_key, x, y, w, h in sig_targets:
+        if page_idx >= len(writer.pages):
+            continue
+        if sig_key not in data or not data.get(sig_key):
+            continue
+        page = writer.pages[page_idx]
+        ph = float(page.mediabox[3])
+        pw = float(page.mediabox[2])
+        overlay_buf = io.BytesIO()
+        oc = rl_canvas.Canvas(overlay_buf, pagesize=(pw, ph))
+        draw_sig_img(oc, sig_key, x, y, w, h)
+        oc.save()
+        overlay_buf.seek(0)
+        overlay_reader = PdfReader(overlay_buf)
+        page.merge_page(overlay_reader.pages[0])
+
+    # ---- Affidavit page (page 2) — use real fields where possible, fallback overlay for checkboxes ----
+    aff_field_values = {
+        'efield68_Text1': get('alien_number'),
+        'Text2': get('authorizing_document'),
+        'Date5_af_date': get('signature_date'),
+        'Signature Field 7': '',
+        'Text7': f"{get('city')}, {get('state')}",
+        'Text8': full_name,
+        'Text9': get('renewal_number'),
+    }
+
+    bg_field_values = {
+        'Text Field 31': full_name,
+        'Date of Signing 4': get('signature_date'),
+    }
+    bg_checkbox_values = {}
+    if get('background_check') == 'glory_conducts':
+        bg_checkbox_values['Checkbox 4'] = '/Yes'
+    elif get('background_check') == 'self_provide':
+        bg_checkbox_values['Checkbox 3'] = '/Yes'
+    writer.update_page_form_field_values(writer.pages[19], {**bg_field_values, **bg_checkbox_values}, auto_regenerate=False)
+
+    nar_field_values = {
+        'Text1': f"{get('signature_date')}   {full_name}",
+        'Text4': get('course_applied'),
+    }
+    writer.update_page_form_field_values(writer.pages[15], nar_field_values, auto_regenerate=False)
+    aph = float(original_reader.pages[1].mediabox[3])
+    apw = float(original_reader.pages[1].mediabox[2])
+    writer.update_page_form_field_values(writer.pages[1], aff_field_values, auto_regenerate=False)
+    affidavit_page = writer.pages[1]
+
+    aff_overlay_buf = io.BytesIO()
+    aoc = rl_canvas.Canvas(aff_overlay_buf, pagesize=(apw, aph))
+    aoc.setFont('Helvetica-Bold', 13)
+    aoc.setFillColor(HexColor('#000000'))
+    lp_value = get('lawful_presence')
+    if lp_value == 'us_citizen':
+        aoc.drawString(36, 636, '\u2713')
+    elif lp_value == 'qualified_alien':
+        aoc.drawString(38, 597, '\u2713')
+    draw_sig_img(aoc, 'sig_final', 380, 412, 170, 18)
+    aoc.save()
+    aff_overlay_buf.seek(0)
+    aff_overlay_reader = PdfReader(aff_overlay_buf)
+    affidavit_page.merge_page(aff_overlay_reader.pages[0])
+
+    final_buf = io.BytesIO()
+    writer.write(final_buf)
+    final_buf.seek(0)
+    pdf_bytes = final_buf.read()
+
+    email_error = None
+    try:
+        msg = EmailMessage(
+            subject=f'New CMA Application Received - {full_name}',
+            body=f"""A student has submitted their CMA application through the Glory Nursing website.
+
+Student: {full_name}
+Email: {student_email}
+Phone: {get("phone")}
+
+The completed application is attached.
+
+Glory Nursing Online Portal""",
+            from_email=None,
+            to=['glorynursing@yahoo.com'],
+        )
+        msg.attach('CMA_Application.pdf', pdf_bytes, 'application/pdf')
+        msg.send()
+
+        EmailMessage(
+            subject='Your Glory Nursing CMA Application Received',
+            body=f"""Thank you for submitting your CMA application to Glory Nursing!
+
+We have received your completed application. Our admissions team will review it and contact you within 1-2 business days.
+
+Next step: Complete your enrollment payment at glorynursing.com
+
+Questions? Call us at (405) 968-5004 or email glorynursing@yahoo.com
+
+Glory Nursing Healthcare Training School
+12032 N Pennsylvania Ave, Oklahoma City, OK 73120""",
+            from_email=None,
+            to=[student_email],
+        ).send()
+    except Exception as e:
+        email_error = str(e)
+        print(f"Email error: {e}")
+
+    request.session['application_submitted'] = True
+
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="CMA_Application_{full_name.replace(" ", "_")}.pdf"'
+    if email_error:
+        response['X-Email-Error'] = email_error[:200]
+    return response
 
 def render_pdf_page(request):
     import os

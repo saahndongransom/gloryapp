@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ program_name }} Application | Glory Nursing</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#f1f5f9;color:#0f172a}
+.topbar{height:56px;background:#16213e;display:flex;align-items:center;padding:0 18px;gap:12px;position:sticky;top:0;z-index:50}
+.topbar a{color:#94a3b8;font-size:20px;text-decoration:none}
+.topbar .title{color:#fff;font-weight:700;font-size:15px;flex:1}
+.wrap{max-width:720px;margin:0 auto;padding:24px 16px 100px}
+.section{background:#fff;border-radius:14px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:16px}
+.section h2{font-size:18px;font-weight:800;margin-bottom:4px;color:#0f172a}
+.section .sub{font-size:13px;color:#64748b;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.form-row.three{grid-template-columns:1fr 1fr 1fr}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12.5px;font-weight:700;color:#334155;margin-bottom:5px}
+.form-group label .req{color:#dc2626}
+.form-control{width:100%;padding:11px 13px;border:1.5px solid #cbd5e1;border-radius:9px;font-size:14px;outline:none;font-family:inherit;background:#fff}
+.form-control:focus{border-color:#1a56db;box-shadow:0 0 0 3px rgba(26,86,219,.1)}
+.email-field{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px;margin-bottom:16px}
+.email-field label{font-size:12.5px;font-weight:700;color:#1e40af;margin-bottom:6px;display:block}
+.nav-buttons{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e2e8f0;padding:14px 16px;display:flex;gap:10px;z-index:60}
+.btn{flex:1;padding:13px;border-radius:10px;font-size:14.5px;font-weight:700;border:none;cursor:pointer;text-align:center}
+.btn-submit{background:#059669;color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.error-msg{background:#fee2e2;color:#991b1b;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#059669;color:#fff;padding:12px 22px;border-radius:8px;font-size:13px;font-weight:600;display:none;z-index:999}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="{{ back_url }}"><i class="fas fa-arrow-left"></i></a>
+  <div class="title">{{ program_name }} Application</div>
+</div>
+
+<div class="wrap">
+  <div class="error-msg" id="errorMsg"></div>
+
+  <div class="section">
+    <h2>Let's Get Started</h2>
+    <div class="sub">Enter your email — we'll send a confirmation once your application is submitted.</div>
+    <div class="email-field">
+      <label>Your Email Address <span class="req">*</span></label>
+      <input type="email" class="form-control" id="studentEmail" placeholder="you@example.com" required>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Application Information</h2>
+    <div class="sub">Tell us a bit about yourself.</div>
+
+    <div class="form-row three">
+      <div class="form-group"><label>Last Name <span class="req">*</span></label><input type="text" class="form-control" data-field="last_name" required></div>
+      <div class="form-group"><label>First Name <span class="req">*</span></label><input type="text" class="form-control" data-field="first_name" required></div>
+      <div class="form-group"><label>M.I.</label><input type="text" class="form-control" data-field="middle_initial" maxlength="2"></div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group"><label>Date of Birth <span class="req">*</span></label><input type="date" class="form-control" data-field="dob" required></div>
+      <div class="form-group"><label>Social Security # <span class="req">*</span></label><input type="text" class="form-control" data-field="ssn" placeholder="000-00-0000" required maxlength="11" oninput="formatSSN(this)"></div>
+    </div>
+
+    <div class="form-group"><label>Street Address <span class="req">*</span></label><input type="text" class="form-control" data-field="street" required></div>
+
+    <div class="form-row three">
+      <div class="form-group"><label>City <span class="req">*</span></label><input type="text" class="form-control" data-field="city" required></div>
+      <div class="form-group"><label>State <span class="req">*</span></label><input type="text" class="form-control" data-field="state" value="OK" required></div>
+      <div class="form-group"><label>Zip <span class="req">*</span></label><input type="text" class="form-control" data-field="zip" required maxlength="10" oninput="this.value=this.value.replace(/[^0-9-]/g,'')"></div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group"><label>Phone <span class="req">*</span></label><input type="tel" class="form-control" data-field="phone" placeholder="(555) 123-4567" required oninput="formatPhone(this)"></div>
+      <div class="form-group"><label>How did you hear about us?</label><input type="text" class="form-control" data-field="how_heard"></div>
+    </div>
+
+    <div class="form-group"><label>Course Applied For <span class="req">*</span></label>
+      <input type="text" class="form-control" data-field="course_applied" value="{{ program_name }}" readonly>
+    </div>
+  </div>
+</div>
+
+<div class="nav-buttons">
+  <button class="btn btn-submit" id="submitBtn" onclick="submitApplication()">
+    <i class="fas fa-paper-plane"></i> Submit Application
+  </button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function formatPhone(input) {
+  var digits = input.value.replace(/\D/g, '').slice(0, 10);
+  var formatted = digits;
+  if (digits.length > 6) {
+    formatted = '(' + digits.slice(0,3) + ') ' + digits.slice(3,6) + '-' + digits.slice(6);
+  } else if (digits.length > 3) {
+    formatted = '(' + digits.slice(0,3) + ') ' + digits.slice(3);
+  } else if (digits.length > 0) {
+    formatted = '(' + digits;
+  }
+  input.value = formatted;
+}
+
+function formatSSN(input) {
+  var digits = input.value.replace(/\D/g, '').slice(0, 9);
+  var formatted = digits;
+  if (digits.length > 5) {
+    formatted = digits.slice(0,3) + '-' + digits.slice(3,5) + '-' + digits.slice(5);
+  } else if (digits.length > 3) {
+    formatted = digits.slice(0,3) + '-' + digits.slice(3);
+  }
+  input.value = formatted;
+}
+
+function getCk(n) { var m = document.cookie.match('(^|;)\\s*' + n + '\\s*=\\s*([^;]+)'); return m ? m.pop() : ''; }
+
+function submitApplication() {
+  var errorEl = document.getElementById('errorMsg');
+  errorEl.style.display = 'none';
+
+  var email = document.getElementById('studentEmail').value.trim();
+  if (!email || !email.includes('@')) {
+    errorEl.textContent = 'Please enter a valid email address.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  var formData = { student_email: email, program_name: "{{ program_name }}" };
+  var missing = false;
+  document.querySelectorAll('[data-field]').forEach(function(el) {
+    formData[el.getAttribute('data-field')] = el.value;
+    if (el.required && !el.value.trim()) missing = true;
+  });
+
+  if (missing) {
+    errorEl.textContent = 'Please fill in all required fields.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  var btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+
+  fetch('{{ submit_url }}', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCk('csrftoken') },
+    body: JSON.stringify(formData)
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.success) {
+      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:20px;background:#16213e;color:#fff;padding:24px;text-align:center;"><div style="font-size:64px">🎉</div><h2 style="font-size:24px;font-weight:800">Application Submitted!</h2><p style="color:#94a3b8;font-size:14px;max-width:400px">Your application has been sent to Glory Nursing. We will contact you within 1-2 business days.</p><a href="/lms/enroll/{{ course_id }}/" style="background:#059669;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:800;margin-top:10px">&#128274; Pay &amp; Complete Enrollment</a><a href="/" style="color:#64748b;font-size:13px">Return to Home</a></div>';
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Application';
+      var t = document.getElementById('toast');
+      t.textContent = d.error || 'Submission failed. Please try again.';
+      t.style.display = 'block';
+      setTimeout(function() { t.style.display = 'none'; }, 4000);
+    }
+  })
+  .catch(function() {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Application';
+  });
+}
+</script>
+</body>
+</html>

@@ -29,6 +29,12 @@
       </div>
       {% if program.slug == "cma" or program.slug == "cma-traditional" %}
       <a href="{% url 'apply_cma' %}" class="btn btn-primary btn-lg" style="margin-top:2rem">Apply for This Program</a>
+      {% elif program.slug == "bls-cpr" or program.slug == "american-heart-association-aha-cprbls-certificatio" %}
+      <a href="{% url 'fill_form_simple' 'BLS' %}" class="btn btn-primary btn-lg" style="margin-top:2rem">Apply for This Program</a>
+      {% elif program.slug == "hha" %}
+      <a href="{% url 'fill_form_simple' 'HHA' %}" class="btn btn-primary btn-lg" style="margin-top:2rem">Apply for This Program</a>
+      {% elif program.slug == "phlebotomy" or program.slug == "ekg" or program.slug == "medical-assistant" %}
+      <a href="{% url 'contact' %}" class="btn btn-primary btn-lg" style="margin-top:2rem">Apply for This Program</a>
       {% else %}
       <a href="{% url 'apply_cna' %}?program={{ program.slug }}" class="btn btn-primary btn-lg" style="margin-top:2rem">Apply for This Program</a>
       {% endif %}

@@ -5,6 +5,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{% block title %}Glory Nursing – Healthcare Training School | Oklahoma City{% endblock %}</title>
+
+<!-- Open Graph / Social Share Tags -->
+<meta property="og:title" content="{% block og_title %}Glory Nursing – Healthcare Training School{% endblock %}">
+<meta property="og:description" content="{% block og_desc %}Glory Nursing offers CNA, CMA, HHA, BLS/CPR, Phlebotomy and more in Oklahoma City. Get certified fast with flexible scheduling.{% endblock %}">
+<meta property="og:image" content="https://glorynursingok.com{% static 'core/images/share.jpeg' %}">
+<meta property="og:url" content="https://glorynursingok.com{{ request.path }}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Glory Nursing">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{% block twitter_title %}Glory Nursing – Healthcare Training School{% endblock %}">
+<meta name="twitter:description" content="{% block twitter_desc %}Glory Nursing offers CNA, CMA, HHA, BLS/CPR, Phlebotomy and more in Oklahoma City.{% endblock %}">
+<meta name="twitter:image" content="https://glorynursingok.com{% static 'core/images/share.jpeg' %}">
 <meta name="description" content="{% block meta_desc %}Glory Nursing offers CNA, CMA, HHA, BLS/CPR, Phlebotomy and more in Oklahoma City. Get certified fast with flexible scheduling.{% endblock %}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
