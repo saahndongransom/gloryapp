@@ -488,6 +488,18 @@ def lms_dashboard_view(request):
                 return redirect('lms_dashboard')
 
 
+            elif action == 'edit_content':
+                ci_id = request.POST.get('content_id')
+                ci = get_object_or_404(ContentItem, id=ci_id)
+                ci.title = request.POST.get('title', ci.title).strip()
+                if request.POST.get('video_url'):
+                    ci.video_url = request.POST.get('video_url').strip()
+                if request.FILES.get('file_attachment'):
+                    ci.file_attachment = request.FILES['file_attachment']
+                ci.save()
+                messages.success(request, f"Content '{ci.title}' updated successfully!")
+                return redirect('lms_dashboard')
+
             elif action == 'delete_content':
                 ci = get_object_or_404(ContentItem, id=request.POST.get('content_id'))
                 # Delete slide images if PPT
@@ -497,6 +509,35 @@ def lms_dashboard_view(request):
                     shutil.rmtree(slides_dir)
                 ci.delete()
                 messages.success(request, "Content item deleted.")
+                return redirect('lms_dashboard')
+
+            elif action == 'edit_course':
+                course_id = request.POST.get('course_id')
+                course = get_object_or_404(Course, id=course_id)
+                course.title = request.POST.get('title', course.title).strip()
+                course.program = request.POST.get('program', course.program).strip()
+                course.price = float(request.POST.get('price', course.price) or 0)
+                course.is_published = request.POST.get('is_published') == 'on'
+                course.save()
+                messages.success(request, f"Course '{course.title}' updated successfully!")
+                return redirect('lms_dashboard')
+
+            elif action == 'edit_module':
+                module_id = request.POST.get('module_id')
+                module = get_object_or_404(Module, id=module_id)
+                module.title = request.POST.get('title', module.title).strip()
+                module.order = int(request.POST.get('order', module.order) or module.order)
+                module.save()
+                messages.success(request, f"Module '{module.title}' updated successfully!")
+                return redirect('lms_dashboard')
+
+            elif action == 'edit_lesson':
+                lesson_id = request.POST.get('lesson_id')
+                lesson = get_object_or_404(Lesson, id=lesson_id)
+                lesson.title = request.POST.get('title', lesson.title).strip()
+                lesson.order = int(request.POST.get('order', lesson.order) or lesson.order)
+                lesson.save()
+                messages.success(request, f"Lesson '{lesson.title}' updated successfully!")
                 return redirect('lms_dashboard')
 
             elif action == 'create_full_course':
@@ -686,9 +727,12 @@ def lms_dashboard_view(request):
                 if not already_reviewed:
                     reviewable_courses.append(e['course'])
 
+        pending_course_id = request.session.get('pending_course_id', '')
+        has_paid = Subscription.objects.filter(student=user, status='active').exists()
         context = {
             'user': user,
             'enrollments': enrollments,
+            'has_paid': has_paid,
             'overall_progress': overall_progress,
             'avg_score': avg_score,
             'total_completed': total_completed,
@@ -697,6 +741,7 @@ def lms_dashboard_view(request):
             'announcements': Announcement.objects.filter(is_active=True)[:3],
             'leaderboard': leaderboard[:10],
             'my_rank': my_rank,
+            'pending_course_id': pending_course_id,
             'streak': streak,
             'reviewable_courses': reviewable_courses,
             'page': 'lms_student_dashboard'
@@ -711,6 +756,12 @@ def lms_dashboard_view(request):
 @login_required(login_url='lms_login')
 def course_classroom(request, course_id):
     enrollment = get_object_or_404(Enrollment, course_id=course_id, student=request.user)
+    # Payment gate — must have active subscription
+    if not request.user.is_staff:
+        has_paid = Subscription.objects.filter(student=request.user, status='active').exists()
+        if not has_paid:
+            messages.warning(request, 'Please complete your payment to access course content.')
+            return redirect('enroll_page', course_id=course_id)
     modules = Module.objects.filter(course_id=course_id).order_by('order').prefetch_related(Prefetch('lessons', queryset=Lesson.objects.order_by('order')))
     course_lessons = Lesson.objects.filter(module__course_id=course_id)
     total = course_lessons.count()
@@ -850,6 +901,14 @@ def lms_video_helper(url):
 
 @login_required(login_url='lms_login')
 def lesson_view(request, lesson_id):
+    # Payment gate
+    if not request.user.is_staff:
+        has_paid = Subscription.objects.filter(student=request.user, status='active').exists()
+        if not has_paid:
+            lesson = get_object_or_404(Lesson, id=lesson_id)
+            course_id = lesson.module.course_id
+            messages.warning(request, 'Please complete your payment to access course content.')
+            return redirect('enroll_page', course_id=course_id)
     lesson = get_object_or_404(Lesson, id=lesson_id)
 
     # Check enrollment
@@ -1019,9 +1078,22 @@ def account_settings(request):
 
 @login_required(login_url='lms_login')
 def course_builder(request):
-    """The Course Builder page — create a full course in one go."""
+    """The Course Builder page — create or edit a course."""
     if not request.user.is_staff:
         return redirect('lms_dashboard')
+
+    import json as _json
+    edit_id = request.GET.get('edit')
+    edit_course = None
+    edit_structure = '[]'
+
+    if edit_id:
+        edit_course = get_object_or_404(Course, id=edit_id)
+        structure = []
+        for module in edit_course.modules.all().order_by('order'):
+            lessons = [{'title': l.title} for l in module.lessons.all().order_by('order')]
+            structure.append({'title': module.title, 'lessons': lessons})
+        edit_structure = _json.dumps(structure)
 
     students_profiles = []
     for s in User.objects.filter(is_staff=False):
@@ -1029,10 +1101,11 @@ def course_builder(request):
 
     context = {
         'students_profiles': students_profiles,
-        'page': 'course_builder'
+        'page': 'course_builder',
+        'edit_course': edit_course,
+        'edit_structure': edit_structure,
     }
     return render(request, 'lms/course_builder.html', context)
-
 
 # ── Add this action inside lms_dashboard_view, inside the if user.is_staff block ──
 # Find the section: # --- BASE CURRICULUM STRUCTURAL DATA BLOCKS ---
@@ -1334,15 +1407,129 @@ def lesson_discussion(request, lesson_id):
 # SQUARE PAYMENT FLOW
 # ══════════════════════════════════════════════════════════════
 
+def generic_payment(request):
+    """Generic payment page — collect name, email, amount, reason and process payment."""
+    from dotenv import load_dotenv
+    load_dotenv()
+    if request.method == 'POST':
+        import uuid
+        nonce = request.POST.get('nonce', '').strip()
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        email = request.POST.get('email', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        amount_str = request.POST.get('amount', '0').strip()
+        reason = request.POST.get('reason', '').strip()
+
+        if not all([nonce, first_name, email, amount_str, reason]):
+            messages.error(request, 'Please fill in all required fields.')
+            return redirect('generic_payment')
+
+        try:
+            amount = int(float(amount_str) * 100)
+            if amount < 100:
+                messages.error(request, 'Minimum payment is $1.00.')
+                return redirect('generic_payment')
+        except ValueError:
+            messages.error(request, 'Invalid amount.')
+            return redirect('generic_payment')
+
+        try:
+            from square import Square
+            from square.environment import SquareEnvironment
+            env = os.environ.get('SQUARE_ENVIRONMENT', 'sandbox')
+            sq_env = SquareEnvironment.SANDBOX if env == 'sandbox' else SquareEnvironment.PRODUCTION
+            client = Square(token=os.environ.get('SQUARE_ACCESS_TOKEN'), environment=sq_env)
+
+            result = client.payments.create(
+                source_id=nonce,
+                idempotency_key=str(uuid.uuid4()),
+                amount_money={'amount': amount, 'currency': 'USD'},
+                location_id=os.environ.get('SQUARE_LOCATION_ID'),
+                buyer_email_address=email,
+                note=f"Payment from {first_name} {last_name} — {reason}",
+            )
+
+            payment = getattr(result, 'payment', None)
+            success = (payment and hasattr(payment, 'id')) or (not (hasattr(result, 'errors') and result.errors))
+
+            if success:
+                # Send confirmation email to payer
+                try:
+                    from django.core.mail import EmailMessage
+                    EmailMessage(
+                        subject='Payment Received — Glory Nursing',
+                        body=f"""Hi {first_name},
+
+Your payment of ${float(amount_str):.2f} has been received successfully.
+
+Payment Details:
+- Name: {first_name} {last_name}
+- Email: {email}
+- Amount: ${float(amount_str):.2f}
+- Reason: {reason}
+
+Thank you for your payment. If you have any questions, contact us at glorynursing@yahoo.com or (405) 968-5004.
+
+Glory Nursing Healthcare Training School""",
+                        from_email=None,
+                        to=[email],
+                    ).send()
+                    EmailMessage(
+                        subject=f'New Payment Received — {first_name} {last_name}',
+                        body=f"""A payment has been received through the Glory Nursing website.
+
+Name: {first_name} {last_name}
+Email: {email}
+Phone: {phone}
+Amount: ${float(amount_str):.2f}
+Reason: {reason}
+
+Glory Nursing Online Portal""",
+                        from_email=None,
+                        to=['glorynursing@yahoo.com'],
+                    ).send()
+                except Exception as e:
+                    print(f"Email error: {e}")
+
+                messages.success(request, f'Payment of ${float(amount_str):.2f} received successfully! A confirmation has been sent to {email}.')
+                return redirect('generic_payment_success')
+            else:
+                errors = getattr(result, 'errors', [])
+                error_msg = errors[0].detail if errors else 'Payment failed. Please try again.'
+                messages.error(request, error_msg)
+                return redirect('generic_payment')
+
+        except Exception as e:
+            messages.error(request, f'Payment error: {str(e)}')
+            return redirect('generic_payment')
+
+    context = {
+        'square_app_id': os.environ.get('SQUARE_APP_ID', ''),
+        'location_id': os.environ.get('SQUARE_LOCATION_ID', ''),
+        'square_env': os.environ.get('SQUARE_ENVIRONMENT', 'sandbox'),
+    }
+    return render(request, 'lms/generic_payment.html', context)
+
+
+def generic_payment_success(request):
+    return render(request, 'lms/generic_payment_success.html')
+
+
 def enroll_page(request, course_id):
     """Public enrollment page — student enters details and pays."""
+    # Allow logged-in students with existing enrollment to proceed directly
     if not request.session.get('application_submitted'):
-        from lms.models import Course as LMSCourse
-        course_obj = get_object_or_404(LMSCourse, id=course_id)
-        messages.warning(request, 'Please fill and submit your application form first before proceeding to payment.')
-        if course_obj.program == 'CMA':
-            return redirect('apply_cma')
-        return redirect('apply_cna')
+        if request.user.is_authenticated and not request.user.is_staff:
+            # Check if student has a pending enrollment for this course
+            if Enrollment.objects.filter(student=request.user, course_id=course_id).exists():
+                pass  # Allow through
+            else:
+                messages.warning(request, 'Please submit your application form first.')
+                return redirect('programs')
+        elif not request.user.is_authenticated:
+            messages.warning(request, 'Please log in to complete your enrollment.')
+            return redirect('lms_login')
     from dotenv import load_dotenv
     load_dotenv()
     course = get_object_or_404(Course, id=course_id, is_published=True)
@@ -1371,8 +1558,8 @@ def process_payment(request, course_id):
         messages.error(request, "Please fill in all required fields.")
         return redirect('enroll_page', course_id=course_id)
 
-    # Check if email already registered
-    if User.objects.filter(email=email).exists():
+    # Check if email already registered — allow if user is already logged in
+    if not request.user.is_authenticated and User.objects.filter(email=email).exists():
         messages.error(request, "An account with this email already exists. Please log in.")
         return redirect('lms_login')
 

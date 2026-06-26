@@ -1,7 +1,36 @@
 {% extends 'lms/lms_base.html' %}
 {% load static %}
 
-{% block title %}Admin Panel | GloryLMS{% endblock %}
+{% block title %}Admin Panel | GloryLMS<!-- Content Edit Modal -->
+<div id="contentEditModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;padding:24px;width:480px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;color:#111827">Edit Content Item</h3>
+    <form method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="edit_content">
+      <input type="hidden" name="content_id" id="ceContentId">
+      <div style="margin-bottom:12px">
+        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">Title</label>
+        <input type="text" id="ceTitle" name="title" style="width:100%;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;outline:none" required>
+      </div>
+      <input type="hidden" id="ceType" name="content_type">
+      <div id="ceVideoRow" style="display:none;margin-bottom:12px">
+        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">YouTube URL</label>
+        <input type="url" id="ceVideoUrl" name="video_url" style="width:100%;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;outline:none" placeholder="https://youtube.com/watch?v=...">
+      </div>
+      <div id="ceFileRow" style="display:none;margin-bottom:12px">
+        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">Replace File (leave blank to keep existing)</label>
+        <input type="file" name="file_attachment" style="width:100%;padding:8px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px">
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button type="button" onclick="closeContentEditModal()" style="padding:9px 18px;border-radius:8px;border:1.5px solid #cbd5e1;background:#fff;font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+        <button type="submit" style="padding:9px 18px;border-radius:8px;border:none;background:#1a56db;color:#fff;font-size:13px;font-weight:600;cursor:pointer">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
 
 {% block extra_css %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -202,6 +231,35 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
   .topbar { padding:0 14px; }
 }
 </style>
+<!-- Content Edit Modal -->
+<div id="contentEditModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;padding:24px;width:480px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;color:#111827">Edit Content Item</h3>
+    <form method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="edit_content">
+      <input type="hidden" name="content_id" id="ceContentId">
+      <div style="margin-bottom:12px">
+        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">Title</label>
+        <input type="text" id="ceTitle" name="title" style="width:100%;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;outline:none" required>
+      </div>
+      <input type="hidden" id="ceType" name="content_type">
+      <div id="ceVideoRow" style="display:none;margin-bottom:12px">
+        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">YouTube URL</label>
+        <input type="url" id="ceVideoUrl" name="video_url" style="width:100%;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;outline:none" placeholder="https://youtube.com/watch?v=...">
+      </div>
+      <div id="ceFileRow" style="display:none;margin-bottom:12px">
+        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">Replace File (leave blank to keep existing)</label>
+        <input type="file" name="file_attachment" style="width:100%;padding:8px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px">
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button type="button" onclick="closeContentEditModal()" style="padding:9px 18px;border-radius:8px;border:1.5px solid #cbd5e1;background:#fff;font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+        <button type="submit" style="padding:9px 18px;border-radius:8px;border:none;background:#1a56db;color:#fff;font-size:13px;font-weight:600;cursor:pointer">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block content %}
@@ -1305,6 +1363,7 @@ CORRECT: B"></textarea>
                 <td>{% with lessons=course.modules.all %}{% for m in lessons %}{% endfor %}{{ course.modules.all|length }}{% endwith %}</td>
                 <td style="display:flex;gap:8px;flex-wrap:wrap">
                   <a href="{% url 'course_builder' %}?edit={{ course.id }}" class="btn-success" style="font-size:12px;padding:5px 10px;border-radius:6px;text-decoration:none">Edit</a>
+                  <button onclick="copyPayLink('{{ course.id }}')" style="font-size:12px;padding:5px 10px;border-radius:6px;border:none;cursor:pointer;background:#7c3aed;color:#fff">🔗 Share Link</button>
                   <form method="POST" onsubmit="return confirm('Delete this course and ALL its modules, lessons and content?')">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="delete_course">
@@ -1319,7 +1378,8 @@ CORRECT: B"></textarea>
                   <i class="fas fa-layer-group" style="margin-right:6px;color:var(--muted)"></i>{{ module.title }}
                 </td>
                 <td colspan="2" style="font-size:12px;color:var(--muted)">{{ module.lessons.count }} lesson{{ module.lessons.count|pluralize }}</td>
-                <td>
+                <td style="display:flex;gap:6px;flex-wrap:wrap">
+                  <button onclick="openEditModal('module','{{ module.id }}','{{ module.title|escapejs }}','{{ module.order }}')" class="btn-success" style="font-size:11px;padding:4px 8px;border:none;cursor:pointer;border-radius:5px">Edit</button>
                   <form method="POST" onsubmit="return confirm('Delete this module and all its lessons?')">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="delete_module">
@@ -1334,7 +1394,8 @@ CORRECT: B"></textarea>
                   <i class="fas fa-file-alt" style="margin-right:6px;color:#d1d5db"></i>{{ lesson.title }}
                 </td>
                 <td colspan="2" style="font-size:11px;color:var(--muted)">{{ lesson.contents.count }} content item{{ lesson.contents.count|pluralize }}</td>
-                <td>
+                <td style="display:flex;gap:6px;flex-wrap:wrap">
+                  <button onclick="openEditModal('lesson','{{ lesson.id }}','{{ lesson.title|escapejs }}','{{ lesson.order }}')" class="btn-success" style="font-size:11px;padding:4px 8px;border:none;cursor:pointer;border-radius:5px">Edit</button>
                   <form method="POST" onsubmit="return confirm('Delete this lesson?')">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="delete_lesson">
@@ -1378,12 +1439,15 @@ CORRECT: B"></textarea>
                 <td style="font-size:12px;color:var(--muted)">{{ ci.lesson.title|truncatechars:30 }}</td>
                 <td><span class="badge badge-info">{{ ci.lesson.module.course.program }}</span></td>
                 <td>
-                  <form method="POST" action="{% url 'lms_dashboard' %}" onsubmit="return confirm('Delete this content item?')">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="delete_content">
-                    <input type="hidden" name="content_id" value="{{ ci.id }}">
-                    <button type="submit" class="btn-danger">Delete</button>
-                  </form>
+                  <div style="display:flex;gap:6px">
+                    <button onclick="openContentEditModal('{{ ci.id }}','{{ ci.title|escapejs }}','{{ ci.content_type }}','{{ ci.video_url|default:'' }}')" class="btn-success" style="font-size:11px;padding:4px 8px;border:none;cursor:pointer;border-radius:5px">Edit</button>
+                    <form method="POST" action="{% url 'lms_dashboard' %}" onsubmit="return confirm('Delete this content item?')">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="delete_content">
+                      <input type="hidden" name="content_id" value="{{ ci.id }}">
+                      <button type="submit" class="btn-danger">Delete</button>
+                    </form>
+                  </div>
                 </td>
               </tr>
               {% empty %}
@@ -1599,6 +1663,35 @@ CORRECT: B"></textarea>
     </main>
   </div>
 </div>
+<!-- Content Edit Modal -->
+<div id="contentEditModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;padding:24px;width:480px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;color:#111827">Edit Content Item</h3>
+    <form method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="edit_content">
+      <input type="hidden" name="content_id" id="ceContentId">
+      <div style="margin-bottom:12px">
+        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">Title</label>
+        <input type="text" id="ceTitle" name="title" style="width:100%;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;outline:none" required>
+      </div>
+      <input type="hidden" id="ceType" name="content_type">
+      <div id="ceVideoRow" style="display:none;margin-bottom:12px">
+        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">YouTube URL</label>
+        <input type="url" id="ceVideoUrl" name="video_url" style="width:100%;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;outline:none" placeholder="https://youtube.com/watch?v=...">
+      </div>
+      <div id="ceFileRow" style="display:none;margin-bottom:12px">
+        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">Replace File (leave blank to keep existing)</label>
+        <input type="file" name="file_attachment" style="width:100%;padding:8px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px">
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button type="button" onclick="closeContentEditModal()" style="padding:9px 18px;border-radius:8px;border:1.5px solid #cbd5e1;background:#fff;font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+        <button type="submit" style="padding:9px 18px;border-radius:8px;border:none;background:#1a56db;color:#fff;font-size:13px;font-weight:600;cursor:pointer">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -1957,6 +2050,17 @@ function prepareQuestionSubmit() {
   return true;
 }
 
+function copyPayLink(courseId) {
+  var url = 'https://glorynursingok.com/lms/enroll/' + courseId + '/?direct=1';
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url).then(function() {
+      alert('Payment link copied to clipboard!\n\n' + url + '\n\nShare this with your client via WhatsApp or email.');
+    });
+  } else {
+    prompt('Copy this link and share with your client:', url);
+  }
+}
+
 function toggleSidebar() {
   const s = document.querySelector('.sidebar');
   const o = document.getElementById('sidebarOverlay');
@@ -1966,5 +2070,100 @@ function closeSidebar() {
   document.querySelector('.sidebar').classList.remove('open');
   document.getElementById('sidebarOverlay').classList.remove('open');
 }
+
+function openEditModal(type, id, title, order) {
+  document.getElementById('editModalType').value = type;
+  document.getElementById('editModalId').value = id;
+  document.getElementById('editModalTitle').value = title;
+  document.getElementById('editModalOrder').value = order;
+  document.getElementById('editModalLabel').textContent = 'Edit ' + (type === 'module' ? 'Module' : 'Lesson');
+  document.getElementById('editModal').style.display = 'flex';
+}
+function closeEditModal() {
+  document.getElementById('editModal').style.display = 'none';
+}
 </script>
+
+<!-- Edit Modal -->
+<div id="editModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;padding:24px;width:420px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <h3 id="editModalLabel" style="font-size:16px;font-weight:700;margin-bottom:16px;color:#111827">Edit</h3>
+    <form method="POST">
+      {% csrf_token %}
+      <input type="hidden" name="action" id="editModalActionField">
+      <input type="hidden" name="module_id" id="editModalModuleId">
+      <input type="hidden" name="lesson_id" id="editModalLessonId">
+      <input type="hidden" id="editModalType">
+      <input type="hidden" id="editModalId">
+      <div style="margin-bottom:12px">
+        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">Title</label>
+        <input type="text" id="editModalTitle" name="title" style="width:100%;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;outline:none" required>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">Order</label>
+        <input type="number" id="editModalOrder" name="order" style="width:100%;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;outline:none" min="1">
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button type="button" onclick="closeEditModal()" style="padding:9px 18px;border-radius:8px;border:1.5px solid #cbd5e1;background:#fff;font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+        <button type="submit" onclick="prepareEditForm()" style="padding:9px 18px;border-radius:8px;border:none;background:#1a56db;color:#fff;font-size:13px;font-weight:600;cursor:pointer">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openContentEditModal(id, title, type, videoUrl) {
+  document.getElementById('ceContentId').value = id;
+  document.getElementById('ceTitle').value = title;
+  document.getElementById('ceType').value = type;
+  document.getElementById('ceVideoUrl').value = videoUrl || '';
+  document.getElementById('ceVideoRow').style.display = (type === 'youtube') ? 'block' : 'none';
+  document.getElementById('ceFileRow').style.display = (type !== 'youtube' && type !== 'text') ? 'block' : 'none';
+  document.getElementById('contentEditModal').style.display = 'flex';
+}
+function closeContentEditModal() {
+  document.getElementById('contentEditModal').style.display = 'none';
+}
+
+function prepareEditForm() {
+  var type = document.getElementById('editModalType').value;
+  var id = document.getElementById('editModalId').value;
+  if (type === 'module') {
+    document.getElementById('editModalActionField').value = 'edit_module';
+    document.getElementById('editModalModuleId').value = id;
+  } else {
+    document.getElementById('editModalActionField').value = 'edit_lesson';
+    document.getElementById('editModalLessonId').value = id;
+  }
+}
+</script>
+<!-- Content Edit Modal -->
+<div id="contentEditModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;padding:24px;width:480px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;color:#111827">Edit Content Item</h3>
+    <form method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="edit_content">
+      <input type="hidden" name="content_id" id="ceContentId">
+      <div style="margin-bottom:12px">
+        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">Title</label>
+        <input type="text" id="ceTitle" name="title" style="width:100%;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;outline:none" required>
+      </div>
+      <input type="hidden" id="ceType" name="content_type">
+      <div id="ceVideoRow" style="display:none;margin-bottom:12px">
+        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">YouTube URL</label>
+        <input type="url" id="ceVideoUrl" name="video_url" style="width:100%;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;outline:none" placeholder="https://youtube.com/watch?v=...">
+      </div>
+      <div id="ceFileRow" style="display:none;margin-bottom:12px">
+        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">Replace File (leave blank to keep existing)</label>
+        <input type="file" name="file_attachment" style="width:100%;padding:8px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px">
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button type="button" onclick="closeContentEditModal()" style="padding:9px 18px;border-radius:8px;border:1.5px solid #cbd5e1;background:#fff;font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+        <button type="submit" style="padding:9px 18px;border-radius:8px;border:none;background:#1a56db;color:#fff;font-size:13px;font-weight:600;cursor:pointer">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 {% endblock %}

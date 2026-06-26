@@ -300,7 +300,17 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
         <a href="{% url 'programs' %}" class="section-link">Browse all programs →</a>
       </div>
 
-      {% if enrollments %}
+      {% if enrollments and not has_paid %}
+        <div style="background:linear-gradient(135deg,#1a56db,#1344b5);border-radius:14px;padding:24px;margin-bottom:20px;color:#fff">
+          <div style="font-size:28px;margin-bottom:8px">💳</div>
+          <div style="font-weight:800;font-size:16px;margin-bottom:6px">Complete Your Payment</div>
+          <div style="font-size:13px;opacity:0.85;margin-bottom:16px">You're enrolled! Pay now to unlock your course content and get instant access.</div>
+          {% for enrollment in enrollments %}
+          <a href="/lms/enroll/{{ enrollment.course.id }}/" style="display:inline-flex;align-items:center;gap:8px;background:#fff;color:#1a56db;padding:11px 22px;border-radius:9px;text-decoration:none;font-size:14px;font-weight:800;margin-right:8px;margin-bottom:8px"><i class="fas fa-lock-open"></i> Pay for {{ enrollment.course.title }}</a>
+          {% endfor %}
+        </div>
+      {% endif %}
+      {% if enrollments and has_paid %}
         <div class="courses-grid">
           {% for enrollment in enrollments %}
             <div class="course-card">
@@ -337,10 +347,16 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
         </div>
       {% else %}
         <div class="empty-state">
-          <div class="empty-icon"><i class="fas fa-graduation-cap"></i></div>
-          <h3>No courses yet</h3>
-          <p>Once an administrator enrolls you in a program, it will appear here.</p>
-          <a href="{% url 'programs' %}" class="btn-outline"><i class="fas fa-compass"></i> Explore Programs</a>
+          <div class="empty-icon">💳</div>
+          <h3>Complete Your Enrollment</h3>
+          <p>Your application has been received. Complete your payment to get instant access to your course.</p>
+          {% for enrollment in enrollments %}
+          <a href="/lms/enroll/{{ enrollment.course.id }}/" style="display:inline-flex;align-items:center;gap:8px;background:#059669;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:800;margin-bottom:10px"><i class="fas fa-lock-open"></i> Pay for {{ enrollment.course.title }}</a>
+          {% empty %}
+          <a href="{% url 'programs' %}" style="display:inline-flex;align-items:center;gap:8px;background:#1a56db;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-size:14px;font-weight:700;margin-bottom:10px"><i class="fas fa-compass"></i> Select Your Course</a>
+          {% endfor %}
+          <br>
+          <a href="{% url 'programs' %}" style="font-size:13px;color:#6b7280;text-decoration:none">Browse all programs →</a>
         </div>
       {% endif %}
 

@@ -357,7 +357,7 @@ def apply_cna(request):
         request.session['apply_enroll_id'] = program_course.id
     elif not program_slug or program_slug in cna_slugs:
         request.session.pop('apply_enroll_id', None)
-    cna_courses = LMSCourse.objects.filter(program='CNA', is_published=True).order_by('price')
+    cna_courses = LMSCourse.objects.filter(program__icontains='CNA', is_published=True).exclude(program__icontains='HHA').order_by('price')
     if request.method == 'POST':
         # Collect all form data into session so the download view can use it
         data = {
@@ -451,7 +451,7 @@ def apply_cma(request):
         messages.success(request, '✅ CMA Application submitted! Your pre-filled documents are ready to download, sign, and return.')
         return redirect('apply_cma')
     from lms.models import Course as LMSCourse
-    cma_courses = LMSCourse.objects.filter(program='CMA', is_published=True).order_by('price')
+    cma_courses = LMSCourse.objects.filter(program__icontains='CMA', is_published=True).order_by('price')
     return render(request, 'core/apply_cma.html', {'page': 'apply', 'cma_courses': cma_courses})
 
 
@@ -503,7 +503,7 @@ def fill_form_cna(request):
     enroll_id = request.session.get('apply_enroll_id', 1)
     program_slug = request.session.get('apply_program_slug', '')
     back_url = f'/apply/cna/?program={program_slug}' if program_slug else '/apply/cna/'
-    cna_courses = LMSCourse.objects.filter(program='CNA', is_published=True).order_by('price')
+    cna_courses = LMSCourse.objects.filter(program__icontains='CNA', is_published=True).exclude(program__icontains='HHA').order_by('price')
     return render(request, 'core/fill_form_cna.html', {
         'enroll_id': enroll_id,
         'back_url': back_url,
@@ -977,7 +977,94 @@ Glory Nursing Healthcare Training School
         email_error = str(e)
         print(f"Email error: {e}")
 
+    # Auto-create student account
+    from django.contrib.auth.models import User as AuthUser
+    import secrets, string
+    account_created = False
+    temp_password = None
+    try:
+        if not AuthUser.objects.filter(email=student_email).exists():
+            username = student_email.split('@')[0].lower().replace('.','_')[:30]
+            base_username = username
+            counter = 1
+            while AuthUser.objects.filter(username=username).exists():
+                username = f"{base_username}{counter}"
+                counter += 1
+            alphabet = string.ascii_letters + string.digits
+            temp_password = ''.join(secrets.choice(alphabet) for _ in range(10))
+            new_user = AuthUser.objects.create_user(
+                username=username,
+                email=student_email,
+                password=temp_password,
+                first_name=get('first_name'),
+                last_name=get('last_name'),
+            )
+            account_created = True
+            # Store pending course in user's first_name field as fallback
+            # Create a pending enrollment so dashboard knows which course to pay for
+            try:
+                from lms.models import Course as LMSCourse2, Enrollment
+                course_title = get('course_applied') or ''
+                pending_c = LMSCourse2.objects.filter(title=course_title, is_published=True).first()
+                if not pending_c:
+                    pending_c = LMSCourse2.objects.filter(
+                        program__icontains='CNA', is_published=True
+                    ).exclude(program__icontains='HHA').order_by('price').first()
+                if pending_c:
+                    Enrollment.objects.get_or_create(
+                        student=new_user,
+                        course=pending_c,
+                    )
+            except Exception as enroll_err:
+                print(f"Pending enrollment error: {enroll_err}")
+            # Send credentials email
+            try:
+                EmailMessage(
+                    subject='Your Glory Nursing Account Has Been Created',
+                    body=f'''Welcome to Glory Nursing Healthcare Training School!
+
+Your application has been received and your student account has been created.
+
+Login Details:
+Website: https://glorynursingok.com/lms/login/
+Username: {username}
+Password: {temp_password}
+
+Please login and complete your enrollment payment to gain access to your course.
+
+Questions? Call us at (405) 968-5004 or email glorynursing@yahoo.com
+
+Glory Nursing Healthcare Training School
+12032 N Pennsylvania Ave, Oklahoma City, OK 73120''',
+                    from_email=None,
+                    to=[student_email],
+                ).send()
+            except Exception as e:
+                print(f"Credentials email error: {e}")
+            # Create pending enrollment based on course_applied field
+            try:
+                from lms.models import Course as LMSCourse2, Enrollment
+                course_title = data.get('course_applied', '').strip()
+                pending_c = None
+                if course_title:
+                    pending_c = LMSCourse2.objects.filter(title=course_title, is_published=True).first()
+                if not pending_c:
+                    pending_c = LMSCourse2.objects.filter(is_published=True).order_by('price').first()
+                if pending_c:
+                    Enrollment.objects.get_or_create(student=new_user, course=pending_c)
+            except Exception as enroll_err:
+                print(f"Pending enrollment error: {enroll_err}")
+    except Exception as e:
+        print(f"Account creation error: {e}")
+
     request.session['application_submitted'] = True
+    # Store pending course for payment redirect
+    from lms.models import Course as LMSCourse
+    pending_course = LMSCourse.objects.filter(
+        program__icontains='CNA', is_published=True
+    ).exclude(program__icontains='HHA').order_by('price').first()
+    if pending_course:
+        request.session['pending_course_id'] = pending_course.id
 
     from django.http import HttpResponse
     response = HttpResponse(pdf_bytes, content_type='application/pdf')
@@ -1079,6 +1166,65 @@ Glory Nursing Healthcare Training School
     except Exception as e:
         print(f"Email error: {e}")
 
+
+    # Auto-create student account
+    from django.contrib.auth.models import User as AuthUser
+    import secrets, string
+    try:
+        if not AuthUser.objects.filter(email=student_email).exists():
+            username = student_email.split('@')[0].lower().replace('.','_')[:30]
+            base_username = username
+            counter = 1
+            while AuthUser.objects.filter(username=username).exists():
+                username = f"{base_username}{counter}"
+                counter += 1
+            alphabet = string.ascii_letters + string.digits
+            temp_password = ''.join(secrets.choice(alphabet) for _ in range(10))
+            new_user = AuthUser.objects.create_user(
+                username=username,
+                email=student_email,
+                password=temp_password,
+                first_name=data.get('first_name',''),
+                last_name=data.get('last_name',''),
+            )
+            try:
+                EmailMessage(
+                    subject='Your Glory Nursing Account Has Been Created',
+                    body=f"""Welcome to Glory Nursing Healthcare Training School!
+
+Your application has been received and your student account has been created.
+
+Login Details:
+Website: https://glorynursingok.com/lms/login/
+Username: {username}
+Password: {temp_password}
+
+Please login and complete your enrollment payment to gain access to your course.
+
+Questions? Call us at (405) 968-5004 or email glorynursing@yahoo.com
+
+Glory Nursing Healthcare Training School""",
+                    from_email=None,
+                    to=[student_email],
+                ).send()
+            except Exception as e:
+                print(f"Credentials email error: {e}")
+            # Create pending enrollment based on course_applied field
+            try:
+                from lms.models import Course as LMSCourse2, Enrollment
+                course_title = data.get('course_applied', '').strip()
+                pending_c = None
+                if course_title:
+                    pending_c = LMSCourse2.objects.filter(title=course_title, is_published=True).first()
+                if not pending_c:
+                    pending_c = LMSCourse2.objects.filter(is_published=True).order_by('price').first()
+                if pending_c:
+                    Enrollment.objects.get_or_create(student=new_user, course=pending_c)
+            except Exception as enroll_err:
+                print(f"Pending enrollment error: {enroll_err}")
+    except Exception as e:
+        print(f"Account creation error: {e}")
+
     request.session['application_submitted'] = True
     return JsonResponse({'success': True})
 
@@ -1088,7 +1234,7 @@ def fill_form_cma(request):
     enroll_id = request.session.get('apply_enroll_id', 2)
     program_slug = request.session.get('apply_program_slug', '')
     back_url = f'/apply/cma/?program={program_slug}' if program_slug else '/apply/cma/'
-    cma_courses = LMSCourse.objects.filter(program='CMA', is_published=True).order_by('price')
+    cma_courses = LMSCourse.objects.filter(program__icontains='CMA', is_published=True).order_by('price')
     return render(request, 'core/fill_form_cma.html', {
         'enroll_id': enroll_id,
         'back_url': back_url,
@@ -1362,6 +1508,65 @@ Glory Nursing Healthcare Training School
     except Exception as e:
         email_error = str(e)
         print(f"Email error: {e}")
+
+
+    # Auto-create student account
+    from django.contrib.auth.models import User as AuthUser
+    import secrets, string
+    try:
+        if not AuthUser.objects.filter(email=student_email).exists():
+            username = student_email.split('@')[0].lower().replace('.','_')[:30]
+            base_username = username
+            counter = 1
+            while AuthUser.objects.filter(username=username).exists():
+                username = f"{base_username}{counter}"
+                counter += 1
+            alphabet = string.ascii_letters + string.digits
+            temp_password = ''.join(secrets.choice(alphabet) for _ in range(10))
+            new_user = AuthUser.objects.create_user(
+                username=username,
+                email=student_email,
+                password=temp_password,
+                first_name=data.get('first_name',''),
+                last_name=data.get('last_name',''),
+            )
+            try:
+                EmailMessage(
+                    subject='Your Glory Nursing Account Has Been Created',
+                    body=f"""Welcome to Glory Nursing Healthcare Training School!
+
+Your application has been received and your student account has been created.
+
+Login Details:
+Website: https://glorynursingok.com/lms/login/
+Username: {username}
+Password: {temp_password}
+
+Please login and complete your enrollment payment to gain access to your course.
+
+Questions? Call us at (405) 968-5004 or email glorynursing@yahoo.com
+
+Glory Nursing Healthcare Training School""",
+                    from_email=None,
+                    to=[student_email],
+                ).send()
+            except Exception as e:
+                print(f"Credentials email error: {e}")
+            # Create pending enrollment based on course_applied field
+            try:
+                from lms.models import Course as LMSCourse2, Enrollment
+                course_title = data.get('course_applied', '').strip()
+                pending_c = None
+                if course_title:
+                    pending_c = LMSCourse2.objects.filter(title=course_title, is_published=True).first()
+                if not pending_c:
+                    pending_c = LMSCourse2.objects.filter(is_published=True).order_by('price').first()
+                if pending_c:
+                    Enrollment.objects.get_or_create(student=new_user, course=pending_c)
+            except Exception as enroll_err:
+                print(f"Pending enrollment error: {enroll_err}")
+    except Exception as e:
+        print(f"Account creation error: {e}")
 
     request.session['application_submitted'] = True
 

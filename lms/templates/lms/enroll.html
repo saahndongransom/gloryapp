@@ -113,16 +113,16 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">First Name *</label>
-          <input type="text" name="first_name" class="form-control" placeholder="Jane" required>
+          <input type="text" name="first_name" class="form-control" placeholder="Jane" required value="{% if user.is_authenticated %}{{ user.first_name }}{% endif %}">
         </div>
         <div class="form-group">
           <label class="form-label">Last Name *</label>
-          <input type="text" name="last_name" class="form-control" placeholder="Smith" required>
+          <input type="text" name="last_name" class="form-control" placeholder="Smith" required value="{% if user.is_authenticated %}{{ user.last_name }}{% endif %}">
         </div>
       </div>
       <div class="form-group">
         <label class="form-label">Email Address *</label>
-        <input type="email" name="email" class="form-control" placeholder="jane@email.com" required>
+        <input type="email" name="email" class="form-control" placeholder="jane@email.com" required value="{% if user.is_authenticated %}{{ user.email }}{% endif %}">
         <div style="font-size:11px;color:var(--muted);margin-top:4px">Your login credentials will be sent here.</div>
       </div>
       <div class="form-group">

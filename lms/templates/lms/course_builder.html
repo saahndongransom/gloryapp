@@ -243,17 +243,19 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
         <form method="POST" id="courseForm">
           {% csrf_token %}
           <input type="hidden" name="action" value="create_course">
+          {% if edit_course %}<input type="hidden" id="editCourseId" value="{{ edit_course.id }}">{% endif %}
           <input
             type="text"
             name="title"
             id="courseTitle"
             class="course-name-input"
             placeholder="Course title e.g. Certified Nursing Assistant"
+            value="{% if edit_course %}{{ edit_course.title }}{% endif %}"
             required
           >
           <div class="course-meta-row">
-            <input type="text" name="program" id="courseProgram" class="meta-input" placeholder="Program code e.g. CNA" style="max-width:160px" required>
-            <input type="number" name="price" id="coursePrice" class="meta-input" placeholder="Price e.g. 600" style="max-width:120px" min="0" step="0.01">
+            <input type="text" name="program" id="courseProgram" class="meta-input" placeholder="Program code e.g. CNA" style="max-width:160px" required value="{% if edit_course %}{{ edit_course.program }}{% endif %}">
+            <input type="number" name="price" id="coursePrice" class="meta-input" placeholder="Price e.g. 600" style="max-width:120px" min="0" step="0.01" value="{% if edit_course %}{{ edit_course.price }}{% endif %}">
             <input type="text" class="meta-input" placeholder="Description (optional)" id="courseDesc">
           </div>
         </form>
@@ -506,6 +508,7 @@ function saveCourse(publish = false) {
     title: title,
     program: program,
     price: document.getElementById('coursePrice').value || '0',
+    edit_course_id: document.getElementById('editCourseId') ? document.getElementById('editCourseId').value : '',
     structure: JSON.stringify(modules.map(m => ({
       title: m.title,
       lessons: m.lessons.map(l => ({ title: l.title }))
@@ -528,6 +531,23 @@ function publishCourse() { saveCourse(true); }
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('courseProgram').addEventListener('input', updateSummary);
   updateSummary();
+
+  // Pre-load existing structure when editing
+  {% if edit_course and edit_structure %}
+  console.log('EDIT MODE: course={{ edit_course.id }}, structure={{ edit_structure|escapejs }}');
+  var existingStructure = {{ edit_structure|safe }};
+  existingStructure.forEach(function(modData) {
+    moduleCounter++;
+    var modId = 'mod_' + moduleCounter;
+    var lessons = (modData.lessons || []).map(function(l) {
+      lessonCounter++;
+      return { id: 'les_' + lessonCounter, title: l.title };
+    });
+    modules.push({ id: modId, title: modData.title, lessons: lessons, open: true });
+  });
+  renderModules();
+  updateSummary();
+  {% endif %}
 });
 </script>
 {% endblock %}

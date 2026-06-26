@@ -39,15 +39,19 @@
       <span><i class="fas fa-phone"></i> (405) 968-5004</span>
 
       {% if user.is_authenticated %}
+        <a href="{% url 'lms_dashboard' %}" class="btn-topbar btn-topbar-login" target="_blank" rel="noopener">
+          <i class="fas fa-graduation-cap"></i> My LMS
+        </a>
         <a href="{% url 'lms_logout' %}" class="btn-topbar btn-topbar-logout">
           <i class="fas fa-sign-out-alt"></i> Sign Out
         </a>
       {% else %}
-        <a href="{% url 'lms_dashboard' %}" target="_blank" rel="noopener noreferrer" class="btn-topbar btn-topbar-login">
+        <a href="{% url 'lms_dashboard' %}" class="btn-topbar btn-topbar-login" target="_blank" rel="noopener">
           <i class="fas fa-user-graduate"></i> Login
         </a>
       {% endif %}
 
+      <a href="/lms/pay/" class="btn-topbar" style="background:#059669;color:#fff">💳 Pay Now</a>
       <a href="{% url 'apply' %}" class="btn-topbar">Apply Now</a>
     </div>
   </div>
@@ -234,6 +238,9 @@
       <!-- Mobile-only Login / Sign Out (visible only on small screens) -->
       <li class="mobile-auth-item">
         {% if user.is_authenticated %}
+          <a href="{% url 'lms_dashboard' %}" class="mobile-auth-link mobile-auth-login" target="_blank" rel="noopener">
+            <i class="fas fa-graduation-cap"></i> My LMS
+          </a>
           <a href="{% url 'lms_logout' %}" class="mobile-auth-link mobile-auth-logout">
             <i class="fas fa-sign-out-alt"></i> Sign Out
           </a>
@@ -306,6 +313,7 @@
           <li><a href="{% url 'admissions_requirements' %}">Requirements</a></li>
           <li><a href="{% url 'admissions_faq' %}">FAQs</a></li>
           <li><a href="{% url 'apply' %}">Apply Now</a></li>
+          <li><a href="/lms/pay/">💳 Make a Payment</a></li>
           <li><a href="{% url 'contact' %}">Contact Us</a></li>
         </ul>
         <h4 style="margin-top:1.5rem">Accreditations</h4>

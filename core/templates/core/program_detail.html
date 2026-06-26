@@ -27,7 +27,7 @@
       <div class="schedules-list">
      <div class="schedule-item"><i class="fas fa-calendar-check"></i> {{ program.schedules|linebreaksbr }}</div>
       </div>
-      {% if program.slug == "cma" or program.slug == "cma-traditional" %}
+      {% if program.slug == "cma" or program.slug == "cma-traditional" or program.slug == "certified-medication-aide-onlinehybrid" %}
       <a href="{% url 'apply_cma' %}" class="btn btn-primary btn-lg" style="margin-top:2rem">Apply for This Program</a>
       {% elif program.slug == "bls-cpr" or program.slug == "american-heart-association-aha-cprbls-certificatio" %}
       <a href="{% url 'fill_form_simple' 'BLS' %}" class="btn btn-primary btn-lg" style="margin-top:2rem">Apply for This Program</a>

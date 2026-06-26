@@ -1,0 +1,116 @@
+{% extends 'lms/lms_base.html' %}
+{% load static %}
+{% block title %}Make a Payment | Glory Nursing{% endblock %}
+{% block content %}
+<div style="min-height:100vh;background:#f1f5f9;padding:40px 16px">
+  <div style="max-width:560px;margin:0 auto">
+    <div style="text-align:center;margin-bottom:32px">
+      <h1 style="font-size:28px;font-weight:800;color:#0f172a;margin-bottom:8px">Make a Payment</h1>
+      <p style="color:#64748b;font-size:14px">Enter your details and payment information below.</p>
+    </div>
+
+    {% if messages %}
+    {% for msg in messages %}
+    <div style="background:{% if msg.tags == 'error' %}#fee2e2;color:#991b1b{% else %}#d1fae5;color:#065f46{% endif %};padding:12px 16px;border-radius:10px;margin-bottom:16px;font-size:13px;font-weight:600">
+      {{ msg }}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div style="background:#fff;border-radius:16px;padding:32px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+      <form method="POST" id="paymentForm">
+        {% csrf_token %}
+        <input type="hidden" name="nonce" id="nonceInput">
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+          <div>
+            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">First Name *</label>
+            <input type="text" name="first_name" required style="width:100%;padding:11px 13px;border:1.5px solid #cbd5e1;border-radius:9px;font-size:14px;outline:none">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">Last Name *</label>
+            <input type="text" name="last_name" required style="width:100%;padding:11px 13px;border:1.5px solid #cbd5e1;border-radius:9px;font-size:14px;outline:none">
+          </div>
+        </div>
+
+        <div style="margin-bottom:14px">
+          <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">Email Address *</label>
+          <input type="email" name="email" required style="width:100%;padding:11px 13px;border:1.5px solid #cbd5e1;border-radius:9px;font-size:14px;outline:none" placeholder="your@email.com">
+        </div>
+
+        <div style="margin-bottom:14px">
+          <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">Phone Number</label>
+          <input type="tel" name="phone" style="width:100%;padding:11px 13px;border:1.5px solid #cbd5e1;border-radius:9px;font-size:14px;outline:none" placeholder="(555) 123-4567">
+        </div>
+
+        <div style="margin-bottom:14px">
+          <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">Amount ($) *</label>
+          <input type="number" name="amount" required min="1" step="0.01" style="width:100%;padding:11px 13px;border:1.5px solid #cbd5e1;border-radius:9px;font-size:14px;outline:none" placeholder="0.00">
+        </div>
+
+        <div style="margin-bottom:20px">
+          <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">Reason for Payment *</label>
+          <select name="reason" required style="width:100%;padding:11px 13px;border:1.5px solid #cbd5e1;border-radius:9px;font-size:14px;outline:none;background:#fff">
+            <option value="">-- Select reason --</option>
+            <option value="CNA Program Tuition">CNA Program Tuition</option>
+            <option value="CMA Program Tuition">CMA Program Tuition</option>
+            <option value="BLS/CPR Certification">BLS/CPR Certification</option>
+            <option value="Registration Fee">Registration Fee</option>
+            <option value="State Exam Fee">State Exam Fee</option>
+            <option value="Background Check Fee">Background Check Fee</option>
+            <option value="Materials Fee">Materials Fee</option>
+            <option value="Partial Payment">Partial Payment</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom:20px">
+          <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:8px">Card Details *</label>
+          <div id="card-container" style="border:1.5px solid #cbd5e1;border-radius:9px;padding:12px;min-height:50px"></div>
+        </div>
+
+        <button type="button" id="payBtn" onclick="handlePayment()" style="width:100%;background:#059669;color:#fff;padding:14px;border-radius:10px;border:none;font-size:15px;font-weight:800;cursor:pointer">
+          <i class="fas fa-lock"></i> Pay Now
+        </button>
+        <p style="text-align:center;font-size:12px;color:#94a3b8;margin-top:12px">🔒 Secured by Square. Your card information is never stored.</p>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% if square_env == 'sandbox' %}
+<script src="https://sandbox.web.squarecdn.com/v1/square.js"></script>
+{% else %}
+<script src="https://web.squarecdn.com/v1/square.js"></script>
+{% endif %}
+<script>
+var card;
+async function initSquare() {
+  const payments = window.Square.payments('{{ square_app_id }}', '{{ location_id }}');
+  card = await payments.card();
+  await card.attach('#card-container');
+}
+initSquare();
+
+async function handlePayment() {
+  var btn = document.getElementById('payBtn');
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+  try {
+    const result = await card.tokenize();
+    if (result.status === 'OK') {
+      document.getElementById('nonceInput').value = result.token;
+      document.getElementById('paymentForm').submit();
+    } else {
+      alert('Card error: ' + (result.errors ? result.errors[0].message : 'Please try again.'));
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-lock"></i> Pay Now';
+    }
+  } catch(e) {
+    alert('Payment error: ' + e.message);
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-lock"></i> Pay Now';
+  }
+}
+</script>
+{% endblock %}

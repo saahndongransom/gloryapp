@@ -420,6 +420,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   updateUI();
+  restoreProgress();
 });
 
 function initSignaturePad(mount) {
@@ -470,6 +471,10 @@ function initSignaturePad(mount) {
 
   sigPads[key] = { canvas: canvas, hasSig: function() { return hasSig; } };
 }
+
+// Auto-save on any input change
+document.addEventListener('change', saveProgress);
+document.addEventListener('input', saveProgress);
 
 function collectFieldsInSection(idx) {
   var section = document.querySelector('[data-section="' + idx + '"]');
@@ -573,6 +578,51 @@ function updateUI() {
 
 function getCk(n) { var m = document.cookie.match('(^|;)\\s*' + n + '\\s*=\\s*([^;]+)'); return m ? m.pop() : ''; }
 
+// Save/restore form progress using localStorage
+var SAVE_KEY = 'glory_cna_form_progress';
+
+function saveProgress() {
+  var saved = {};
+  document.querySelectorAll('[data-field]').forEach(function(el) {
+    if (el.type === 'radio') { if (el.checked) saved[el.getAttribute('data-field')] = el.value; }
+    else if (el.type === 'checkbox') { saved[el.getAttribute('data-field')] = el.checked; }
+    else { saved[el.getAttribute('data-field')] = el.value; }
+  });
+  saved['_email'] = document.getElementById('studentEmail') ? document.getElementById('studentEmail').value : '';
+  saved['_section'] = currentSection;
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(saved)); } catch(e) {}
+}
+
+function restoreProgress() {
+  try {
+    var raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
+    var saved = JSON.parse(raw);
+    if (saved['_email'] && document.getElementById('studentEmail')) {
+      document.getElementById('studentEmail').value = saved['_email'];
+    }
+    document.querySelectorAll('[data-field]').forEach(function(el) {
+      var key = el.getAttribute('data-field');
+      if (saved[key] === undefined) return;
+      if (el.type === 'radio') { if (el.value === saved[key]) el.checked = true; }
+      else if (el.type === 'checkbox') { el.checked = !!saved[key]; }
+      else { el.value = saved[key]; }
+    });
+    // Restore section
+    if (saved['_section'] && saved['_section'] > 0) {
+      currentSection = parseInt(saved['_section']);
+      updateUI();
+    }
+    // Trigger alien number group visibility
+    var lp = document.querySelector('input[name="lawful_presence"]:checked');
+    if (lp) lp.dispatchEvent(new Event('change'));
+  } catch(e) {}
+}
+
+function clearProgress() {
+  try { localStorage.removeItem(SAVE_KEY); } catch(e) {}
+}
+
 function submitApplication() {
   if (!validateSection(currentSection)) return;
   collectFieldsInSection(currentSection);
@@ -597,7 +647,8 @@ function submitApplication() {
     URL.revokeObjectURL(url);
     var d = { success: true };
     if (d.success) {
-      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:20px;background:#16213e;color:#fff;padding:24px;text-align:center;"><div style="font-size:64px">🎉</div><h2 style="font-size:24px;font-weight:800">Application Submitted!</h2><p style="color:#94a3b8;font-size:14px;max-width:400px">Your completed application has been sent to Glory Nursing. We will contact you within 1-2 business days.<br><br>Check your email for confirmation.</p><a href="/lms/enroll/{{ enroll_id }}/" style="background:#059669;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:800;margin-top:10px">&#128274; Pay &amp; Complete Enrollment</a><a href="/" style="color:#64748b;font-size:13px">Return to Home</a></div>';
+      clearProgress();
+      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:24px;background:#16213e;color:#fff;padding:24px;text-align:center;"><div style="font-size:64px">🎉</div><h2 style="font-size:24px;font-weight:800">Application Submitted!</h2><div style="background:rgba(255,255,255,0.08);border-radius:14px;padding:24px;max-width:420px;text-align:left;"><p style="color:#94a3b8;font-size:14px;margin-bottom:12px">✅ Your application has been sent to Glory Nursing.</p><p style="color:#94a3b8;font-size:14px;margin-bottom:12px">✅ Your student account has been created.</p><p style="color:#34d399;font-size:14px;font-weight:700;">📧 Check your email for your login credentials.</p></div><p style="color:#64748b;font-size:13px;max-width:380px">Login with your credentials, then complete your enrollment payment to get instant access to your course.</p><a href="/lms/login/" style="background:#1a56db;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:800;">Login to Your Account</a><a href="/" style="color:#64748b;font-size:13px">Return to Home</a></div>';
     } else {
       btn.disabled = false;
       btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Application';
