@@ -419,6 +419,17 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
+  // Save progress when email is entered
+  var emailEl = document.getElementById('studentEmail');
+  if (emailEl) {
+    emailEl.addEventListener('blur', function() {
+      if (this.value && this.value.includes('@')) {
+        formData.student_email = this.value;
+        saveProgressToServer();
+      }
+    });
+  }
+
   updateUI();
   restoreProgress();
 });
@@ -545,6 +556,20 @@ function validateSection(idx) {
   return true;
 }
 
+function saveProgressToServer() {
+  if (!formData.student_email && !document.getElementById('studentEmail').value) return;
+  var email = formData.student_email || document.getElementById('studentEmail').value;
+  if (!email) return;
+  fetch('/apply/save-progress/', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(Object.assign({}, formData, {
+      student_email: email,
+      _section: currentSection
+    }))
+  }).catch(function(){});
+}
+
 function nextSection() {
   if (!validateSection(currentSection)) return;
   collectFieldsInSection(currentSection);
@@ -552,6 +577,7 @@ function nextSection() {
     currentSection++;
     updateUI();
     window.scrollTo({top: 0, behavior: 'smooth'});
+    saveProgressToServer();
   }
 }
 

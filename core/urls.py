@@ -15,6 +15,7 @@ urlpatterns = [
     path('apply/cna/', views.apply_cna, name='apply_cna'),
     path('apply/cna/fill/', views.fill_pdf_cna, name='fill_pdf_cna'),
     path('apply/cna/form/', views.fill_form_cna, name='fill_form_cna'),
+    path('apply/save-progress/', views.save_form_progress, name='save_form_progress'),
     path('apply/cna/submit-form/', views.submit_form_cna, name='submit_form_cna'),
     path('apply/cna/render-page/', views.render_pdf_page, name='render_pdf_page_cna'),
     path('apply/cna/save/', views.save_filled_pdf, name='save_filled_pdf_cna'),

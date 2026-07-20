@@ -498,6 +498,47 @@ def fill_pdf_cna(request):
     })
 
 
+
+@csrf_exempt
+def save_form_progress(request):
+    import json
+    from django.http import JsonResponse
+    from lms.models import StudentJourney
+    if request.method != 'POST':
+        return JsonResponse({'ok': False})
+    try:
+        data = json.loads(request.body)
+        email = data.get('student_email', '').strip()
+        if not email:
+            return JsonResponse({'ok': False})
+        section = int(data.get('_section', 0))
+        section_names = {
+            0: 'Email Entry', 1: 'Personal Info', 2: 'Emergency Contact',
+            3: 'Education', 4: 'Affidavit of Lawful Presence',
+            5: 'Clinical Tasks', 6: 'Media Release',
+            7: 'Background Check', 8: 'Grievance Policy',
+            9: 'NAR Rules', 10: 'Final Signature'
+        }
+        StudentJourney.objects.update_or_create(
+            student_email=email,
+            stage='form_started',
+            defaults={
+                'program': data.get('course_applied', ''),
+                'metadata': {
+                    'section': section,
+                    'section_name': section_names.get(section, f'Section {section}'),
+                    'first_name': data.get('first_name', ''),
+                    'last_name': data.get('last_name', ''),
+                    'total_sections': 11,
+                    'percent': round((section / 11) * 100),
+                }
+            }
+        )
+        return JsonResponse({'ok': True})
+    except Exception as e:
+        print(f"save_form_progress error: {e}")
+        return JsonResponse({'ok': False})
+
 def fill_form_cna(request):
     from lms.models import Course as LMSCourse
     enroll_id = request.session.get('apply_enroll_id', 1)
@@ -1056,6 +1097,17 @@ Glory Nursing Healthcare Training School
                 print(f"Pending enrollment error: {enroll_err}")
     except Exception as e:
         print(f"Account creation error: {e}")
+
+    # Track journey: form submitted
+    try:
+        from lms.models import StudentJourney
+        StudentJourney.objects.update_or_create(
+            student_email=student_email,
+            stage='form_submitted',
+            defaults={'program': get('course_applied'), 'metadata': {'full_name': full_name}}
+        )
+    except Exception:
+        pass
 
     request.session['application_submitted'] = True
     # Store pending course for payment redirect

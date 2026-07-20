@@ -235,6 +235,8 @@
         <a href="{% url 'apply' %}" class="btn-nav">Apply Now</a>
       </li>
 
+      <!-- Mobile Pay Now -->
+      <li><a href="/lms/pay/" style="color:#059669;font-weight:700">💳 Make a Payment</a></li>
       <!-- Mobile-only Login / Sign Out (visible only on small screens) -->
       <li class="mobile-auth-item">
         {% if user.is_authenticated %}
@@ -285,9 +287,10 @@
         </div>
         <p class="footer-about">Empowering future healthcare heroes since 2018. State-approved programs, expert instructors, and a community that cares about your success.</p>
         <div class="footer-social">
-          <a href="https://www.facebook.com/profile.php?id=100094356164772" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
-          <a href="https://www.instagram.com/glory_healthcare_llc/" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
-          <a href="https://www.linkedin.com/in/glory-healthcare-319a46290" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+          <a href="https://www.facebook.com/share/17EsFm3aJ1/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+          <a href="https://www.instagram.com/glory_nursing?igsh=MWNqeXFtbnd2dzJmNw==" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+          <a href="https://www.tiktok.com/@glorynursingok?_r=1&_t=ZT-97gfCBJ5OQw" target="_blank" rel="noopener noreferrer" aria-label="TikTok"><i class="fab fa-tiktok"></i></a>
+          <a href="https://www.linkedin.com/in/glory-nursing-8743ab41b/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
         </div>
       </div>
 
@@ -299,6 +302,8 @@
           <li><a href="{% url 'program_detail' 'cma' %}">Certified Medication Aide (CMA)</a></li>
           <li><a href="{% url 'program_detail' 'hha' %}">Home Health Aide (HHA)</a></li>
           <li><a href="{% url 'program_detail' 'bls-cpr' %}">BLS / CPR</a></li>
+          <li><a href="{% url 'programs' %}">ACMA Certification</a></li>
+          <li><a href="{% url 'programs' %}">CMA Renewal</a></li>
         </ul>
       </div>
 
@@ -318,10 +323,14 @@
         </ul>
         <h4 style="margin-top:1.5rem">Accreditations</h4>
         <ul>
-          <li><span style="color:#a8d5a2">✔</span> OBPVS </li>
-          <li><span style="color:#a8d5a2">✔</span> ACMA </li>
-          <li><span style="color:#a8d5a2">✔</span> OBN Licensed</li>
+          
+         <!--
+<li><span style="color:#a8d5a2">✔</span> OBPVS</li>
+<li><span style="color:#a8d5a2">✔</span> ACMA</li>
+<li><span style="color:#a8d5a2">✔</span> OBN Licensed</li>
+-->
           <li><span style="color:#a8d5a2">✔</span> OSDH-NAR Approved</li>
+          <li style="margin-top:12px"><a href="https://oklahoma.gov/health/services/licensing-inspections/health-resources-development-service/nurse-aide-registry.html" target="_blank" rel="noopener"><img src="/static/core/images/onar_logo.png" alt="OSDH-NAR Approved" style="height:60px;object-fit:contain;background:#fff;padding:6px;border-radius:8px;max-width:160px"></a></li>
         </ul>
       </div>
 

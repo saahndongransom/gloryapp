@@ -318,6 +318,9 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
       <a href="{% url 'setup_2fa' %}" class="nav-item-link" style="margin-top:8px">
         <i class="fas fa-shield-alt"></i> Security (2FA)
       </a>
+      <a href="{% url 'student_preview' %}" class="nav-item-link" style="color:#34d399" target="_blank">
+        <i class="fas fa-eye"></i> Preview as Student
+      </a>
       <a href="{% url 'lms_logout' %}" class="nav-item-link" style="color:#fca5a5">
         <i class="fas fa-sign-out-alt"></i> Sign Out
       </a>
@@ -1171,6 +1174,116 @@ CORRECT: B"></textarea>
 
       <!-- ══ ENROLLMENTS ══ -->
       <div id="view-enrollments" class="view-section">
+
+        <!-- Admissions Pipeline -->
+        <div class="panel" style="margin-bottom:24px">
+          <div class="panel-title">📋 Admissions Pipeline</div>
+          <div style="overflow-x:auto">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Email</th>
+                  <th>Course</th>
+                  <th>📝 Form</th>
+                  <th>💳 Payment</th>
+                  <th>📖 Course</th>
+                  <th>Progress</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for profile in students_profiles %}
+                <tr>
+                  <td><strong>{{ profile.user_obj.get_full_name|default:profile.user_obj.username }}</strong></td>
+                  <td style="font-size:12px;color:var(--muted)">{{ profile.user_obj.email }}</td>
+                  <td style="font-size:12px">
+                    {% for e in profile.user_obj.enrollment_set.all %}
+                      {{ e.course.title|truncatechars:30 }}<br>
+                    {% empty %}—{% endfor %}
+                  </td>
+                  <!-- Form Stage -->
+                  <td style="font-size:11px">
+                    {% if profile.form_submitted %}
+                      <span style="color:#059669;font-weight:700">✅ Submitted</span>
+                    {% elif profile.form_started %}
+                      <span style="color:#d97706">📝 Stopped:<br><strong>{{ profile.form_started.metadata.section_name|default:'Started' }}</strong><br>{{ profile.form_started.metadata.percent|default:0 }}% done</span>
+                    {% else %}
+                      <span style="color:#9ca3af">—</span>
+                    {% endif %}
+                  </td>
+                  <!-- Payment Stage -->
+                  <td style="font-size:11px">
+                    {% if profile.has_paid %}
+                      <span style="color:#059669;font-weight:700">✅ Paid</span>
+                    {% else %}
+                      {% if profile.payment_page_visited %}<span style="color:#d97706">👀 Visited</span><br>{% endif %}
+                      <span style="color:#dc2626">⏳ Unpaid</span>
+                      {% for e in profile.user_obj.enrollment_set.all %}
+                      <br><button onclick="copyPayLink('{{ e.course.id }}')" style="font-size:10px;padding:2px 7px;border-radius:4px;border:none;cursor:pointer;background:#7c3aed;color:#fff;margin-top:3px">🔗 Send</button>
+                      {% endfor %}
+                    {% endif %}
+                  </td>
+                  <!-- Course Stage -->
+                  <td style="font-size:11px">
+                    {% if profile.progress_percentage >= 100 %}
+                      <span style="color:#059669;font-weight:700">✅ Completed</span>
+                    {% elif profile.last_progress %}
+                      <span style="color:#1a56db">
+                        📖 Last seen:<br>
+                        <strong>{{ profile.last_progress.lesson.title|truncatechars:25 }}</strong><br>
+                        <span style="color:#6b7280">{{ profile.last_progress.lesson.module.title|truncatechars:20 }}</span><br>
+                        <span style="color:#6b7280">{{ profile.last_progress.lesson.module.course.title|truncatechars:20 }}</span><br>
+                        {{ profile.progress_percentage }}% overall
+                      </span>
+                    {% elif profile.has_paid %}
+                      <span style="color:#9ca3af">💳 Not started</span>
+                    {% else %}
+                      <span style="color:#9ca3af">—</span>
+                    {% endif %}
+                  </td>
+                  <!-- Progress -->
+                  <td>
+                    <div class="progress-row">
+                      <div class="progress-rail" style="width:60px"><div class="progress-fill" style="width:{{ profile.progress_percentage }}%"></div></div>
+                      <span class="pct">{{ profile.progress_percentage }}%</span>
+                    </div>
+                  </td>
+                  <!-- Action -->
+                  <td style="font-size:11px">
+                    {% for e in profile.user_obj.enrollment_set.all %}
+                    <a href="/lms/enroll/{{ e.course.id }}/?direct=1" style="font-size:10px;padding:2px 7px;border-radius:4px;background:#1a56db;color:#fff;text-decoration:none">Pay Page</a>
+                    {% endfor %}
+                  </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:30px">No students yet.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Abandoned Forms -->
+        {% if abandoned_forms %}
+        <div class="panel" style="margin-bottom:24px;border-left:4px solid #f59e0b">
+          <div class="panel-title">⚠️ Started Form But Didn't Submit ({{ abandoned_forms|length }})</div>
+          <table class="data-table">
+            <thead><tr><th>Email</th><th>Stopped At</th><th>Progress</th><th>When</th></tr></thead>
+            <tbody>
+              {% for j in abandoned_forms %}
+              <tr>
+                <td style="font-size:12px">{{ j.student_email }}</td>
+                <td style="font-size:12px"><strong>{{ j.metadata.section_name|default:'—' }}</strong></td>
+                <td style="font-size:12px">{{ j.metadata.percent|default:0 }}% done</td>
+                <td style="font-size:11px;color:var(--muted)">{{ j.updated_at|timesince }} ago</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endif %}
+
         <div class="two-col">
           <div class="panel">
             <div class="panel-title">Enroll Student in Course</div>
@@ -1181,25 +1294,7 @@ CORRECT: B"></textarea>
               <button type="submit" class="btn-submit">Enroll Student</button>
             </form>
           </div>
-          <div class="panel">
-            <div class="panel-title">Active Enrollments</div>
-            <table class="data-table">
-              <thead><tr><th>Student</th><th>Progress</th></tr></thead>
-              <tbody>
-                {% for profile in students_profiles %}
-                <tr>
-                  <td><strong>{{ profile.user_obj.username }}</strong></td>
-                  <td>
-                    <div class="progress-row">
-                      <div class="progress-rail" style="width:90px"><div class="progress-fill" style="width:{{ profile.progress_percentage }}%"></div></div>
-                      <span class="pct">{{ profile.progress_percentage }}%</span>
-                    </div>
-                  </td>
-                </tr>
-                {% empty %}<tr><td colspan="2" style="text-align:center;color:var(--muted)">No enrollments yet.</td></tr>{% endfor %}
-              </tbody>
-            </table>
-          </div>
+
         </div>
       </div>
 
@@ -1519,6 +1614,14 @@ CORRECT: B"></textarea>
                   <option value="">-- No course linked --</option>
                   {% for cs in all_courses %}<option value="{{ cs.id }}">{{ cs.title }} (${{ cs.price }})</option>{% endfor %}
                 </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Program Image</label>
+                <input type="file" name="prog_image" accept="image/*" class="form-control" style="padding:6px">
+                <div id="currentProgImage" style="margin-top:8px;display:none">
+                  <span style="font-size:11px;color:var(--muted)">Current image: </span>
+                  <img id="progImagePreview" src="" style="height:40px;border-radius:6px;vertical-align:middle">
+                </div>
               </div>
               <div class="form-row">
                 <div class="form-group"><label class="form-label">Order</label><input type="number" name="prog_order" id="progOrder" class="form-control" value="0"></div>

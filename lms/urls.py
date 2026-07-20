@@ -21,6 +21,7 @@ urlpatterns = [
     path('quiz/results/<int:attempt_id>/', views.quiz_results, name='quiz_results'),
     path('certificate/<int:cert_id>/download/', views.download_certificate, name='download_certificate'),
     path('search/', views.lms_search, name='lms_search'),
+    path('preview/student/', views.student_preview, name='student_preview'),
     path('pay/', views.generic_payment, name='generic_payment'),
     path('pay/success/', views.generic_payment_success, name='generic_payment_success'),
     path('enroll/<int:course_id>/', views.enroll_page, name='enroll_page'),

@@ -92,8 +92,12 @@ def lms_logout_view(request):
 # 2. THE UNIFIED MASTER CONTROL CENTER (ROLE-BASED TRAFFIC COP)
 # =========================================================================
 
-@login_required(login_url='lms_login')
+LMS_OFFLINE = True
+LMS_OFFLINE_MESSAGE = "The GloryLMS student portal is temporarily offline for maintenance. Please check back soon or contact us at glorynursing@yahoo.com"
+
 def lms_dashboard_view(request):
+    if not request.user.is_authenticated:
+        return redirect('lms_login')
     user = request.user
 
     # -------------------------------------------------------------------------
@@ -412,11 +416,18 @@ def lms_dashboard_view(request):
                     if prog_id:
                         CoreProgram.objects.filter(id=prog_id).update(**{k:v for k,v in data.items() if k != 'course'})
                         CoreProgram.objects.filter(id=prog_id).update(course=course_obj)
+                        if request.FILES.get('prog_image'):
+                            prog_obj = CoreProgram.objects.get(id=prog_id)
+                            prog_obj.image = request.FILES['prog_image']
+                            prog_obj.save()
                         messages.success(request, f"Program '{title}' updated.")
                     else:
                         from django.utils.text import slugify
                         data['slug'] = slugify(title)
-                        CoreProgram.objects.create(**data)
+                        prog_obj = CoreProgram.objects.create(**data)
+                        if request.FILES.get('prog_image'):
+                            prog_obj.image = request.FILES['prog_image']
+                            prog_obj.save()
                         messages.success(request, f"Program '{title}' created.")
                 return redirect('lms_dashboard')
 
@@ -574,18 +585,50 @@ def lms_dashboard_view(request):
             prog_ratio = int((completed_count / total_lessons_count) * 100) if total_lessons_count > 0 else 0
             last_attempt = QuizAttempt.objects.filter(student_id=s.id).order_by('-timestamp').first()
             
+            has_paid = Subscription.objects.filter(student=s, status='active').exists()
+            from lms.models import StudentJourney, LessonProgress as LP2
+            s_journeys = {j.stage: j for j in StudentJourney.objects.filter(student_email=s.email)}
+            form_submitted = 'form_submitted' in s_journeys
+            form_started = s_journeys.get('form_started')
+            payment_page_visited = 'payment_page' in s_journeys
+            last_progress = LP2.objects.filter(student=s).select_related('lesson__module__course').order_by('-id').first()
+            course_started = last_progress is not None
             students_profiles.append({
                 'user_obj': s,
                 'progress_percentage': prog_ratio,
-                'last_score_attempt': last_attempt
+                'last_score_attempt': last_attempt,
+                'has_paid': has_paid,
+                'form_submitted': form_submitted,
+                'form_started': form_started,
+                'payment_page_visited': payment_page_visited,
+                'last_progress': last_progress,
+                'course_started': course_started,
             })
 
         revenue_query = Subscription.objects.filter(status='active').aggregate(total=Sum('amount_paid'))
         total_revenue = revenue_query['total'] if revenue_query['total'] is not None else 0.00
+        # Journey tracking data
+        from lms.models import StudentJourney as SJ2
+        all_journeys = SJ2.objects.all()
+        journey_by_email = {}
+        for j in all_journeys:
+            if j.student_email not in journey_by_email:
+                journey_by_email[j.student_email] = {}
+            journey_by_email[j.student_email][j.stage] = j
+
+        from django.contrib.auth.models import User as AuthUser2
+        existing_emails = set(AuthUser2.objects.values_list('email', flat=True))
+        abandoned_forms = [
+            stages['form_started']
+            for email, stages in journey_by_email.items()
+            if email not in existing_emails and 'form_started' in stages
+        ]
+
 
         context = {
             'all_students': raw_students,
             'students_profiles': students_profiles,
+            'abandoned_forms': abandoned_forms,
             'all_courses': Course.objects.all(),
             'all_modules': Module.objects.all(),
             'all_lessons': Lesson.objects.all(),
@@ -909,6 +952,16 @@ def lesson_view(request, lesson_id):
             course_id = lesson.module.course_id
             messages.warning(request, 'Please complete your payment to access course content.')
             return redirect('enroll_page', course_id=course_id)
+    # Track journey: course started
+    try:
+        from lms.models import StudentJourney
+        StudentJourney.objects.get_or_create(
+            student_email=request.user.email,
+            stage='course_started',
+            defaults={'metadata': {'lesson_id': lesson_id}}
+        )
+    except Exception:
+        pass
     lesson = get_object_or_404(Lesson, id=lesson_id)
 
     # Check enrollment
@@ -1407,6 +1460,55 @@ def lesson_discussion(request, lesson_id):
 # SQUARE PAYMENT FLOW
 # ══════════════════════════════════════════════════════════════
 
+@login_required(login_url='lms_login')
+def student_preview(request):
+    """Admin preview of the student dashboard."""
+    if not request.user.is_staff:
+        return redirect('lms_dashboard')
+    # Temporarily render dashboard as if user is a student
+    from lms.models import Course, Enrollment, Subscription
+    # Get first non-staff student for preview, or use empty data
+    from django.contrib.auth.models import User as AuthUser
+    sample_student = AuthUser.objects.filter(is_staff=False).first()
+    if sample_student:
+        enrollments_qs = Enrollment.objects.filter(student=sample_student).select_related('course')
+        has_paid = Subscription.objects.filter(student=sample_student, status='active').exists()
+    else:
+        enrollments_qs = Enrollment.objects.none()
+        has_paid = False
+
+    enrollments = []
+    for enrollment in enrollments_qs:
+        enrollments.append({
+            'course': enrollment.course,
+            'progress_percentage': 0,
+            'completed_count': 0,
+            'total_lessons': enrollment.course.modules.count(),
+            'next_lesson': None,
+            'module_count': enrollment.course.modules.count(),
+        })
+
+    context = {
+        'user': sample_student or request.user,
+        'enrollments': enrollments,
+        'has_paid': has_paid,
+        'overall_progress': 0,
+        'avg_score': 0,
+        'total_completed': 0,
+        'my_certificates': [],
+        'activity': [],
+        'announcements': Announcement.objects.filter(is_active=True)[:3],
+        'leaderboard': [],
+        'my_rank': 1,
+        'pending_course_id': '',
+        'streak': None,
+        'reviewable_courses': [],
+        'page': 'lms_student_dashboard',
+        'is_admin_preview': True,
+    }
+    return render(request, 'lms/dashboard.html', context)
+
+
 def generic_payment(request):
     """Generic payment page — collect name, email, amount, reason and process payment."""
     from dotenv import load_dotenv
@@ -1533,6 +1635,18 @@ def enroll_page(request, course_id):
     from dotenv import load_dotenv
     load_dotenv()
     course = get_object_or_404(Course, id=course_id, is_published=True)
+    # Track journey: payment page visited
+    if request.user.is_authenticated and not request.user.is_staff:
+        try:
+            from lms.models import StudentJourney
+            StudentJourney.objects.update_or_create(
+                student_email=request.user.email,
+                stage='payment_page',
+                defaults={'program': course.title, 'metadata': {'course_id': course.id}}
+            )
+        except Exception:
+            pass
+
     context = {
         'course': course,
         'square_app_id': os.environ.get('SQUARE_APP_ID', ''),

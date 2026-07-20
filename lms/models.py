@@ -327,3 +327,26 @@ class InteractiveCompletion(models.Model):
 
     def __str__(self):
         return f"{self.student.username} - {self.element.title}"
+
+
+class StudentJourney(models.Model):
+    STAGE_CHOICES = [
+        ('form_started', 'Form Started'),
+        ('form_submitted', 'Form Submitted'),
+        ('payment_page', 'Visited Payment Page'),
+        ('payment_completed', 'Payment Completed'),
+        ('course_started', 'Course Started'),
+    ]
+    student_email = models.EmailField(db_index=True)
+    stage = models.CharField(max_length=30, choices=STAGE_CHOICES)
+    program = models.CharField(max_length=100, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+        unique_together = ['student_email', 'stage']
+
+    def __str__(self):
+        return f"{self.student_email} — {self.stage}"
