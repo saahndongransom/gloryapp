@@ -798,9 +798,19 @@ def lms_dashboard_view(request):
 
 @login_required(login_url='lms_login')
 def course_classroom(request, course_id):
-    enrollment = get_object_or_404(Enrollment, course_id=course_id, student=request.user)
-    # Payment gate — must have active subscription
-    if not request.user.is_staff:
+    # Allow staff to preview any course
+    if request.user.is_staff:
+        enrollment = Enrollment.objects.filter(course_id=course_id).first()
+        if not enrollment:
+            # Create a temporary enrollment object for preview
+            course_obj = get_object_or_404(Course, id=course_id)
+            class FakeEnrollment:
+                course = course_obj
+                student = request.user
+            enrollment = FakeEnrollment()
+    else:
+        enrollment = get_object_or_404(Enrollment, course_id=course_id, student=request.user)
+        # Payment gate — must have active subscription
         has_paid = Subscription.objects.filter(student=request.user, status='active').exists()
         if not has_paid:
             messages.warning(request, 'Please complete your payment to access course content.')
@@ -944,7 +954,7 @@ def lms_video_helper(url):
 
 @login_required(login_url='lms_login')
 def lesson_view(request, lesson_id):
-    # Payment gate
+    # Payment gate — staff can always preview
     if not request.user.is_staff:
         has_paid = Subscription.objects.filter(student=request.user, status='active').exists()
         if not has_paid:
@@ -1465,17 +1475,24 @@ def student_preview(request):
     """Admin preview of the student dashboard."""
     if not request.user.is_staff:
         return redirect('lms_dashboard')
-    # Temporarily render dashboard as if user is a student
     from lms.models import Course, Enrollment, Subscription
-    # Get first non-staff student for preview, or use empty data
     from django.contrib.auth.models import User as AuthUser
-    sample_student = AuthUser.objects.filter(is_staff=False).first()
+    # Allow picking a specific student via ?student_id=
+    student_id = request.GET.get('student_id')
+    if student_id:
+        sample_student = AuthUser.objects.filter(id=student_id, is_staff=False).first()
+    else:
+        # Get a paid student for best preview experience
+        paid_ids = Subscription.objects.filter(status='active').values_list('student_id', flat=True)
+        sample_student = AuthUser.objects.filter(id__in=paid_ids, is_staff=False).first()
+        if not sample_student:
+            sample_student = AuthUser.objects.filter(is_staff=False).first()
     if sample_student:
         enrollments_qs = Enrollment.objects.filter(student=sample_student).select_related('course')
-        has_paid = Subscription.objects.filter(student=sample_student, status='active').exists()
+        has_paid = True  # Admin preview always shows full course access
     else:
         enrollments_qs = Enrollment.objects.none()
-        has_paid = False
+        has_paid = True
 
     enrollments = []
     for enrollment in enrollments_qs:

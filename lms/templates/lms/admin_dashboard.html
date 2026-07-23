@@ -318,9 +318,22 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
       <a href="{% url 'setup_2fa' %}" class="nav-item-link" style="margin-top:8px">
         <i class="fas fa-shield-alt"></i> Security (2FA)
       </a>
-      <a href="{% url 'student_preview' %}" class="nav-item-link" style="color:#34d399" target="_blank">
-        <i class="fas fa-eye"></i> Preview as Student
-      </a>
+      <div style="padding:4px 12px">
+        <div style="font-size:10px;color:#64748b;margin-bottom:4px;font-weight:700">PREVIEW COURSE</div>
+        <select onchange="if(this.value) window.open('/lms/classroom/'+this.value+'/','_blank')" style="width:100%;font-size:11px;padding:5px 8px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#94a3b8;margin-bottom:8px">
+          <option value="">Pick a course…</option>
+          {% for course in all_courses %}
+          <option value="{{ course.id }}">{{ course.title|truncatechars:30 }}</option>
+          {% endfor %}
+        </select>
+        <div style="font-size:10px;color:#64748b;margin-bottom:4px;font-weight:700">PREVIEW AS STUDENT</div>
+        <select onchange="if(this.value) window.open('/lms/preview/student/?student_id='+this.value,'_blank')" style="width:100%;font-size:11px;padding:5px 8px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#94a3b8">
+          <option value="">Pick a student…</option>
+          {% for profile in students_profiles %}
+          <option value="{{ profile.user_obj.id }}">{{ profile.user_obj.get_full_name|default:profile.user_obj.username }}</option>
+          {% endfor %}
+        </select>
+      </div>
       <a href="{% url 'lms_logout' %}" class="nav-item-link" style="color:#fca5a5">
         <i class="fas fa-sign-out-alt"></i> Sign Out
       </a>
@@ -958,9 +971,12 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
             <div class="form-row" style="margin-bottom:14px">
               <div class="form-group" style="margin-bottom:0">
                 <label class="form-label">Target Lesson</label>
-                <select name="lesson_id" class="form-control">
-                  {% for l in all_lessons %}<option value="{{ l.id }}">{{ l.module.course.program }} › {{ l.module.title|truncatechars:20 }} › {{ l.title }}</option>{% empty %}<option value="">No lessons yet</option>{% endfor %}
-                </select>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <select name="lesson_id" id="lessonSelector" class="form-control" onchange="updatePreviewLink()">
+                    {% for l in all_lessons %}<option value="{{ l.id }}">{{ l.module.course.program }} › {{ l.module.title|truncatechars:20 }} › {{ l.title }}</option>{% empty %}<option value="">No lessons yet</option>{% endfor %}
+                  </select>
+                  <a id="previewLessonBtn" href="#" target="_blank" style="white-space:nowrap;background:#7c3aed;color:#fff;padding:9px 14px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:700">👁 Preview</a>
+                </div>
               </div>
               <div class="form-group" style="margin-bottom:0">
                 <label class="form-label">Content Title</label>
@@ -1047,127 +1063,120 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
 
             <!-- ══ ASSESSMENTS ══ -->
       <div id="view-testing" class="view-section">
-        <div class="two-col">
-          <div class="panel">
-            <div class="panel-title">Create Quiz</div>
-            <form method="POST" action="{% url 'lms_dashboard' %}">
-              {% csrf_token %}<input type="hidden" name="action" value="create_quiz">
-              <div class="form-group">
-                <label class="form-label">Link to Lesson</label>
-                <select name="lesson_id" class="form-control">{% for l in all_lessons %}<option value="{{ l.id }}">{{ l.title }}</option>{% endfor %}</select>
-              </div>
-              <div class="form-group"><label class="form-label">Quiz Title</label><input type="text" name="title" class="form-control" placeholder="e.g., Module 3 Final Quiz" required></div>
-              <div class="form-group"><label class="form-label">Passing Score (%)</label><input type="number" name="passing_score" value="70" class="form-control"></div>
-              <div class="form-group"><label class="form-label">Time Limit (minutes, 0 = no limit)</label><input type="number" name="time_limit" value="0" class="form-control"></div>
-              <button type="submit" class="btn-submit">Create Quiz</button>
-            </form>
-
-            <div style="margin-top:28px">
-              <div class="panel-title">Add Question</div>
-              <form method="POST" action="{% url 'lms_dashboard' %}" enctype="multipart/form-data">
-              {% csrf_token %}<input type="hidden" name="action" value="create_question">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px">
+            <!-- Create Quiz -->
+            <div class="panel">
+              <div class="panel-title">➕ Create Quiz for a Lesson</div>
+              <form method="POST" action="{% url 'lms_dashboard' %}">
+                {% csrf_token %}<input type="hidden" name="action" value="create_quiz">
                 <div class="form-group">
-                  <label class="form-label">Select Quiz</label>
-                  <select name="quiz_id" class="form-control">{% for q in all_quizzes %}<option value="{{ q.id }}">{{ q.title }}</option>{% endfor %}</select>
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label">Question Type</label>
-                  <select name="question_type" class="form-control" id="questionTypeSelect" onchange="switchQuestionType(this.value)">
-                    <option value="multiple_choice">Multiple Choice</option>
-                    <option value="image_choice">Image + Multiple Choice</option>
-                    <option value="drag_drop_match">Drag &amp; Drop Matching</option>
+                  <label class="form-label">Course</label>
+                  <select id="quizCourseFilter" class="form-control" onchange="filterLessonsForQuiz()">
+                    <option value="">All Courses</option>
+                    {% for course in all_courses %}<option value="{{ course.id }}">{{ course.title|truncatechars:40 }}</option>{% endfor %}
                   </select>
                 </div>
-
-                <div class="form-group"><label class="form-label">Question Text</label><textarea name="text" class="form-control" rows="2" style="resize:vertical" required></textarea></div>
-
-                <!-- Image upload (for image_choice) -->
-                <div class="form-group qtype-section qtype-image_choice" style="display:none">
-                  <label class="form-label">Question Image</label>
-                  <input type="file" name="image" class="form-control" accept="image/*">
+                <div class="form-group">
+                  <label class="form-label">Lesson</label>
+                  <select name="lesson_id" id="quizLessonSelect" class="form-control" required>
+                    {% for l in all_lessons %}<option value="{{ l.id }}" data-course="{{ l.module.course.id }}">{{ l.module.course.program }} › {{ l.module.title|truncatechars:15 }} › {{ l.title }}</option>{% endfor %}
+                  </select>
                 </div>
-
-                <!-- Multiple choice options (for multiple_choice & image_choice) -->
-                <div class="qtype-section qtype-multiple_choice qtype-image_choice">
-                  <div class="form-row">
-                    <div class="form-group"><label class="form-label">Option A</label><input type="text" name="option_a" class="form-control"></div>
-                    <div class="form-group"><label class="form-label">Option B</label><input type="text" name="option_b" class="form-control"></div>
-                    <div class="form-group"><label class="form-label">Option C</label><input type="text" name="option_c" class="form-control"></div>
-                    <div class="form-group"><label class="form-label">Option D</label><input type="text" name="option_d" class="form-control"></div>
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">Correct Answer</label>
-                    <select name="correct_answer" class="form-control"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>
-                  </div>
+                <div class="form-group">
+                  <label class="form-label">Quiz Title</label>
+                  <input type="text" name="title" class="form-control" placeholder="e.g., Chapter 1 Quiz" required>
                 </div>
-
-                <!-- Drag & drop matching pairs -->
-                <div class="qtype-section qtype-drag_drop_match" style="display:none">
-                  <label class="form-label">Matching Pairs (left side matches right side)</label>
-                  <div id="matchPairRows"></div>
-                  <button type="button" onclick="addMatchPair()" style="background:var(--blue);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;margin-top:8px">+ Add Pair</button>
-                  <input type="hidden" name="match_data_json" id="matchDataJson">
+                <div class="form-row">
+                  <div class="form-group"><label class="form-label">Passing Score (%)</label><input type="number" name="passing_score" class="form-control" value="70" min="0" max="100"></div>
+                  <div class="form-group"><label class="form-label">Time Limit (mins, 0=none)</label><input type="number" name="time_limit" class="form-control" value="0" min="0"></div>
                 </div>
-
-                <button type="submit" class="btn-submit green" onclick="return prepareQuestionSubmit()">Add Question</button>
+                <button type="submit" class="btn-submit">Create Quiz</button>
               </form>
             </div>
 
-            <div style="margin-top:28px;border-top:1px solid var(--border);padding-top:20px">
-              <div class="panel-title">Bulk Add Questions</div>
-              <p style="font-size:12px;color:var(--muted);margin-bottom:10px">
-                Paste multiple questions using this format (separate each question with a blank line):
-              </p>
-              <pre style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;color:var(--muted);margin-bottom:12px;overflow-x:auto">Q: What does CNA stand for?
-A) Certified Nursing Assistant
-B) Certified Nurse Aide
-C) Clinical Nursing Associate
-D) Community Nursing Aide
-CORRECT: A
-
-Q: Normal body temperature is?
-A) 96.6°F
-B) 97.6°F
-C) 98.6°F
-D) 99.6°F
-CORRECT: C</pre>
-              <form method="POST" action="{% url 'lms_dashboard' %}">
-                {% csrf_token %}<input type="hidden" name="action" value="bulk_add_questions">
-                <div class="form-group">
-                  <label class="form-label">Select Quiz</label>
-                  <select name="quiz_id" class="form-control" required>{% for q in all_quizzes %}<option value="{{ q.id }}">{{ q.title }}</option>{% endfor %}</select>
+            <!-- All Quizzes grouped by course -->
+            <div class="panel">
+              <div class="panel-title">📋 All Quizzes</div>
+              <div style="max-height:400px;overflow-y:auto">
+                {% for quiz in all_quizzes %}
+                <div style="padding:8px 0;border-bottom:1px solid #f3f4f6">
+                  <div style="font-size:12px;font-weight:700;color:#0f172a">{{ quiz.title }}</div>
+                  <div style="font-size:11px;color:#6b7280">{{ quiz.lesson.module.course.title|truncatechars:25 }} › {{ quiz.lesson.title|truncatechars:20 }}</div>
+                  <div style="font-size:11px;color:#6b7280">Pass: {{ quiz.passing_score }}% · {{ quiz.questions.count }} question{{ quiz.questions.count|pluralize }}</div>
+                  <button onclick="openAddQuestion({{ quiz.id }}, '{{ quiz.title|escapejs }}')" style="font-size:10px;padding:2px 8px;border-radius:4px;border:none;cursor:pointer;background:#1a56db;color:#fff;margin-top:4px">+ Add Question</button>
                 </div>
-                <div class="form-group">
-                  <label class="form-label">Questions (paste in the format above)</label>
-                  <textarea name="bulk_text" class="form-control" rows="10" style="resize:vertical;font-family:monospace;font-size:12px" required placeholder="Q: ...
-A) ...
-B) ...
-C) ...
-D) ...
-CORRECT: A
-
-Q: ...
-A) ...
-B) ...
-C) ...
-D) ...
-CORRECT: B"></textarea>
-                </div>
-                <button type="submit" class="btn-submit green"><i class="fas fa-layer-group"></i> Bulk Add Questions</button>
-              </form>
+                {% empty %}
+                <p style="color:var(--muted);font-size:13px;text-align:center;padding:20px">No quizzes yet.</p>
+                {% endfor %}
+              </div>
             </div>
           </div>
-          <div class="panel">
-            <div class="panel-title">All Quizzes</div>
-            <table class="data-table">
-              <thead><tr><th>Lesson</th><th>Quiz</th><th>Pass Mark</th></tr></thead>
-              <tbody>
-                {% for qz in all_quizzes %}
-                <tr><td style="font-size:12px;color:var(--muted)">{{ qz.lesson.title|truncatechars:28 }}</td><td><strong>{{ qz.title }}</strong></td><td>{{ qz.passing_score }}%</td></tr>
-                {% empty %}<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:20px">No quizzes yet.</td></tr>{% endfor %}
-              </tbody>
-            </table>
+
+          <!-- Add Question Modal trigger area -->
+          <div class="panel" id="addQuestionPanel" style="display:none;margin-bottom:24px">
+            <div class="panel-title">➕ Add Question to: <span id="addQuestionQuizName"></span></div>
+            <form method="POST" action="{% url 'lms_dashboard' %}" id="addQuestionForm">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="create_question">
+              <input type="hidden" name="quiz_id" id="addQuestionQuizId">
+              <div class="form-group">
+                <label class="form-label">Question Type</label>
+                <select name="question_type" class="form-control" id="questionTypeSelect" onchange="toggleQuestionType()">
+                  <option value="multiple_choice">Multiple Choice</option>
+                  <option value="true_false">True / False</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Question Text *</label>
+                <textarea name="text" class="form-control" rows="2" required placeholder="Enter your question here..."></textarea>
+              </div>
+              <div id="mcOptions">
+                <div class="form-row">
+                  <div class="form-group"><label class="form-label">Option A *</label><input type="text" name="option_a" class="form-control" required></div>
+                  <div class="form-group"><label class="form-label">Option B *</label><input type="text" name="option_b" class="form-control" required></div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group"><label class="form-label">Option C *</label><input type="text" name="option_c" class="form-control" required></div>
+                  <div class="form-group"><label class="form-label">Option D *</label><input type="text" name="option_d" class="form-control" required></div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Correct Answer *</label>
+                  <select name="correct_answer" class="form-control" required>
+                    <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+                  </select>
+                </div>
+              </div>
+              <div id="tfOptions" style="display:none">
+                <div class="form-group">
+                  <label class="form-label">Correct Answer</label>
+                  <select name="correct_answer_tf" class="form-control">
+                    <option value="True">True</option><option value="False">False</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display:flex;gap:10px">
+                <button type="submit" class="btn-submit green">Add Question</button>
+                <button type="button" onclick="document.getElementById('addQuestionPanel').style.display='none'" style="padding:10px 20px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;cursor:pointer">Cancel</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Bulk Add -->
+          <div class="panel" style="margin-bottom:24px">
+            <div class="panel-title">📋 Bulk Add Questions</div>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Paste multiple questions using the format below. Each question separated by a blank line.</p>
+            <form method="POST" action="{% url 'lms_dashboard' %}">
+              {% csrf_token %}<input type="hidden" name="action" value="bulk_add_questions">
+              <div class="form-group">
+                <label class="form-label">Select Quiz</label>
+                <select name="quiz_id" class="form-control">{% for quiz in all_quizzes %}<option value="{{ quiz.id }}">{{ quiz.title }} ({{ quiz.lesson.title }})</option>{% endfor %}</select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Questions</label>
+                <textarea name="bulk_questions" class="form-control" rows="8" placeholder="Q: What does CNA stand for?&#10;A) Certified Nursing Assistant&#10;B) Certified Nurse Aide&#10;C) Clinical Nursing Associate&#10;D) Community Nursing Aide&#10;CORRECT: A"></textarea>
+              </div>
+              <button type="submit" class="btn-submit green"><i class="fas fa-layer-group"></i> Bulk Add Questions</button>
+            </form>
           </div>
         </div>
       </div>
@@ -1899,12 +1908,18 @@ const SECTION_NAMES = {
   testing:'Assessments', enrollments:'Enrollments',
   credentials:'Certificates', support:'Support Tickets',
   subscriptions:'Subscriptions', programs:'Website Programs',
-  blog:'Blog Posts', events:'Events'
+  blog:'Blog Posts', events:'Events',
+  manage_courses:'Manage Courses', content_library:'Content Library',
+  activity_monitor:'Live Activity', revenue:'Revenue Reports',
+  audit_log:'Audit Log', reviews:'Course Reviews',
+  interactive:'Interactive Content', announcements:'Announcements',
+  discussions:'Discussions'
 };
 function switchTab(tabId, clickedEl) {
   document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-  document.getElementById('view-' + tabId).classList.add('active');
+  var target = document.getElementById('view-' + tabId);
+  if (target) target.classList.add('active');
   if (clickedEl) clickedEl.classList.add('active');
   document.getElementById('topbar-section-name').textContent = SECTION_NAMES[tabId] || tabId;
 }
@@ -2163,6 +2178,45 @@ function copyPayLink(courseId) {
     prompt('Copy this link and share with your client:', url);
   }
 }
+
+function openAddQuestion(quizId, quizName) {
+  document.getElementById('addQuestionQuizId').value = quizId;
+  document.getElementById('addQuestionQuizName').textContent = quizName;
+  document.getElementById('addQuestionPanel').style.display = 'block';
+  document.getElementById('addQuestionPanel').scrollIntoView({behavior:'smooth'});
+}
+
+function openViewQuestions(quizId, quizName) {
+  window.location.href = '#view-assessments';
+  alert('Quiz: ' + quizName + '\nTo view/edit questions, use the Django admin at /admin/lms/question/?quiz__id=' + quizId);
+}
+
+function toggleQuestionType() {
+  var type = document.getElementById('questionTypeSelect').value;
+  document.getElementById('mcOptions').style.display = type === 'multiple_choice' ? 'block' : 'none';
+  document.getElementById('tfOptions').style.display = type === 'true_false' ? 'block' : 'none';
+}
+
+function filterLessonsForQuiz() {
+  var courseId = document.getElementById('quizCourseFilter').value;
+  var select = document.getElementById('quizLessonSelect');
+  for (var i = 0; i < select.options.length; i++) {
+    var opt = select.options[i];
+    opt.style.display = (!courseId || opt.dataset.course === courseId) ? '' : 'none';
+  }
+}
+
+function updatePreviewLink() {
+  var sel = document.getElementById('lessonSelector');
+  var btn = document.getElementById('previewLessonBtn');
+  if (sel && btn && sel.value) {
+    btn.href = '/lms/lesson/' + sel.value + '/';
+  }
+}
+// Init on page load
+document.addEventListener('DOMContentLoaded', function() {
+  updatePreviewLink();
+});
 
 function toggleSidebar() {
   const s = document.querySelector('.sidebar');
