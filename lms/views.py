@@ -199,14 +199,18 @@ def lms_dashboard_view(request):
             # --- TESTING & ASSESSMENTS INJECTOR ---
             elif action == 'create_quiz':
                 lesson_id = request.POST.get('lesson_id')
-                title = request.POST.get('title')
-                passing = request.POST.get('passing_score', 70)
+                title = request.POST.get('title') or request.POST.get('quiz_title', '')
+                passing = request.POST.get('passing_score') or request.POST.get('pass_mark', 70)
                 time_limit = request.POST.get('time_limit', 0)
                 if lesson_id:
                     les = get_object_or_404(Lesson, id=lesson_id)
-                    Quiz.objects.create(lesson=les, title=title, passing_score=passing, time_limit=time_limit)
-                    messages.success(request, f"Assessment module '{title}' linked directly to Lesson.")
-                return redirect('lms_dashboard')
+                    existing = Quiz.objects.filter(lesson=les).first()
+                    if existing:
+                        messages.warning(request, f"This lesson already has a quiz: '{existing.title}'. Please add questions to the existing quiz instead.")
+                    else:
+                        Quiz.objects.create(lesson=les, title=title, passing_score=passing, time_limit=time_limit)
+                        messages.success(request, f"Quiz '{title}' created successfully!")
+                return redirect('/lms/dashboard/?tab=testing')
 
             elif action == 'create_question':
                 quiz_id = request.POST.get('quiz_id')
@@ -247,6 +251,7 @@ def lms_dashboard_view(request):
             elif action == 'bulk_add_questions':
                 quiz_id = request.POST.get('quiz_id')
                 bulk_text = request.POST.get('bulk_text', '')
+                print(f"DEBUG bulk_add: quiz_id={quiz_id}, text_length={len(bulk_text)}, text_preview={bulk_text[:100]}")
 
                 if quiz_id and bulk_text.strip():
                     qz = get_object_or_404(Quiz, id=quiz_id)
@@ -836,9 +841,25 @@ def course_classroom(request, course_id):
 
 # Add this to lms/views.py
 @login_required(login_url='lms_login')
+@login_required(login_url='lms_login')
 def quiz_view(request, quiz_id):
     quiz = get_object_or_404(Quiz, id=quiz_id)
-    # Placeholder: replace with your actual quiz rendering logic
+    # Staff can always access
+    if not request.user.is_staff:
+        # Check payment
+        has_paid = Subscription.objects.filter(student=request.user, status='active').exists()
+        if not has_paid:
+            messages.warning(request, 'Please complete your payment to access assessments.')
+            return redirect('enroll_page', course_id=quiz.lesson.module.course_id)
+        # Check lesson was completed
+        lesson_completed = LessonProgress.objects.filter(
+            student=request.user,
+            lesson=quiz.lesson,
+            is_completed=True
+        ).exists()
+        if not lesson_completed:
+            messages.warning(request, 'Please complete the lesson before taking the quiz.')
+            return redirect('lesson_view', lesson_id=quiz.lesson.id)
     return render(request, 'lms/quiz.html', {'quiz': quiz})
 @login_required(login_url='lms_login')
 def submit_quiz(request, quiz_id):

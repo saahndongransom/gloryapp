@@ -1079,7 +1079,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
                 <div class="form-group">
                   <label class="form-label">Lesson</label>
                   <select name="lesson_id" id="quizLessonSelect" class="form-control" required>
-                    {% for l in all_lessons %}<option value="{{ l.id }}" data-course="{{ l.module.course.id }}">{{ l.module.course.program }} › {{ l.module.title|truncatechars:15 }} › {{ l.title }}</option>{% endfor %}
+                    {% for l in all_lessons %}<option value="{{ l.id }}" data-course="{{ l.module.course.id }}">{{ l.module.course.program }} › {{ l.module.title|truncatechars:15 }} › {{ l.title }}{% if l.quiz %} ✅ has quiz{% endif %}</option>{% endfor %}
                   </select>
                 </div>
                 <div class="form-group">
@@ -1169,11 +1169,11 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
               {% csrf_token %}<input type="hidden" name="action" value="bulk_add_questions">
               <div class="form-group">
                 <label class="form-label">Select Quiz</label>
-                <select name="quiz_id" class="form-control">{% for quiz in all_quizzes %}<option value="{{ quiz.id }}">{{ quiz.title }} ({{ quiz.lesson.title }})</option>{% endfor %}</select>
+                <select name="quiz_id" class="form-control">{% for quiz in all_quizzes %}<option value="{{ quiz.id }}">{{ quiz.title }} — {{ quiz.lesson.module.course.program }} › {{ quiz.lesson.title }}</option>{% endfor %}</select>
               </div>
               <div class="form-group">
                 <label class="form-label">Questions</label>
-                <textarea name="bulk_questions" class="form-control" rows="8" placeholder="Q: What does CNA stand for?&#10;A) Certified Nursing Assistant&#10;B) Certified Nurse Aide&#10;C) Clinical Nursing Associate&#10;D) Community Nursing Aide&#10;CORRECT: A"></textarea>
+                <textarea name="bulk_text" class="form-control" rows="8" placeholder="Q: What does CNA stand for?&#10;A) Certified Nursing Assistant&#10;B) Certified Nurse Aide&#10;C) Clinical Nursing Associate&#10;D) Community Nursing Aide&#10;CORRECT: A"></textarea>
               </div>
               <button type="submit" class="btn-submit green"><i class="fas fa-layer-group"></i> Bulk Add Questions</button>
             </form>
@@ -1922,7 +1922,18 @@ function switchTab(tabId, clickedEl) {
   if (target) target.classList.add('active');
   if (clickedEl) clickedEl.classList.add('active');
   document.getElementById('topbar-section-name').textContent = SECTION_NAMES[tabId] || tabId;
+  try { localStorage.setItem('lms_active_tab', tabId); } catch(e) {}
 }
+
+// Restore last active tab on page load
+document.addEventListener('DOMContentLoaded', function() {
+  var urlParams = new URLSearchParams(window.location.search);
+  var tab = urlParams.get('tab') || localStorage.getItem('lms_active_tab');
+  if (tab && document.getElementById('view-' + tab)) {
+    var btn = document.querySelector('[onclick*="switchTab(\''+tab+'\'"]');
+    switchTab(tab, btn);
+  }
+});
 
 
 
