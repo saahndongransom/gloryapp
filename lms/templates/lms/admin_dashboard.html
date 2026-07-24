@@ -511,6 +511,98 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
             </table>
           </div>
         </div>
+
+        <!-- Student Balances -->
+        <div class="panel" style="margin-top:24px">
+          <div class="panel-title">
+            💰 Student Balances
+            <span style="float:right;font-size:11px;color:var(--muted);font-weight:400">
+              Owing: {{ student_balances|length }} students
+            </span>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Email</th>
+                <th>Course</th>
+                <th>Due</th>
+                <th>Paid</th>
+                <th>Balance</th>
+                <th>Status</th>
+                <th>Receipt</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for b in student_balances %}
+              <tr>
+                <td><strong>{{ b.student.get_full_name|default:b.student.username }}</strong></td>
+                <td style="font-size:12px;color:var(--muted)">{{ b.student.email }}</td>
+                <td style="font-size:12px">{{ b.course.title|truncatechars:25 }}</td>
+                <td>${{ b.amount_due|floatformat:2 }}</td>
+                <td style="color:var(--green);font-weight:700">${{ b.amount_paid|floatformat:2 }}</td>
+                <td style="font-weight:700;{% if b.balance > 0 %}color:#dc2626{% else %}color:var(--green){% endif %}">
+                  ${{ b.balance|floatformat:2 }}
+                </td>
+                <td>
+                  {% if b.balance <= 0 %}
+                    <span class="badge badge-active">✅ Paid</span>
+                  {% else %}
+                    <span class="badge badge-danger">⚠️ Owing</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <a href="/lms/receipt/{{ b.student.id }}/{{ b.course.id }}/" target="_blank" style="font-size:11px;padding:3px 8px;border-radius:5px;background:#1a56db;color:#fff;text-decoration:none">🧾 Receipt</a>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:30px">No student balances.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Payment Receipts -->
+        <div class="panel" style="margin-top:24px">
+          <div class="panel-title">
+            💳 All Payment Receipts
+            <span style="float:right;font-size:11px;color:var(--muted);font-weight:400">{{ all_subscriptions|length }} total payments</span>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Student</th>
+                <th>Email</th>
+                <th>Course/Program</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for sub in all_subscriptions %}
+              <tr>
+                <td style="color:var(--muted);font-size:11px">#{{ sub.id }}</td>
+                <td><strong>{{ sub.student.get_full_name|default:sub.student.username }}</strong></td>
+                <td style="font-size:12px;color:var(--muted)">{{ sub.student.email }}</td>
+                <td style="font-size:12px">{{ sub.tier_name }}</td>
+                <td style="font-weight:700;color:var(--green)">${{ sub.amount_paid|floatformat:2 }}</td>
+                <td>
+                  {% if sub.status == 'active' %}
+                    <span class="badge badge-active">✅ Active</span>
+                  {% else %}
+                    <span class="badge badge-danger">{{ sub.status }}</span>
+                  {% endif %}
+                </td>
+                <td style="font-size:12px;white-space:nowrap">{{ sub.started_at|date:"M d, Y H:i" }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px">No payments yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- ══ AUDIT LOG ══ -->

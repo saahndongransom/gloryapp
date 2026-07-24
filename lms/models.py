@@ -186,6 +186,7 @@ class Subscription(models.Model):
     amount_paid = models.DecimalField(max_digits=8, decimal_places=2, default=0.00)
     status = models.CharField(max_length=20, default='active')
     started_at = models.DateTimeField(auto_now_add=True)
+    breakdown = models.JSONField(default=dict, blank=True)
 
 
 
@@ -350,3 +351,4 @@ class StudentJourney(models.Model):
 
     def __str__(self):
         return f"{self.student_email} — {self.stage}"
+# Note: breakdown field added to Subscription via migration

@@ -560,24 +560,52 @@ def lms_dashboard_view(request):
                 title = request.POST.get('title', '').strip()
                 program = request.POST.get('program', '').strip()
                 structure_json = request.POST.get('structure', '[]')
+                edit_course_id = request.POST.get('edit_course_id', '').strip()
                 if title and program:
                     price = float(request.POST.get('price', 0) or 0)
-                    course = Course.objects.create(title=title, program=program, price=price, is_published=True)
+                    if edit_course_id:
+                        # UPDATE existing course
+                        course = get_object_or_404(Course, id=edit_course_id)
+                        course.title = title
+                        course.program = program
+                        course.price = price
+                        course.save()
+                        # Add new modules/lessons without deleting existing ones
+                        existing_mod_titles = set(course.modules.values_list('title', flat=True))
+                        max_mod_order = course.modules.aggregate(m=models.Max('order'))['m'] or 0
+                        action_msg = f"Course '{title}' updated successfully!"
+                    else:
+                        # CREATE new course
+                        course = Course.objects.create(title=title, program=program, price=price, is_published=True)
+                        existing_mod_titles = set()
+                        max_mod_order = 0
+                        action_msg = f"Course '{title}' created successfully!"
                     try:
                         structure = json.loads(structure_json)
-                        for mod_order, mod_data in enumerate(structure, start=1):
+                        for mod_data in structure:
                             mod_title = mod_data.get('title', '').strip()
                             if not mod_title:
                                 continue
-                            module = Module.objects.create(course=course, title=mod_title, order=mod_order)
-                            for les_order, les_data in enumerate(mod_data.get('lessons', []), start=1):
-                                les_title = les_data.get('title', '').strip()
-                                if not les_title:
-                                    continue
-                                Lesson.objects.create(module=module, title=les_title, order=les_order)
+                            if mod_title in existing_mod_titles:
+                                # Add new lessons to existing module
+                                module = course.modules.filter(title=mod_title).first()
+                                existing_les = set(module.lessons.values_list('title', flat=True))
+                                max_les = module.lessons.aggregate(m=models.Max('order'))['m'] or 0
+                                for les_data in mod_data.get('lessons', []):
+                                    les_title = les_data.get('title', '').strip()
+                                    if les_title and les_title not in existing_les:
+                                        max_les += 1
+                                        Lesson.objects.create(module=module, title=les_title, order=max_les)
+                            else:
+                                max_mod_order += 1
+                                module = Module.objects.create(course=course, title=mod_title, order=max_mod_order)
+                                for les_order, les_data in enumerate(mod_data.get('lessons', []), start=1):
+                                    les_title = les_data.get('title', '').strip()
+                                    if les_title:
+                                        Lesson.objects.create(module=module, title=les_title, order=les_order)
                     except (json.JSONDecodeError, KeyError):
                         pass
-                    messages.success(request, f"Course '{title}' created successfully!")
+                    messages.success(request, action_msg)
                 return redirect('lms_dashboard')
 
         # --- REVENUE & ANALYTICS METRICS AGGREGATION ---
@@ -630,10 +658,30 @@ def lms_dashboard_view(request):
         ]
 
 
+        # Financial balance data
+        from lms.models import Enrollment as EnrollmentModel2
+        student_balances = []
+        for s in raw_students:
+            s_subs = Subscription.objects.filter(student=s)
+            s_enrollments = EnrollmentModel2.objects.filter(student=s).select_related('course')
+            for e in s_enrollments:
+                paid = float(sum(sub.amount_paid for sub in s_subs))
+                due = float(e.course.price)
+                balance = due - paid
+                student_balances.append({
+                    'student': s,
+                    'course': e.course,
+                    'amount_due': due,
+                    'amount_paid': paid,
+                    'balance': balance,
+                    'status': 'Paid' if balance <= 0 else 'Owing',
+                })
+
         context = {
             'all_students': raw_students,
             'students_profiles': students_profiles,
             'abandoned_forms': abandoned_forms,
+            'student_balances': student_balances,
             'all_courses': Course.objects.all(),
             'all_modules': Module.objects.all(),
             'all_lessons': Lesson.objects.all(),
@@ -1547,6 +1595,60 @@ def student_preview(request):
     return render(request, 'lms/dashboard.html', context)
 
 
+@login_required(login_url='lms_login')
+def student_receipt(request, student_id, course_id):
+    if not request.user.is_staff:
+        return redirect('lms_dashboard')
+    from django.contrib.auth.models import User as AuthUser
+    student = get_object_or_404(AuthUser, id=student_id)
+    course = get_object_or_404(Course, id=course_id)
+    subs = Subscription.objects.filter(student=student)
+    amount_paid = float(sum(s.amount_paid for s in subs))
+    # Use total charged (including fees) as amount due if breakdown exists
+    last_sub = subs.order_by('-started_at').first()
+    if last_sub and last_sub.breakdown and last_sub.breakdown.get('total'):
+        amount_due = float(last_sub.breakdown['total'])
+    else:
+        amount_due = float(course.price)
+    balance = amount_due - amount_paid
+    context = {
+        'student': student,
+        'course': course,
+        'amount_paid': amount_paid,
+        'amount_due': amount_due,
+        'balance': balance,
+        'payments': subs,
+    }
+    return render(request, 'lms/student_receipt.html', context)
+
+
+@login_required(login_url='lms_login')
+def student_receipt(request, student_id, course_id):
+    if not request.user.is_staff:
+        return redirect('lms_dashboard')
+    from django.contrib.auth.models import User as AuthUser
+    student = get_object_or_404(AuthUser, id=student_id)
+    course = get_object_or_404(Course, id=course_id)
+    subs = Subscription.objects.filter(student=student)
+    amount_paid = float(sum(s.amount_paid for s in subs))
+    # Use total charged (including fees) as amount due if breakdown exists
+    last_sub = subs.order_by('-started_at').first()
+    if last_sub and last_sub.breakdown and last_sub.breakdown.get('total'):
+        amount_due = float(last_sub.breakdown['total'])
+    else:
+        amount_due = float(course.price)
+    balance = amount_due - amount_paid
+    context = {
+        'student': student,
+        'course': course,
+        'amount_paid': amount_paid,
+        'amount_due': amount_due,
+        'balance': balance,
+        'payments': subs,
+    }
+    return render(request, 'lms/student_receipt.html', context)
+
+
 def generic_payment(request):
     """Generic payment page — collect name, email, amount, reason and process payment."""
     from dotenv import load_dotenv
@@ -1777,11 +1879,25 @@ def process_payment(request, course_id):
             Enrollment.objects.create(student=new_user, course=course)
 
             # Create subscription record
+            addon_exam = float(request.POST.get('addon_exam') or 0)
+            addon_tb = float(request.POST.get('addon_tb') or 0)
+            addon_bg = float(request.POST.get('addon_bg') or 0)
+            tuition = float(course.price)
+            subtotal = float(amount)/100 / 1.037  # Remove processing fee
+            proc_fee = float(amount)/100 - subtotal
             Subscription.objects.create(
                 student=new_user,
-                tier_name=course.program,
-                amount_paid=course.price,
-                status='active'
+                tier_name=course.title,
+                amount_paid=float(amount)/100,
+                status='active',
+                breakdown={
+                    'tuition': tuition,
+                    'state_exam': addon_exam,
+                    'tb_test': addon_tb,
+                    'background_check': addon_bg,
+                    'processing_fee': round(proc_fee, 2),
+                    'total': float(amount)/100,
+                }
             )
 
             # Notify Glory Nursing of new enrollment

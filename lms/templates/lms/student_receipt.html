@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Receipt - {{ student.get_full_name }}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f1f5f9;padding:40px 20px}
+.receipt{max-width:600px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+.header{background:#16213e;color:#fff;padding:32px;text-align:center}
+.header h1{font-size:22px;font-weight:800;margin-bottom:4px}
+.header p{color:#94a3b8;font-size:13px}
+.body{padding:32px}
+.row{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f1f5f9;font-size:14px}
+.row:last-child{border-bottom:none}
+.label{color:#64748b}
+.value{font-weight:600;color:#0f172a}
+.total-row{background:#f8fafc;border-radius:10px;padding:16px;margin:20px 0;display:flex;justify-content:space-between;align-items:center}
+.total-label{font-size:14px;font-weight:700;color:#0f172a}
+.total-value{font-size:22px;font-weight:800}
+.paid{color:#059669}
+.owing{color:#dc2626}
+.status-badge{display:inline-block;padding:6px 16px;border-radius:20px;font-size:12px;font-weight:700;margin-top:16px}
+.badge-paid{background:#d1fae5;color:#065f46}
+.badge-owing{background:#fee2e2;color:#991b1b}
+.footer{background:#f8fafc;padding:20px 32px;text-align:center;font-size:12px;color:#64748b}
+.print-btn{display:block;margin:20px auto;background:#1a56db;color:#fff;border:none;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer}
+@media print{.print-btn{display:none}body{background:#fff;padding:0}.receipt{box-shadow:none}}
+</style>
+</head>
+<body>
+<div class="receipt">
+  <div class="header">
+    <h1>Glory Nursing Healthcare Training School</h1>
+    <p>12032 N. Pennsylvania Ave, Oklahoma City, OK 73120</p>
+    <p>(405) 968-5004 · glorynursing@yahoo.com</p>
+  </div>
+  <div class="body">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:16px;font-weight:800;color:#0f172a">PAYMENT RECEIPT</div>
+      <div style="font-size:12px;color:#64748b">Generated: {% now "N j, Y" %}</div>
+    </div>
+
+    <div class="row"><span class="label">Student Name</span><span class="value">{{ student.get_full_name }}</span></div>
+    <div class="row"><span class="label">Email</span><span class="value">{{ student.email }}</span></div>
+    <div class="row"><span class="label">Program</span><span class="value">{{ course.title }}</span></div>
+    <div class="row"><span class="label">Enrollment Date</span><span class="value">{{ student.date_joined|date:"N j, Y" }}</span></div>
+
+    <div style="margin-top:24px;margin-bottom:8px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em">Payment Summary</div>
+
+    <div class="row"><span class="label">Program Tuition</span><span class="value">${{ amount_due|floatformat:2 }}</span></div>
+    <div class="row"><span class="label">Amount Paid</span><span class="value paid">${{ amount_paid|floatformat:2 }}</span></div>
+    <div class="row"><span class="label">Outstanding Balance</span><span class="value {% if balance > 0 %}owing{% else %}paid{% endif %}">${{ balance|floatformat:2 }}</span></div>
+
+    {% if payments %}
+    <div style="margin-top:24px;margin-bottom:8px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em">Payment History</div>
+    {% for p in payments %}
+    <div class="row">
+      <span class="label">{{ p.started_at|date:"N j, Y" }} — {{ p.tier_name }}</span>
+      <span class="value paid">${{ p.amount_paid|floatformat:2 }}</span>
+    </div>
+    {% if p.breakdown %}
+    <div style="background:#f8fafc;border-radius:8px;padding:12px;margin-bottom:8px;font-size:12px">
+      <div style="font-weight:700;margin-bottom:8px;color:#64748b">Breakdown:</div>
+      {% if p.breakdown.tuition %}<div class="row" style="padding:4px 0"><span class="label">Course Tuition</span><span>${{ p.breakdown.tuition|floatformat:2 }}</span></div>{% endif %}
+      {% if p.breakdown.state_exam %}<div class="row" style="padding:4px 0"><span class="label">State Exam Fee</span><span>${{ p.breakdown.state_exam|floatformat:2 }}</span></div>{% endif %}
+      {% if p.breakdown.tb_test %}<div class="row" style="padding:4px 0"><span class="label">TB Test</span><span>${{ p.breakdown.tb_test|floatformat:2 }}</span></div>{% endif %}
+      {% if p.breakdown.background_check %}<div class="row" style="padding:4px 0"><span class="label">Background Check</span><span>${{ p.breakdown.background_check|floatformat:2 }}</span></div>{% endif %}
+      {% if p.breakdown.processing_fee %}<div class="row" style="padding:4px 0"><span class="label">Processing Fee (3.7%)</span><span>${{ p.breakdown.processing_fee|floatformat:2 }}</span></div>{% endif %}
+    </div>
+    {% endif %}
+    {% endfor %}
+    {% endif %}
+
+    <div class="total-row">
+      <span class="total-label">BALANCE DUE</span>
+      <span class="total-value {% if balance > 0 %}owing{% else %}paid{% endif %}">${{ balance|floatformat:2 }}</span>
+    </div>
+
+    <div style="text-align:center">
+      {% if balance <= 0 %}
+        <span class="status-badge badge-paid">✅ FULLY PAID</span>
+      {% else %}
+        <span class="status-badge badge-owing">⚠️ BALANCE OUTSTANDING</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="footer">
+    <p>Thank you for choosing Glory Nursing Healthcare Training School</p>
+    <p style="margin-top:4px">This is an official receipt. Please keep for your records.</p>
+  </div>
+</div>
+<button class="print-btn" onclick="window.print()">🖨️ Print Receipt</button>
+</body>
+</html>
