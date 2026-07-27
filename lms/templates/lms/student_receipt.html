@@ -2,94 +2,178 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Receipt - {{ student.get_full_name }}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f1f5f9;padding:40px 20px}
-.receipt{max-width:600px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)}
-.header{background:#16213e;color:#fff;padding:32px;text-align:center}
-.header h1{font-size:22px;font-weight:800;margin-bottom:4px}
-.header p{color:#94a3b8;font-size:13px}
-.body{padding:32px}
-.row{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f1f5f9;font-size:14px}
-.row:last-child{border-bottom:none}
-.label{color:#64748b}
-.value{font-weight:600;color:#0f172a}
-.total-row{background:#f8fafc;border-radius:10px;padding:16px;margin:20px 0;display:flex;justify-content:space-between;align-items:center}
-.total-label{font-size:14px;font-weight:700;color:#0f172a}
-.total-value{font-size:22px;font-weight:800}
-.paid{color:#059669}
-.owing{color:#dc2626}
-.status-badge{display:inline-block;padding:6px 16px;border-radius:20px;font-size:12px;font-weight:700;margin-top:16px}
-.badge-paid{background:#d1fae5;color:#065f46}
-.badge-owing{background:#fee2e2;color:#991b1b}
-.footer{background:#f8fafc;padding:20px 32px;text-align:center;font-size:12px;color:#64748b}
-.print-btn{display:block;margin:20px auto;background:#1a56db;color:#fff;border:none;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer}
-@media print{.print-btn{display:none}body{background:#fff;padding:0}.receipt{box-shadow:none}}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:#e2e8f0;padding:40px 20px;min-height:100vh}
+
+.receipt{max-width:680px;margin:0 auto;background:#fff;border-radius:0;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.15);position:relative}
+
+/* Watermark */
+.receipt::before{
+  content:'GLORY NURSING';
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-45deg);
+  font-size:72px;font-weight:900;color:rgba(22,33,62,0.04);
+  white-space:nowrap;pointer-events:none;z-index:0;letter-spacing:8px;
+}
+
+/* Security pattern border */
+.security-border{
+  height:12px;
+  background:repeating-linear-gradient(90deg,#16213e 0,#16213e 10px,#1a56db 10px,#1a56db 20px,#059669 20px,#059669 30px,#16213e 30px,#16213e 40px);
+}
+
+.header{
+  background:linear-gradient(135deg,#16213e 0%,#1a3a6e 60%,#1a56db 100%);
+  color:#fff;padding:32px 40px;text-align:center;position:relative;z-index:1;
+}
+.logo-row{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:12px}
+.logo-circle{width:56px;height:56px;background:rgba(255,255,255,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;border:2px solid rgba(255,255,255,.3)}
+.school-name{font-size:20px;font-weight:900;letter-spacing:.5px}
+.school-sub{color:rgba(255,255,255,.7);font-size:12px;margin-top:2px}
+.receipt-title{font-size:13px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.6);margin-top:16px;margin-bottom:4px}
+.receipt-code{font-size:18px;font-weight:900;letter-spacing:2px;color:#fff;background:rgba(255,255,255,.1);display:inline-block;padding:6px 20px;border-radius:6px;border:1px solid rgba(255,255,255,.2)}
+
+.body{padding:32px 40px;position:relative;z-index:1}
+
+.section-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:#94a3b8;margin-bottom:12px;margin-top:24px;padding-bottom:6px;border-bottom:1px solid #e2e8f0}
+
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px}
+.info-item{background:#f8fafc;border-radius:8px;padding:12px 14px;border-left:3px solid #1a56db}
+.info-item .label{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.info-item .value{font-size:14px;font-weight:700;color:#0f172a}
+
+.fee-table{width:100%;border-collapse:collapse;margin-top:8px}
+.fee-table th{background:#16213e;color:#fff;padding:10px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;text-align:left}
+.fee-table th:last-child{text-align:right}
+.fee-table td{padding:10px 14px;font-size:13px;border-bottom:1px solid #f1f5f9}
+.fee-table td:last-child{text-align:right;font-weight:600}
+.fee-table tr:nth-child(even) td{background:#f8fafc}
+.fee-table .total-row td{background:#16213e;color:#fff;font-weight:800;font-size:14px}
+.fee-table .paid-row td{background:#d1fae5;color:#065f46;font-weight:700}
+.fee-table .balance-row-paid td{background:#d1fae5;color:#065f46;font-weight:800;font-size:15px}
+.fee-table .balance-row-owing td{background:#fee2e2;color:#991b1b;font-weight:800;font-size:15px}
+
+.status-section{text-align:center;margin:24px 0 16px}
+.status-badge{display:inline-block;padding:12px 32px;border-radius:30px;font-size:14px;font-weight:800;letter-spacing:.5px}
+.badge-paid{background:linear-gradient(135deg,#059669,#047857);color:#fff;box-shadow:0 4px 12px rgba(5,150,105,.3)}
+.badge-owing{background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;box-shadow:0 4px 12px rgba(220,38,38,.3)}
+
+.verify-box{background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:14px;text-align:center;margin-top:20px}
+.verify-box p{font-size:11px;color:#0369a1;margin-bottom:4px}
+.verify-box code{font-size:12px;font-weight:700;color:#0c4a6e;background:#e0f2fe;padding:3px 8px;border-radius:4px}
+
+.security-features{display:flex;gap:16px;margin-top:16px;justify-content:center}
+.sec-item{display:flex;align-items:center;gap:6px;font-size:10px;color:#94a3b8}
+.sec-item span{font-size:14px}
+
+.footer{background:linear-gradient(135deg,#16213e,#1a3a6e);color:rgba(255,255,255,.6);padding:16px 40px;text-align:center;font-size:11px;position:relative;z-index:1}
+.footer strong{color:#fff}
+
+.action-buttons{display:flex;gap:12px;justify-content:center;padding:20px;background:#f8fafc;border-top:1px solid #e2e8f0}
+.btn{padding:11px 24px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;text-decoration:none;display:inline-block}
+.btn-print{background:#16213e;color:#fff}
+.btn-pdf{background:#059669;color:#fff}
+.btn-verify{background:#7c3aed;color:#fff}
+
+@media print{
+  body{background:#fff;padding:0}
+  .receipt{box-shadow:none;max-width:100%}
+  .action-buttons{display:none}
+  .security-border{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .header{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .fee-table .total-row td,.fee-table .paid-row td,.fee-table .balance-row-paid td{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
 </style>
 </head>
 <body>
 <div class="receipt">
+  <div class="security-border"></div>
+
   <div class="header">
-    <h1>Glory Nursing Healthcare Training School</h1>
-    <p>12032 N. Pennsylvania Ave, Oklahoma City, OK 73120</p>
-    <p>(405) 968-5004 · glorynursing@yahoo.com</p>
+    <div class="logo-row">
+      <img src="https://glorynursingok.com/static/core/images/glorylogo.png" alt="Glory Nursing" style="height:56px;object-fit:contain">
+      <div>
+        <div class="school-name">Glory Nursing</div>
+        <div class="school-sub">Healthcare Training School</div>
+      </div>
+    </div>
+    <div class="receipt-title">Official Payment Receipt</div>
+    {% for p in payments %}{% if p.receipt_code %}
+    <div class="receipt-code">{{ p.receipt_code }}</div>
+    {% endif %}{% endfor %}
   </div>
+
   <div class="body">
-    <div style="text-align:center;margin-bottom:24px">
-      <div style="font-size:16px;font-weight:800;color:#0f172a">PAYMENT RECEIPT</div>
-      <div style="font-size:12px;color:#64748b">Generated: {% now "N j, Y" %}</div>
+
+    <div class="section-label">Student Information</div>
+    <div class="info-grid">
+      <div class="info-item"><div class="label">Full Name</div><div class="value">{{ student.get_full_name }}</div></div>
+      <div class="info-item"><div class="label">Email</div><div class="value" style="font-size:12px">{{ student.email }}</div></div>
+      <div class="info-item"><div class="label">Program</div><div class="value" style="font-size:12px">{{ course.title }}</div></div>
+      <div class="info-item"><div class="label">Enrollment Date</div><div class="value">{{ student.date_joined|date:"N j, Y" }}</div></div>
     </div>
 
-    <div class="row"><span class="label">Student Name</span><span class="value">{{ student.get_full_name }}</span></div>
-    <div class="row"><span class="label">Email</span><span class="value">{{ student.email }}</span></div>
-    <div class="row"><span class="label">Program</span><span class="value">{{ course.title }}</span></div>
-    <div class="row"><span class="label">Enrollment Date</span><span class="value">{{ student.date_joined|date:"N j, Y" }}</span></div>
+    <div class="section-label">Payment Details</div>
+    <table class="fee-table">
+      <thead><tr><th>Description</th><th>Amount</th></tr></thead>
+      <tbody>
+        {% for p in payments %}
+        {% if p.breakdown %}
+        {% if p.breakdown.tuition %}<tr><td>Course Tuition</td><td>${{ p.breakdown.tuition|floatformat:2 }}</td></tr>{% endif %}
+        {% if p.breakdown.state_exam %}<tr><td>State Exam Fee</td><td>${{ p.breakdown.state_exam|floatformat:2 }}</td></tr>{% endif %}
+        {% if p.breakdown.tb_test %}<tr><td>TB Test</td><td>${{ p.breakdown.tb_test|floatformat:2 }}</td></tr>{% endif %}
+        {% if p.breakdown.background_check %}<tr><td>Background Check</td><td>${{ p.breakdown.background_check|floatformat:2 }}</td></tr>{% endif %}
+        {% if p.breakdown.processing_fee %}<tr><td>Processing Fee (3.7%)</td><td>${{ p.breakdown.processing_fee|floatformat:2 }}</td></tr>{% endif %}
+        {% else %}
+        <tr><td>Course Tuition — {{ course.title }}</td><td>${{ p.amount_paid|floatformat:2 }}</td></tr>
+        {% endif %}
+        {% endfor %}
+        <tr class="total-row"><td>TOTAL CHARGED</td><td>${{ amount_due|floatformat:2 }}</td></tr>
+        <tr class="paid-row"><td>AMOUNT PAID</td><td>${{ amount_paid|floatformat:2 }}</td></tr>
+        <tr class="{% if balance <= 0 %}balance-row-paid{% else %}balance-row-owing{% endif %}"><td>BALANCE DUE</td><td>${{ balance|floatformat:2 }}</td></tr>
+      </tbody>
+    </table>
 
-    <div style="margin-top:24px;margin-bottom:8px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em">Payment Summary</div>
-
-    <div class="row"><span class="label">Program Tuition</span><span class="value">${{ amount_due|floatformat:2 }}</span></div>
-    <div class="row"><span class="label">Amount Paid</span><span class="value paid">${{ amount_paid|floatformat:2 }}</span></div>
-    <div class="row"><span class="label">Outstanding Balance</span><span class="value {% if balance > 0 %}owing{% else %}paid{% endif %}">${{ balance|floatformat:2 }}</span></div>
-
-    {% if payments %}
-    <div style="margin-top:24px;margin-bottom:8px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em">Payment History</div>
-    {% for p in payments %}
-    <div class="row">
-      <span class="label">{{ p.started_at|date:"N j, Y" }} — {{ p.tier_name }}</span>
-      <span class="value paid">${{ p.amount_paid|floatformat:2 }}</span>
-    </div>
-    {% if p.breakdown %}
-    <div style="background:#f8fafc;border-radius:8px;padding:12px;margin-bottom:8px;font-size:12px">
-      <div style="font-weight:700;margin-bottom:8px;color:#64748b">Breakdown:</div>
-      {% if p.breakdown.tuition %}<div class="row" style="padding:4px 0"><span class="label">Course Tuition</span><span>${{ p.breakdown.tuition|floatformat:2 }}</span></div>{% endif %}
-      {% if p.breakdown.state_exam %}<div class="row" style="padding:4px 0"><span class="label">State Exam Fee</span><span>${{ p.breakdown.state_exam|floatformat:2 }}</span></div>{% endif %}
-      {% if p.breakdown.tb_test %}<div class="row" style="padding:4px 0"><span class="label">TB Test</span><span>${{ p.breakdown.tb_test|floatformat:2 }}</span></div>{% endif %}
-      {% if p.breakdown.background_check %}<div class="row" style="padding:4px 0"><span class="label">Background Check</span><span>${{ p.breakdown.background_check|floatformat:2 }}</span></div>{% endif %}
-      {% if p.breakdown.processing_fee %}<div class="row" style="padding:4px 0"><span class="label">Processing Fee (3.7%)</span><span>${{ p.breakdown.processing_fee|floatformat:2 }}</span></div>{% endif %}
-    </div>
-    {% endif %}
-    {% endfor %}
-    {% endif %}
-
-    <div class="total-row">
-      <span class="total-label">BALANCE DUE</span>
-      <span class="total-value {% if balance > 0 %}owing{% else %}paid{% endif %}">${{ balance|floatformat:2 }}</span>
-    </div>
-
-    <div style="text-align:center">
+    <div class="status-section">
       {% if balance <= 0 %}
-        <span class="status-badge badge-paid">✅ FULLY PAID</span>
+        <span class="status-badge badge-paid">✅ PAYMENT COMPLETE</span>
       {% else %}
-        <span class="status-badge badge-owing">⚠️ BALANCE OUTSTANDING</span>
+        <span class="status-badge badge-owing">⚠️ BALANCE OUTSTANDING: ${{ balance|floatformat:2 }}</span>
       {% endif %}
     </div>
+
+    <div class="verify-box">
+      <p>🔒 Verify this receipt online at:</p>
+      {% for p in payments %}{% if p.receipt_code %}
+      <code>glorynursingok.com/lms/verify/{{ p.receipt_code }}/</code>
+      {% endif %}{% endfor %}
+      <p style="margin-top:6px">Scan QR code on PDF version to verify authenticity</p>
+    </div>
+
+    <div class="security-features">
+      <div class="sec-item"><span>🔐</span> Digitally Verified</div>
+      <div class="sec-item"><span>🏛️</span> Official Document</div>
+      <div class="sec-item"><span>📋</span> State Licensed</div>
+      <div class="sec-item"><span>✅</span> Tamper-Evident</div>
+    </div>
+
   </div>
+
   <div class="footer">
-    <p>Thank you for choosing Glory Nursing Healthcare Training School</p>
-    <p style="margin-top:4px">This is an official receipt. Please keep for your records.</p>
+    <strong>Glory Nursing Healthcare Training School</strong><br>
+    12032 N. Pennsylvania Ave, Oklahoma City, OK 73120 | (405) 968-5004 | glorynursing@yahoo.com<br>
+    This is an official receipt. Keep for your records. Issued: {% now "N j, Y" %}
+  </div>
+
+  <div class="action-buttons">
+    <button class="btn btn-print" onclick="window.print()">🖨️ Print</button>
+    <a href="?pdf=1" class="btn btn-pdf">📄 Download PDF</a>
+    {% for p in payments %}{% if p.receipt_code %}
+    <a href="/lms/verify/{{ p.receipt_code }}/" target="_blank" class="btn btn-verify">🔍 Verify</a>
+    {% endif %}{% endfor %}
   </div>
 </div>
-<button class="print-btn" onclick="window.print()">🖨️ Print Receipt</button>
 </body>
 </html>

@@ -1109,6 +1109,44 @@ Glory Nursing Healthcare Training School
     except Exception:
         pass
 
+    # Save PDF to server for admin download
+    try:
+        import os
+        apps_dir = '/var/www/glorynursing/media/applications'
+        os.makedirs(apps_dir, exist_ok=True)
+        safe_name = full_name.replace(' ', '_').replace('/', '_')
+        pdf_filename = f"CNA_{safe_name}_{student_email.split('@')[0]}.pdf"
+        pdf_path = os.path.join(apps_dir, pdf_filename)
+        with open(pdf_path, 'wb') as pf:
+            pf.write(pdf_bytes)
+        # Save path to journey metadata
+        from lms.models import StudentJourney
+        StudentJourney.objects.update_or_create(
+            student_email=student_email,
+            stage='form_submitted',
+            defaults={
+                'program': get('course_applied'),
+                'metadata': {
+                    'full_name': full_name,
+                    'first_name': get('first_name'),
+                    'last_name': get('last_name'),
+                    'email': student_email,
+                    'phone': get('phone'),
+                    'dob': get('dob'),
+                    'street': get('street'),
+                    'city': get('city'),
+                    'state': get('state'),
+                    'zip': get('zip'),
+                    'course_applied': get('course_applied'),
+                    'how_heard': get('how_heard'),
+                    'lawful_presence': get('lawful_presence'),
+                    'pdf_file': pdf_filename,
+                }
+            }
+        )
+    except Exception as e:
+        print(f"PDF save error: {e}")
+
     request.session['application_submitted'] = True
     # Store pending course for payment redirect
     from lms.models import Course as LMSCourse

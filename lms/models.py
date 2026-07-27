@@ -58,6 +58,7 @@ class ContentItem(models.Model):
 
 # --- ADVANCED MODULE 1: TESTING ENGINE ---
 class Quiz(models.Model):
+    is_final_exam = models.BooleanField(default=False)
     lesson = models.OneToOneField(Lesson, on_delete=models.CASCADE, related_name='quiz')
     title = models.CharField(max_length=255)
     passing_score = models.IntegerField(default=70)
@@ -187,6 +188,7 @@ class Subscription(models.Model):
     status = models.CharField(max_length=20, default='active')
     started_at = models.DateTimeField(auto_now_add=True)
     breakdown = models.JSONField(default=dict, blank=True)
+    receipt_code = models.CharField(max_length=20, blank=True, unique=True, null=True)
 
 
 

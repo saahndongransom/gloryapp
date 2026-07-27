@@ -294,6 +294,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
 
     <div class="nav-label">Admin</div>
     <button class="nav-item" onclick="switchTab('credentials',this)"><i class="fas fa-award"></i>Certificates</button>
+    <button class="nav-item" onclick="switchTab('notifications',this)"><i class="fas fa-bell"></i>Notifications {% if unread_count > 0 %}<span style="background:#dc2626;color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px">{{ unread_count }}</span>{% endif %}</button>
     <button class="nav-item" onclick="switchTab('announcements',this)"><i class="fas fa-bullhorn"></i>Announcements</button>
     <button class="nav-item" onclick="switchTab('discussions',this)"><i class="fas fa-comment-dots"></i>Discussions</button>
     <button class="nav-item" onclick="switchTab('support',this)"><i class="fas fa-comments"></i>Support Tickets</button>
@@ -1437,6 +1438,62 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
         </div>
       </div>
 
+      <!-- ══ NOTIFICATIONS ══ -->
+      <div id="view-notifications" class="view-section">
+        <div class="panel">
+          <div class="panel-title">
+            🔔 New Applications (Last 7 Days)
+            <span style="float:right;font-size:11px;color:var(--muted);font-weight:400">{{ unread_count }} new</span>
+          </div>
+          {% if new_applications %}
+          <div style="display:flex;flex-direction:column;gap:12px">
+            {% for app in new_applications %}
+            <div style="background:#f8fafc;border-radius:10px;padding:16px;border-left:4px solid #1a56db;display:flex;align-items:center;justify-content:space-between">
+              <div>
+                <div style="font-weight:700;font-size:14px;color:#0f172a;margin-bottom:4px">
+                  📝 New Application — {{ app.student_email }}
+                </div>
+                <div style="font-size:12px;color:#64748b">
+                  Program: {{ app.program|default:"—" }} · Submitted: {{ app.updated_at|timesince }} ago
+                </div>
+                {% if app.metadata.full_name %}
+                <div style="font-size:12px;color:#64748b">Name: {{ app.metadata.full_name }}</div>
+                {% endif %}
+              </div>
+              <div style="display:flex;gap:8px;flex-shrink:0">
+                <a href="mailto:{{ app.student_email }}" style="font-size:11px;padding:6px 12px;border-radius:6px;background:#1a56db;color:#fff;text-decoration:none">✉️ Email</a>
+                <button onclick="switchTab('enrollments',this)" style="font-size:11px;padding:6px 12px;border-radius:6px;background:#059669;color:#fff;border:none;cursor:pointer">📋 View Pipeline</button>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div style="text-align:center;padding:40px;color:var(--muted)">
+            <i class="fas fa-bell-slash" style="font-size:32px;margin-bottom:12px;display:block;opacity:.3"></i>
+            No new applications in the last 7 days
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Abandoned Forms Alert -->
+        {% if abandoned_forms %}
+        <div class="panel" style="margin-top:20px;border-left:4px solid #f59e0b">
+          <div class="panel-title">⚠️ Abandoned Applications ({{ abandoned_forms|length }})</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            {% for app in abandoned_forms %}
+            <div style="background:#fffbeb;border-radius:8px;padding:12px;display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-weight:600;font-size:13px">{{ app.student_email }}</div>
+                <div style="font-size:11px;color:#64748b">Stopped at: {{ app.metadata.section_name|default:'—' }} · {{ app.metadata.percent|default:0 }}% done · {{ app.updated_at|timesince }} ago</div>
+              </div>
+              <a href="mailto:{{ app.student_email }}?subject=Complete Your Glory Nursing Application&body=Hi, we noticed you started your application but didn't finish. Click here to complete it: https://glorynursingok.com/apply/" style="font-size:11px;padding:5px 10px;border-radius:6px;background:#f59e0b;color:#fff;text-decoration:none">📧 Follow Up</a>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
       <!-- ══ ANNOUNCEMENTS ══ -->
       <div id="view-announcements" class="view-section">
         <div class="two-col">
@@ -1488,32 +1545,144 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
 
       <!-- ══ DISCUSSIONS ══ -->
       <div id="view-discussions" class="view-section">
-        <div class="panel">
-          <div class="panel-title">Student Discussions & Questions</div>
-          <table class="data-table">
-            <thead><tr><th>Student</th><th>Lesson</th><th>Question</th><th>Time</th></tr></thead>
-            <tbody>
-              {% for disc in all_discussions %}
-              <tr>
-                <td>
-                  <div class="user-cell">
-                    <div class="mini-avatar" style="background:var(--blue)">{{ disc.user.username|slice:":2"|upper }}</div>
-                    <div style="font-weight:600">{{ disc.user.username }}</div>
-                  </div>
-                </td>
-                <td style="font-size:12px;color:var(--muted)">{{ disc.lesson.title|truncatechars:25 }}<br><span style="font-size:10px">{{ disc.lesson.module.course.program }}</span></td>
-                <td style="font-size:13px;max-width:300px">
-                  {% if disc.parent %}<span style="font-size:10px;color:var(--muted)">↳ Reply to a question</span><br>{% endif %}
-                  {{ disc.message|truncatechars:100 }}
-                </td>
-                <td style="font-size:11px;color:var(--muted);white-space:nowrap">{{ disc.created_at|timesince }} ago</td>
-              </tr>
-              {% empty %}
-              <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:30px">No discussions yet.</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
+        <div style="display:grid;grid-template-columns:300px 1fr;height:calc(100vh - 120px);background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+          
+          <!-- Left: conversation list -->
+          <div style="border-right:1px solid #e2e8f0;overflow-y:auto">
+            <div style="padding:16px;border-bottom:1px solid #e2e8f0;font-size:14px;font-weight:700;color:#0f172a">💬 Q&A Inbox <span style="background:#1a56db;color:#fff;font-size:10px;padding:2px 7px;border-radius:10px;margin-left:6px">{{ all_discussions|length }}</span></div>
+            {% for disc in all_discussions %}
+            <div onclick="openThread({{ disc.id }}, '{{ disc.user.get_full_name|default:disc.user.username|escapejs }}', '{{ disc.lesson.title|escapejs }}')"
+              id="thread_{{ disc.id }}"
+              style="padding:14px 16px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:background .15s;display:flex;gap:10px;align-items:flex-start"
+              onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#fff'">
+              <div style="width:42px;height:42px;border-radius:50%;background:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0">{{ disc.user.get_full_name|slice:":1"|upper }}{{ disc.user.last_name|slice:":1"|upper }}</div>
+              <div style="flex:1;min-width:0">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="font-size:13px;font-weight:700;color:#0f172a">{{ disc.user.get_full_name|default:disc.user.username }}</span>
+                  <span style="font-size:10px;color:#94a3b8">{{ disc.created_at|timesince }}</span>
+                </div>
+                <div style="font-size:11px;color:#64748b;margin-bottom:2px">📚 {{ disc.lesson.title|truncatechars:25 }}</div>
+                <div style="font-size:12px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ disc.message|truncatechars:40 }}</div>
+                {% if disc.replies.count == 0 %}
+                <span style="background:#dc2626;color:#fff;font-size:9px;padding:1px 6px;border-radius:10px;font-weight:700">Needs reply</span>
+                {% else %}
+                <span style="background:#d1fae5;color:#065f46;font-size:9px;padding:1px 6px;border-radius:10px;font-weight:700">{{ disc.replies.count }} repl{{ disc.replies.count|pluralize:"y,ies" }}</span>
+                {% endif %}
+              </div>
+            </div>
+            {% empty %}
+            <div style="padding:40px;text-align:center;color:#94a3b8;font-size:13px">No questions yet</div>
+            {% endfor %}
+          </div>
+
+          <!-- Right: chat thread -->
+          <div style="display:flex;flex-direction:column;" id="threadPanel">
+            <div style="flex:1;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px;flex-direction:column;gap:12px" id="threadEmpty">
+              <i class="fas fa-comments" style="font-size:40px;opacity:.2"></i>
+              <p>Select a conversation to view</p>
+            </div>
+            <div style="display:none;flex-direction:column;height:100%" id="threadContent">
+              <div style="padding:14px 16px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:10px">
+                <div style="width:36px;height:36px;border-radius:50%;background:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff" id="threadAvatar">??</div>
+                <div>
+                  <div style="font-size:14px;font-weight:700;color:#0f172a" id="threadName">Student</div>
+                  <div style="font-size:11px;color:#64748b" id="threadLesson">Lesson</div>
+                </div>
+              </div>
+              <div style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px" id="threadMessages"></div>
+              <div style="padding:12px;border-top:1px solid #e2e8f0;display:flex;gap:8px;align-items:flex-end">
+                <textarea id="adminChatInput" rows="1" placeholder="Type a reply…"
+                  style="flex:1;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:20px;font-size:13px;font-family:inherit;resize:none;outline:none;max-height:80px;overflow-y:auto"
+                  onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAdminReply()}"
+                  oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+                <button onclick="sendAdminReply()" style="background:#059669;color:#fff;border:none;width:38px;height:38px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                  <i class="fas fa-paper-plane"></i>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <!-- Hidden discussion data for JS -->
+        <script>
+        var discData = {
+          {% for disc in all_discussions %}
+          {{ disc.id }}: {
+            student: '{{ disc.user.get_full_name|default:disc.user.username|escapejs }}',
+            lesson: '{{ disc.lesson.title|escapejs }}',
+            messages: [
+              {text: '{{ disc.message|escapejs }}', is_staff: false, time: '{{ disc.created_at|date:"H:i" }}', name: '{{ disc.user.get_full_name|default:disc.user.username|escapejs }}'},
+              {% for reply in disc.replies.all %}
+              {text: '{{ reply.message|escapejs }}', is_staff: {{ reply.user.is_staff|yesno:"true,false" }}, time: '{{ reply.created_at|date:"H:i" }}', name: '{{ reply.user.get_full_name|default:reply.user.username|escapejs }}'},
+              {% endfor %}
+            ]
+          },
+          {% endfor %}
+        };
+        var activeDiscId = null;
+
+        function openThread(discId, name, lesson) {
+          activeDiscId = discId;
+          document.getElementById('threadEmpty').style.display = 'none';
+          document.getElementById('threadContent').style.display = 'flex';
+          document.getElementById('threadName').textContent = name;
+          document.getElementById('threadLesson').textContent = '📚 ' + lesson;
+          document.getElementById('threadAvatar').textContent = name.slice(0,2).toUpperCase();
+          renderMessages(discId);
+          // Highlight selected
+          document.querySelectorAll('[id^="thread_"]').forEach(function(el) {
+            el.style.background = '#fff';
+          });
+          document.getElementById('thread_' + discId).style.background = '#eff6ff';
+        }
+
+        function renderMessages(discId) {
+          var msgs = discData[discId] ? discData[discId].messages : [];
+          var container = document.getElementById('threadMessages');
+          container.innerHTML = '';
+          msgs.forEach(function(msg) {
+            var div = document.createElement('div');
+            if (msg.is_staff) {
+              div.style.cssText = 'display:flex;flex-direction:column;align-items:flex-end';
+              div.innerHTML = '<div style="font-size:10px;color:#94a3b8;margin-bottom:3px">' + msg.name + ' · ' + msg.time + '</div>' +
+                '<div style="background:#059669;color:#fff;padding:10px 14px;border-radius:12px 0 12px 12px;font-size:13px;line-height:1.5;max-width:75%">' + msg.text + '</div>';
+            } else {
+              div.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start';
+              div.innerHTML = '<div style="font-size:10px;color:#94a3b8;margin-bottom:3px">' + msg.name + ' · ' + msg.time + '</div>' +
+                '<div style="background:#f1f5f9;color:#0f172a;padding:10px 14px;border-radius:0 12px 12px 12px;font-size:13px;line-height:1.5;max-width:75%">' + msg.text + '</div>';
+            }
+            container.appendChild(div);
+          });
+          container.scrollTop = container.scrollHeight;
+        }
+
+        function sendAdminReply() {
+          var input = document.getElementById('adminChatInput');
+          var msg = input.value.trim();
+          if (!msg || !activeDiscId) return;
+
+          // Show immediately
+          var container = document.getElementById('threadMessages');
+          var div = document.createElement('div');
+          div.style.cssText = 'display:flex;flex-direction:column;align-items:flex-end';
+          div.innerHTML = '<div style="font-size:10px;color:#94a3b8;margin-bottom:3px">You · just now</div>' +
+            '<div style="background:#059669;color:#fff;padding:10px 14px;border-radius:12px 0 12px 12px;font-size:13px;line-height:1.5;max-width:75%">' + msg + '</div>';
+          container.appendChild(div);
+          container.scrollTop = container.scrollHeight;
+          input.value = '';
+          input.style.height = 'auto';
+
+          // Send to server
+          var form = new FormData();
+          form.append('action', 'reply_discussion');
+          form.append('discussion_id', activeDiscId);
+          form.append('reply_message', msg);
+          form.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+          fetch('{% url "lms_dashboard" %}', {method:'POST', body:form})
+            .catch(function(e){ console.error(e); });
+        }
+        </script>
       </div>
 
       <!-- ══ SUPPORT ══ -->
@@ -1891,6 +2060,25 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
       <div style="display:flex;gap:10px;justify-content:flex-end">
         <button type="button" onclick="closeContentEditModal()" style="padding:9px 18px;border-radius:8px;border:1.5px solid #cbd5e1;background:#fff;font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
         <button type="submit" style="padding:9px 18px;border-radius:8px;border:none;background:#1a56db;color:#fff;font-size:13px;font-weight:600;cursor:pointer">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Discussion Reply Modal -->
+<div id="discReplyModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;padding:24px;width:500px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:4px">Reply to <span id="discReplyUsername"></span></h3>
+    <p id="discReplyOriginal" style="font-size:12px;color:#64748b;background:#f8fafc;padding:10px;border-radius:8px;margin:12px 0"></p>
+    <form method="POST" action="{% url 'lms_dashboard' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="reply_discussion">
+      <input type="hidden" name="discussion_id" id="discReplyId">
+      <textarea name="reply_message" id="discReplyText" rows="4" placeholder="Type your reply..."
+        style="width:100%;padding:10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;font-family:inherit;outline:none;margin-bottom:12px"></textarea>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button type="button" onclick="closeDiscReply()" style="padding:9px 18px;border-radius:8px;border:1.5px solid #cbd5e1;background:#fff;font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+        <button type="submit" style="padding:9px 18px;border-radius:8px;border:none;background:#1a56db;color:#fff;font-size:13px;font-weight:600;cursor:pointer">Send Reply</button>
       </div>
     </form>
   </div>
@@ -2320,6 +2508,17 @@ function updatePreviewLink() {
 document.addEventListener('DOMContentLoaded', function() {
   updatePreviewLink();
 });
+
+function openDiscReply(discId, username, message) {
+  document.getElementById('discReplyId').value = discId;
+  document.getElementById('discReplyUsername').textContent = username;
+  document.getElementById('discReplyOriginal').textContent = message;
+  document.getElementById('discReplyText').value = '';
+  document.getElementById('discReplyModal').style.display = 'flex';
+}
+function closeDiscReply() {
+  document.getElementById('discReplyModal').style.display = 'none';
+}
 
 function toggleSidebar() {
   const s = document.querySelector('.sidebar');

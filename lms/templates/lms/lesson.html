@@ -84,7 +84,9 @@ body {
 .l-item.done .l-check { background: var(--green); border-color: var(--green); color: #fff; }
 
 /* ── Content area ── */
-.content-area { display: flex; flex-direction: column; overflow: hidden; background: #000; }
+.content-area { display: flex; flex-direction: column; overflow: hidden; background: #000; align-items: stretch; }
+.youtube-wrapper { flex: 1; }
+.youtube-wrapper iframe { width: 100%; height: 100%; min-height: 400px; display: block; }
 .video-wrapper { flex: 1; display: flex; flex-direction: column; }
 .video-wrapper video { flex: 1; object-fit: contain; }
 
@@ -260,12 +262,7 @@ body {
 .mark-done-btn.locked { background: #9ca3af; cursor: not-allowed; opacity: .7; }
 
 .nav-toggle {
-  display: none; position: fixed; bottom: 80px; left: 16px;
-  z-index: 200; background: var(--blue); color: #fff;
-  border: none; padding: 10px 14px; border-radius: 10px;
-  font-size: 13px; font-weight: 600; cursor: pointer;
-  box-shadow: 0 4px 14px rgba(26,86,219,.4);
-  align-items: center; gap: 7px;
+  display: none;
 }
 .module-nav-overlay {
   display: none; position: fixed; inset: 0;
@@ -285,6 +282,8 @@ body {
   }
   .module-nav.open { left: 0; }
   .nav-toggle { display: flex; }
+  .mobile-menu-btn { display: block !important; }
+  #qaFloatBtn { display: flex !important; }
   .topbar { padding: 0 14px; }
   .crumb { display: none; }
   .action-bar { padding: 10px 14px; }
@@ -296,9 +295,49 @@ body {
 <!-- Disable right-click everywhere -->
 <div class="lesson-page" oncontextmenu="return false">
   <div class="module-nav-overlay" id="navOverlay" onclick="closeNav()"></div>
-  <button class="nav-toggle" id="navToggle" onclick="toggleNav()">
-    <i class="fas fa-list"></i> Lessons
+
+  <!-- Mobile Q&A Bottom Sheet -->
+  <div id="qaOverlay" onclick="closeQA()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:300;"></div>
+  <div id="qaSheet" style="position:fixed;bottom:-100%;left:0;right:0;background:#fff;border-radius:16px 16px 0 0;z-index:301;max-height:80vh;flex-direction:column;transition:bottom .3s ease;display:flex">
+    <div style="padding:12px 16px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:15px;font-weight:700">💬 Q&A</span>
+      <button onclick="closeQA()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#64748b">✕</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px" id="mobileDiscList">
+      {% for disc in discussions %}
+      <div style="display:flex;flex-direction:column;align-items:flex-start">
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:3px">{{ disc.user.get_full_name|default:disc.user.username }} · {{ disc.created_at|timesince }} ago</div>
+        <div style="background:#f1f5f9;padding:10px 14px;border-radius:0 12px 12px 12px;font-size:13px;line-height:1.5;color:#0f172a;max-width:85%">{{ disc.message }}</div>
+      </div>
+      {% for reply in disc.replies.all %}
+      {% if reply.user.is_staff %}
+      <div style="display:flex;flex-direction:column;align-items:flex-end">
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:3px">Instructor · {{ reply.created_at|timesince }} ago</div>
+        <div style="background:#059669;color:#fff;padding:10px 14px;border-radius:12px 0 12px 12px;font-size:13px;line-height:1.5;max-width:85%">{{ reply.message }}</div>
+      </div>
+      {% endif %}
+      {% endfor %}
+      {% empty %}
+      <div style="text-align:center;padding:24px;color:#94a3b8;font-size:13px">No questions yet. Ask below!</div>
+      {% endfor %}
+    </div>
+    <div style="padding:10px 12px;border-top:1px solid #e2e8f0;display:flex;gap:8px;align-items:flex-end">
+      <textarea id="mobileQAInput" rows="1" placeholder="Ask a question…"
+        style="flex:1;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:20px;font-size:13px;font-family:inherit;resize:none;outline:none;max-height:80px"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMobileChat()}"
+        oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+      <button onclick="sendMobileChat()" style="background:#1a56db;color:#fff;border:none;width:36px;height:36px;border-radius:50%;font-size:14px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">
+        <i class="fas fa-paper-plane"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile Q&A floating button -->
+  <button onclick="openQA()" id="qaFloatBtn" style="display:none;position:fixed;bottom:70px;right:16px;z-index:200;background:#7c3aed;color:#fff;border:none;padding:12px 16px;border-radius:30px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(124,58,237,.5);align-items:center;gap:6px">
+    <i class="fas fa-comments"></i> Q&A
+    {% if discussions %}<span style="background:#dc2626;border-radius:50%;width:18px;height:18px;font-size:10px;display:inline-flex;align-items:center;justify-content:center">{{ discussions|length }}</span>{% endif %}
   </button>
+
 
   {% if messages %}
     {% for msg in messages %}
@@ -310,6 +349,9 @@ body {
   {% endif %}
 
   <div class="topbar">
+    <button onclick="toggleNav()" style="display:none;background:none;border:none;color:#0f172a;font-size:20px;cursor:pointer;padding:4px 8px;margin-right:4px" class="mobile-menu-btn" id="mobileMenuBtn">
+      <i class="fas fa-bars"></i>
+    </button>
     <a href="{% url 'course_classroom' lesson.module.course.id %}" class="topbar-back">
       <i class="fas fa-arrow-left"></i> Classroom
     </a>
@@ -339,6 +381,7 @@ body {
         {% for module in lesson.module.course.modules.all %}
           <div class="mod-label">{{ module.title|truncatechars:24 }}</div>
           {% for l in module.lessons.all %}
+            {% if l.id != 249 and l.id != 421 %}
             <a href="{% url 'lesson_view' l.id %}" class="l-item {% if l.id == lesson.id %}active{% elif l.id in completed_ids %}done{% endif %}">
               <div class="l-check">
                 {% if l.id in completed_ids %}
@@ -349,13 +392,26 @@ body {
               </div>
               {{ l.title|truncatechars:26 }}
             </a>
+            {% endif %}
           {% endfor %}
         {% endfor %}
+        <!-- Final Exams -->
+        {% if final_exam_quizzes %}
+        <div style="padding:10px 8px;border-top:1px solid #e2e8f0;margin-top:8px">
+          {% for fq in final_exam_quizzes %}
+          <a href="{% url 'final_exam' lesson.module.course.id %}?quiz={{ fq.id }}"
+             style="background:linear-gradient(135deg,#16213e,#1a56db);color:#fff;border-radius:8px;font-weight:700;display:flex;align-items:center;gap:8px;padding:10px 12px;margin-bottom:6px;text-decoration:none">
+            <span style="font-size:16px">🎓</span>
+            {{ fq.title }}
+          </a>
+          {% endfor %}
+        </div>
+        {% endif %}
       </div>
     </aside>
 
     <!-- Center: Content viewer -->
-    <div class="content-area" id="contentArea">
+    <div class="content-area" id="contentArea" {% if not content_payloads %}style="background:#f8fafc;flex:0;min-height:0"{% endif %}>
 
       {% for item in content_payloads %}
 
@@ -603,37 +659,44 @@ body {
         </div>
       </div>
 
-      <div class="panel-body" id="panel-discussion" style="display:none;flex-direction:column;height:100%">
-        <div style="flex:1;overflow-y:auto;padding:12px" id="discussionList">
+      <div class="panel-body" id="panel-discussion" style="display:none;flex-direction:column;">
+        <div style="max-height:350px;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:12px" id="discussionList">
           {% for disc in discussions %}
-          <div style="margin-bottom:14px">
-            <div style="display:flex;align-items:flex-start;gap:8px">
-              <div style="width:28px;height:28px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">{{ disc.user.username|slice:":2"|upper }}</div>
-              <div style="flex:1;min-width:0">
-                <div style="font-size:11px;font-weight:700;color:var(--text)">{{ disc.user.username }} {% if disc.user.is_staff %}<span style="background:#e8f0fe;color:var(--blue);font-size:9px;padding:1px 6px;border-radius:4px;font-weight:700">Instructor</span>{% endif %}</div>
-                <div style="font-size:12px;color:var(--muted);margin-bottom:4px">{{ disc.created_at|timesince }} ago</div>
-                <div style="font-size:13px;line-height:1.5;background:var(--bg);padding:8px 10px;border-radius:8px">{{ disc.message }}</div>
-                <button onclick="showReply('{{ disc.id }}')" style="font-size:11px;color:var(--blue);background:none;border:none;cursor:pointer;margin-top:4px;padding:0">Reply</button>
-                <div id="replyBox_{{ disc.id }}" style="display:none;margin-top:8px">
-                  <form method="POST" action="{% url 'lesson_discussion' lesson.id %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="parent_id" value="{{ disc.id }}">
-                    <textarea name="message" rows="2" placeholder="Write a reply…" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;font-family:inherit;resize:none;outline:none"></textarea>
-                    <button type="submit" style="background:var(--blue);color:#fff;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;margin-top:4px">Post Reply</button>
-                  </form>
-                </div>
-                {% for reply in disc.replies.all %}
-                <div style="display:flex;align-items:flex-start;gap:7px;margin-top:8px;padding-left:8px;border-left:2px solid #e5e7eb">
-                  <div style="width:22px;height:22px;border-radius:50%;background:{% if reply.user.is_staff %}var(--green){% else %}#7c3aed{% endif %};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;flex-shrink:0">{{ reply.user.username|slice:":2"|upper }}</div>
-                  <div>
-                    <div style="font-size:11px;font-weight:700">{{ reply.user.username }} {% if reply.user.is_staff %}<span style="background:#d1fae5;color:#065f46;font-size:9px;padding:1px 6px;border-radius:4px;font-weight:700">Instructor</span>{% endif %}</div>
-                    <div style="font-size:12px;line-height:1.5;margin-top:3px">{{ reply.message }}</div>
-                  </div>
-                </div>
-                {% endfor %}
-              </div>
+
+          <!-- Student question - left aligned -->
+          <div style="display:flex;flex-direction:column;align-items:flex-start">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <div style="width:26px;height:26px;border-radius:50%;background:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff">{{ disc.user.get_full_name|slice:":1"|upper }}{{ disc.user.last_name|slice:":1"|upper }}</div>
+              <span style="font-size:11px;font-weight:700;color:#0f172a">{{ disc.user.get_full_name|default:disc.user.username }}</span>
+              <span style="font-size:10px;color:#94a3b8">{{ disc.created_at|timesince }} ago</span>
             </div>
+            <div style="background:#f1f5f9;padding:10px 14px;border-radius:0 12px 12px 12px;font-size:13px;line-height:1.5;color:#0f172a;max-width:85%">{{ disc.message }}</div>
           </div>
+
+          <!-- Instructor replies - right aligned -->
+          {% for reply in disc.replies.all %}
+          {% if reply.user.is_staff %}
+          <div style="display:flex;flex-direction:column;align-items:flex-end">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <span style="font-size:10px;color:#94a3b8">{{ reply.created_at|timesince }} ago</span>
+              <span style="font-size:11px;font-weight:700;color:#059669">Instructor</span>
+              <div style="width:26px;height:26px;border-radius:50%;background:#059669;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff">IN</div>
+            </div>
+            <div style="background:#059669;color:#fff;padding:10px 14px;border-radius:12px 0 12px 12px;font-size:13px;line-height:1.5;max-width:85%">{{ reply.message }}</div>
+          </div>
+          {% else %}
+          <!-- Other student replies - left aligned -->
+          <div style="display:flex;flex-direction:column;align-items:flex-start;padding-left:16px">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <div style="width:22px;height:22px;border-radius:50%;background:#1a56db;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff">{{ reply.user.get_full_name|slice:":1"|upper }}</div>
+              <span style="font-size:11px;font-weight:700;color:#0f172a">{{ reply.user.get_full_name|default:reply.user.username }}</span>
+              <span style="font-size:10px;color:#94a3b8">{{ reply.created_at|timesince }} ago</span>
+            </div>
+            <div style="background:#e0e7ff;padding:8px 12px;border-radius:0 10px 10px 10px;font-size:12px;line-height:1.5;color:#0f172a;max-width:85%">{{ reply.message }}</div>
+          </div>
+          {% endif %}
+          {% endfor %}
+
           {% empty %}
           <div style="text-align:center;padding:24px;color:var(--muted);font-size:12px">
             <i class="fas fa-comments" style="font-size:24px;display:block;margin-bottom:8px;opacity:.3"></i>
@@ -641,12 +704,14 @@ body {
           </div>
           {% endfor %}
         </div>
-        <div style="padding:12px;border-top:1px solid var(--border);flex-shrink:0">
-          <form method="POST" action="{% url 'lesson_discussion' lesson.id %}">
-            {% csrf_token %}
-            <textarea name="message" rows="2" placeholder="Ask a question or share a thought…" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;resize:none;outline:none;-webkit-user-select:text;user-select:text"></textarea>
-            <button type="submit" style="width:100%;background:var(--blue);color:#fff;border:none;padding:8px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-top:6px">Post Question</button>
-          </form>
+        <div style="padding:10px 12px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end">
+          <textarea id="chatInput" rows="1" placeholder="Ask a question…" 
+            style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:20px;font-size:13px;font-family:inherit;resize:none;outline:none;line-height:1.4;max-height:80px;overflow-y:auto"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"
+            oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+          <button onclick="sendChat()" style="background:var(--blue);color:#fff;border:none;width:36px;height:36px;border-radius:50%;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">
+            <i class="fas fa-paper-plane"></i>
+          </button>
         </div>
       </div>
     </aside>
@@ -976,6 +1041,92 @@ function switchPanel(name, tab) {
   if (disc) disc.style.display = name === 'discussion' ? 'flex' : 'none';
 }
 
+// Auto-refresh chat every 10 seconds
+var lastChatCount = {{ discussions|length }};
+function refreshChat() {
+  fetch("{% url 'lesson_discussions_json' lesson.id %}")
+    .then(r => r.json())
+    .then(data => {
+      if (data.count > lastChatCount) {
+        lastChatCount = data.count;
+        const list = document.getElementById('discussionList');
+        list.innerHTML = '';
+        data.discussions.forEach(function(disc) {
+          // Student message
+          var div = document.createElement('div');
+          div.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start;margin-bottom:4px';
+          div.innerHTML = `
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <div style="width:26px;height:26px;border-radius:50%;background:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff">${disc.username.slice(0,2).toUpperCase()}</div>
+              <span style="font-size:11px;font-weight:700;color:#0f172a">${disc.full_name}</span>
+              <span style="font-size:10px;color:#94a3b8">${disc.time}</span>
+            </div>
+            <div style="background:#f1f5f9;padding:10px 14px;border-radius:0 12px 12px 12px;font-size:13px;line-height:1.5;color:#0f172a;max-width:85%">${disc.message}</div>
+          `;
+          list.appendChild(div);
+          // Replies
+          disc.replies.forEach(function(reply) {
+            var rdiv = document.createElement('div');
+            if (reply.is_staff) {
+              rdiv.style.cssText = 'display:flex;flex-direction:column;align-items:flex-end;';
+              rdiv.innerHTML = `
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+                  <span style="font-size:10px;color:#94a3b8">${reply.time}</span>
+                  <span style="font-size:11px;font-weight:700;color:#059669">Instructor</span>
+                  <div style="width:26px;height:26px;border-radius:50%;background:#059669;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff">IN</div>
+                </div>
+                <div style="background:#059669;color:#fff;padding:10px 14px;border-radius:12px 0 12px 12px;font-size:13px;line-height:1.5;max-width:85%">${reply.message}</div>
+              `;
+            } else {
+              rdiv.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start;padding-left:16px;';
+              rdiv.innerHTML = `
+                <div style="background:#e0e7ff;padding:8px 12px;border-radius:0 10px 10px 10px;font-size:12px;line-height:1.5;color:#0f172a;max-width:85%">${reply.message}</div>
+              `;
+            }
+            list.appendChild(rdiv);
+          });
+        });
+        list.scrollTop = list.scrollHeight;
+      }
+    }).catch(function(){});
+}
+setInterval(refreshChat, 8000);
+
+function sendChat() {
+  const input = document.getElementById('chatInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+
+  // Show message immediately
+  const list = document.getElementById('discussionList');
+  const bubble = document.createElement('div');
+  bubble.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start;';
+  bubble.innerHTML = `
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+      <div style="width:26px;height:26px;border-radius:50%;background:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff">ME</div>
+      <span style="font-size:11px;font-weight:700;color:#0f172a">You</span>
+      <span style="font-size:10px;color:#94a3b8">just now</span>
+    </div>
+    <div style="background:#f1f5f9;padding:10px 14px;border-radius:0 12px 12px 12px;font-size:13px;line-height:1.5;color:#0f172a;max-width:85%">${msg}</div>
+  `;
+  list.appendChild(bubble);
+  list.scrollTop = list.scrollHeight;
+  input.value = '';
+  input.style.height = 'auto';
+
+  // Send to server
+  const formData = new FormData();
+  formData.append('message', msg);
+  formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+  fetch('{% url "lesson_discussion" lesson.id %}', {
+    method: 'POST',
+    body: formData
+  }).catch(function(err) {
+    console.error('Chat error:', err);
+  });
+}
+
 function showReply(id) {
   const box = document.getElementById('replyBox_' + id);
   if (box) box.style.display = box.style.display === 'none' ? 'block' : 'none';
@@ -1145,6 +1296,35 @@ function markComplete() {
 document.addEventListener('DOMContentLoaded', checkAllComplete);
 
 // ── Mobile nav ──────────────────────────────────────────────────
+function openQA() {
+  document.getElementById('qaOverlay').style.display = 'block';
+  document.getElementById('qaSheet').style.bottom = '0';
+  var list = document.getElementById('mobileDiscList');
+  if (list) setTimeout(function(){ list.scrollTop = list.scrollHeight; }, 300);
+}
+function closeQA() {
+  document.getElementById('qaOverlay').style.display = 'none';
+  document.getElementById('qaSheet').style.bottom = '-100%';
+}
+function sendMobileChat() {
+  var input = document.getElementById('mobileQAInput');
+  var msg = input.value.trim();
+  if (!msg) return;
+  var list = document.getElementById('mobileDiscList');
+  var div = document.createElement('div');
+  div.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start';
+  div.innerHTML = '<div style="font-size:11px;color:#94a3b8;margin-bottom:3px">You · just now</div>' +
+    '<div style="background:#f1f5f9;padding:10px 14px;border-radius:0 12px 12px 12px;font-size:13px;line-height:1.5;color:#0f172a;max-width:85%">' + msg + '</div>';
+  list.appendChild(div);
+  list.scrollTop = list.scrollHeight;
+  input.value = '';
+  input.style.height = 'auto';
+  var form = new FormData();
+  form.append('message', msg);
+  form.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+  fetch('{% url "lesson_discussion" lesson.id %}', {method:'POST', body:form}).catch(function(){});
+}
+
 function toggleNav() {
   const nav = document.querySelector('.module-nav');
   const overlay = document.getElementById('navOverlay');

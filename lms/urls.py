@@ -23,6 +23,8 @@ urlpatterns = [
     path('search/', views.lms_search, name='lms_search'),
     path('preview/student/', views.student_preview, name='student_preview'),
     path('receipt/<int:student_id>/<int:course_id>/', views.student_receipt, name='student_receipt'),
+    path('verify/<str:receipt_code>/', views.verify_receipt, name='verify_receipt'),
+    path('course/<int:course_id>/final-exam/', views.final_exam, name='final_exam'),
     path('pay/', views.generic_payment, name='generic_payment'),
     path('pay/success/', views.generic_payment_success, name='generic_payment_success'),
     path('enroll/<int:course_id>/', views.enroll_page, name='enroll_page'),
@@ -30,6 +32,7 @@ urlpatterns = [
     path('enroll/success/', views.enrollment_success, name='enrollment_success'),
     path('quiz/<int:quiz_id>/check-pass/', views.check_quiz_pass, name='check_quiz_pass'),
     path('lesson/<int:lesson_id>/discuss/', views.lesson_discussion, name='lesson_discussion'),
+    path('lesson/<int:lesson_id>/discussions/', views.lesson_discussions_json, name='lesson_discussions_json'),
     path('password-reset/', auth_views.PasswordResetView.as_view(
         template_name='lms/password_reset.html',
         email_template_name='lms/password_reset_email.html',

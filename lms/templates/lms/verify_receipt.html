@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verify Receipt | Glory Nursing</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f1f5f9;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.card{max-width:500px;width:100%;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+.header{background:#16213e;color:#fff;padding:24px;text-align:center}
+.header h1{font-size:18px;font-weight:800}
+.header p{color:#94a3b8;font-size:12px;margin-top:4px}
+.body{padding:32px;text-align:center}
+.icon{font-size:64px;margin-bottom:16px}
+.status{font-size:20px;font-weight:800;margin-bottom:8px}
+.valid{color:#059669}
+.invalid{color:#dc2626}
+.code{font-size:13px;color:#64748b;background:#f1f5f9;padding:8px 16px;border-radius:8px;display:inline-block;margin-bottom:20px;font-family:monospace}
+.detail{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:14px}
+.label{color:#64748b}
+.value{font-weight:600}
+.footer{background:#f8fafc;padding:16px;text-align:center;font-size:11px;color:#94a3b8}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <h1>Glory Nursing Healthcare Training School</h1>
+    <p>Official Receipt Verification</p>
+  </div>
+  <div class="body">
+    {% if valid %}
+      <div class="icon">✅</div>
+      <div class="status valid">Receipt Verified</div>
+      <div class="code">{{ code }}</div>
+      <div class="detail"><span class="label">Student</span><span class="value">{{ student }}</span></div>
+      <div class="detail"><span class="label">Program</span><span class="value">{{ program }}</span></div>
+      <div class="detail"><span class="label">Amount Paid</span><span class="value" style="color:#059669">${{ amount }}</span></div>
+      <div class="detail"><span class="label">Payment Date</span><span class="value">{{ date|date:"N j, Y" }}</span></div>
+      <div class="detail"><span class="label">Status</span><span class="value" style="color:#059669">✅ Active</span></div>
+    {% else %}
+      <div class="icon">❌</div>
+      <div class="status invalid">Receipt Not Found</div>
+      <div class="code">{{ code }}</div>
+      <p style="color:#64748b;font-size:14px;margin-top:12px">This receipt code could not be verified. It may be invalid or tampered with.</p>
+      <p style="color:#64748b;font-size:13px;margin-top:8px">Contact us at glorynursing@yahoo.com or (405) 968-5004</p>
+    {% endif %}
+  </div>
+  <div class="footer">Glory Nursing Healthcare Training School · glorynursingok.com</div>
+</div>
+</body>
+</html>

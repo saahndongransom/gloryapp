@@ -41,13 +41,16 @@ body.dark-mode .action-bar { background: #1e293b; border-color: rgba(255,255,255
 body.dark-mode .prev-btn { background: #1e293b; border-color: rgba(255,255,255,0.1); color: #f1f5f9; }
 
 .dark-toggle {
-  position: fixed; bottom: 20px; right: 20px;
+  position: fixed; bottom: 75px; right: 20px;
   width: 42px; height: 42px; border-radius: 50%;
   background: #1e293b; border: 1px solid rgba(255,255,255,0.1);
   color: #f1f5f9; font-size: 16px; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   z-index: 999; box-shadow: 0 4px 14px rgba(0,0,0,0.2);
   transition: all .2s;
+}
+@media (max-width: 700px) {
+  .dark-toggle { bottom: 75px; right: auto; left: 20px; }
 }
 .dark-toggle:hover { transform: scale(1.1); }
 body:not(.dark-mode) .dark-toggle { background: #f1f5f9; color: #0f172a; border-color: rgba(0,0,0,0.1); box-shadow: 0 4px 14px rgba(0,0,0,0.1); }

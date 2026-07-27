@@ -296,6 +296,31 @@ def lms_dashboard_view(request):
                 return redirect('lms_dashboard')
 
             # --- COMMUNICATIONS TICKET AUDITS ---
+            elif action == 'reply_discussion':
+                disc_id = request.POST.get('discussion_id')
+                reply_msg = request.POST.get('reply_message', '').strip()
+                if disc_id and reply_msg:
+                    original = get_object_or_404(Discussion, id=disc_id)
+                    Discussion.objects.create(
+                        lesson=original.lesson,
+                        user=request.user,
+                        message=reply_msg,
+                        parent=original
+                    )
+                    try:
+                        from django.core.mail import EmailMessage
+                        body_text = f"Hi {original.user.first_name or original.user.username},\n\nAn instructor replied to your question:\n\nYour question: {original.message}\n\nReply: {reply_msg}\n\nLog in to view: https://glorynursingok.com/lms/lesson/{original.lesson.id}/\n\nGlory Nursing Healthcare Training School"
+                        EmailMessage(
+                            subject=f'Instructor replied to your question',
+                            body=body_text,
+                            from_email=None,
+                            to=[original.user.email],
+                        ).send()
+                    except Exception as e:
+                        print(f"Reply email error: {e}")
+                    messages.success(request, 'Reply sent!')
+                return redirect('/lms/dashboard/?tab=discussions')
+
             elif action == 'resolve_thread':
                 thread_id = request.POST.get('thread_id')
                 thread = get_object_or_404(SupportThread, id=thread_id)
@@ -695,7 +720,7 @@ def lms_dashboard_view(request):
             'chart_data_json': json.dumps([400, 900, 1500, 2900, int(total_revenue)]),
             'all_content_items': ContentItem.objects.all().select_related('lesson__module__course'),
             'all_announcements': Announcement.objects.all(),
-            'all_discussions': Discussion.objects.all().select_related('user', 'lesson__module__course').order_by('-created_at')[:50],
+            'all_discussions': Discussion.objects.filter(parent=None).select_related('user', 'lesson__module__course').prefetch_related('replies__user').order_by('-created_at')[:50],
             'all_activities': StudentActivity.objects.all().select_related('student', 'course', 'lesson').order_by('-created_at')[:100],
             'revenue_data': get_revenue_report(),
             'audit_logs': AuditLog.objects.select_related('user').all()[:100],
@@ -1013,6 +1038,8 @@ def lms_video_helper(url):
         r'youtube\.com/watch\?v=([a-zA-Z0-9_-]{11})',
         r'youtu\.be/([a-zA-Z0-9_-]{11})',
         r'youtube\.com/embed/([a-zA-Z0-9_-]{11})',
+        r'youtube\.com/live/([a-zA-Z0-9_-]{11})',
+        r'youtube\.com/shorts/([a-zA-Z0-9_-]{11})',
     ]
     for pattern in patterns:
         match = re.search(pattern, url)
@@ -1023,6 +1050,16 @@ def lms_video_helper(url):
 
 @login_required(login_url='lms_login')
 def lesson_view(request, lesson_id):
+    # Redirect final exam lessons to dedicated final exam page
+    from lms.models import Quiz as QuizModel
+    try:
+        lquiz = QuizModel.objects.get(lesson_id=lesson_id)
+        if lquiz.is_final_exam:
+            course_id = lquiz.lesson.module.course_id
+            return redirect(f'/lms/course/{course_id}/final-exam/?quiz={lquiz.id}')
+    except QuizModel.DoesNotExist:
+        pass
+
     # Payment gate — staff can always preview
     if not request.user.is_staff:
         has_paid = Subscription.objects.filter(student=request.user, status='active').exists()
@@ -1067,6 +1104,20 @@ def lesson_view(request, lesson_id):
             messages.warning(request, f'Please complete "{prev.title}" first.')
             return redirect('lesson_view', lesson_id=prev.id)
 
+    # Check for final exams in this course
+    final_exam_quizzes = Quiz.objects.filter(
+        lesson__module__course=course,
+        is_final_exam=True
+    ).order_by('id')
+    final_exam_lesson_ids = list(final_exam_quizzes.values_list('lesson_id', flat=True))
+    # Find modules that ONLY contain final exam lessons (should be hidden)
+    from lms.models import Module as ModuleModel
+    hidden_module_ids = []
+    for m in ModuleModel.objects.filter(course=course):
+        lesson_ids = list(m.lessons.values_list('id', flat=True))
+        if lesson_ids and all(lid in final_exam_lesson_ids for lid in lesson_ids):
+            hidden_module_ids.append(m.id)
+
     content_payloads = ContentItem.objects.filter(lesson=lesson)
     for item in content_payloads:
         if item.content_type == 'youtube':
@@ -1106,6 +1157,9 @@ def lesson_view(request, lesson_id):
     context = {
         'lesson': lesson,
         'content_payloads': content_payloads,
+        'final_exam_quizzes': final_exam_quizzes,
+        'final_exam_lesson_ids': final_exam_lesson_ids,
+        'hidden_module_ids': hidden_module_ids,
         'quizzes': Quiz.objects.filter(lesson=lesson),
         'prev_lesson': prev_lesson,
         'next_lesson': next_lesson,
@@ -1272,17 +1326,15 @@ def serve_protected_content(request, content_id):
     mime_type, _ = mimetypes.guess_type(file_path)
     if not mime_type:
         mime_type = 'application/octet-stream'
-    def file_iterator(path, chunk_size=8192):
-        with open(path, 'rb') as f:
-            while True:
-                chunk = f.read(chunk_size)
-                if not chunk:
-                    break
-                yield chunk
-    response = StreamingHttpResponse(file_iterator(file_path), content_type=mime_type)
+    # Use Nginx X-Accel-Redirect for fast video serving
+    # Strip MEDIA_ROOT from path to get the internal URL
+    media_root = str(settings.MEDIA_ROOT).rstrip('/')
+    relative_path = str(file_path).replace(media_root, '')
+    response = HttpResponse(content_type=mime_type)
+    response['X-Accel-Redirect'] = f'/protected_media{relative_path}'
     response['Content-Disposition'] = 'inline'
     response['X-Content-Type-Options'] = 'nosniff'
-    response['Cache-Control'] = 'no-store, no-cache, must-revalidate, private'
+    response['Cache-Control'] = 'private, max-age=3600'
     response['X-Frame-Options'] = 'SAMEORIGIN'
     return response
 
@@ -1513,6 +1565,34 @@ def lms_search(request):
 
 
 @login_required(login_url='lms_login')
+def lesson_discussions_json(request, lesson_id):
+    from django.http import JsonResponse
+    from lms.models import Discussion
+    lesson = get_object_or_404(Lesson, id=lesson_id)
+    discs = Discussion.objects.filter(lesson=lesson, parent=None).prefetch_related('replies__user').select_related('user').order_by('created_at')
+    data = []
+    for d in discs:
+        replies = []
+        for r in d.replies.all():
+            replies.append({
+                'message': r.message,
+                'is_staff': r.user.is_staff,
+                'username': r.user.username,
+                'full_name': r.user.get_full_name() or r.user.username,
+                'time': r.created_at.strftime('%H:%M'),
+            })
+        data.append({
+            'id': d.id,
+            'message': d.message,
+            'username': d.user.username,
+            'full_name': d.user.get_full_name() or d.user.username,
+            'time': d.created_at.strftime('%H:%M'),
+            'replies': replies,
+        })
+    return JsonResponse({'discussions': data, 'count': len(data)})
+
+
+@login_required(login_url='lms_login')
 def lesson_discussion(request, lesson_id):
     """AJAX — post a discussion message or reply."""
     lesson = get_object_or_404(Lesson, id=lesson_id)
@@ -1596,30 +1676,62 @@ def student_preview(request):
 
 
 @login_required(login_url='lms_login')
-def student_receipt(request, student_id, course_id):
-    if not request.user.is_staff:
-        return redirect('lms_dashboard')
-    from django.contrib.auth.models import User as AuthUser
-    student = get_object_or_404(AuthUser, id=student_id)
+def final_exam(request, course_id):
     course = get_object_or_404(Course, id=course_id)
-    subs = Subscription.objects.filter(student=student)
-    amount_paid = float(sum(s.amount_paid for s in subs))
-    # Use total charged (including fees) as amount due if breakdown exists
-    last_sub = subs.order_by('-started_at').first()
-    if last_sub and last_sub.breakdown and last_sub.breakdown.get('total'):
-        amount_due = float(last_sub.breakdown['total'])
-    else:
-        amount_due = float(course.price)
-    balance = amount_due - amount_paid
-    context = {
-        'student': student,
+    # Staff can preview without enrollment
+    if not request.user.is_staff:
+        enrollment = get_object_or_404(Enrollment, course=course, student=request.user)
+        has_paid = Subscription.objects.filter(student=request.user, status='active').exists()
+        if not has_paid:
+            return redirect('enroll_page', course_id=course_id)
+
+    # Get final exam quiz
+    quiz = Quiz.objects.filter(lesson__module__course=course, is_final_exam=True).first()
+    if not quiz:
+        messages.warning(request, 'No final exam configured for this course.')
+        return redirect('course_classroom', course_id=course_id)
+
+    # Check if all lessons completed
+    total_lessons = Lesson.objects.filter(module__course=course).exclude(
+        quiz__is_final_exam=True).count()
+    completed = LessonProgress.objects.filter(
+        student=request.user, lesson__module__course=course, is_completed=True).count()
+    can_take = request.user.is_staff or completed >= total_lessons
+
+    questions = quiz.questions.all().order_by('?')  # randomize
+    processed = []
+    for q in questions:
+        opts = []
+        if q.option_a: opts.append(('A', q.option_a))
+        if q.option_b: opts.append(('B', q.option_b))
+        if q.option_c: opts.append(('C', q.option_c))
+        if q.option_d: opts.append(('D', q.option_d))
+        processed.append({'id': q.id, 'text': q.text, 'options': opts})
+
+    return render(request, 'lms/final_exam.html', {
         'course': course,
-        'amount_paid': amount_paid,
-        'amount_due': amount_due,
-        'balance': balance,
-        'payments': subs,
-    }
-    return render(request, 'lms/student_receipt.html', context)
+        'quiz': quiz,
+        'questions': processed,
+        'can_take': can_take,
+        'completed': completed,
+        'total_lessons': total_lessons,
+    })
+
+
+def verify_receipt(request, receipt_code):
+    from lms.models import Subscription
+    sub = Subscription.objects.filter(receipt_code=receipt_code).select_related('student').first()
+    if not sub:
+        return render(request, 'lms/verify_receipt.html', {'valid': False, 'code': receipt_code})
+    return render(request, 'lms/verify_receipt.html', {
+        'valid': True,
+        'code': receipt_code,
+        'student': sub.student.get_full_name(),
+        'program': sub.tier_name,
+        'amount': sub.amount_paid,
+        'date': sub.started_at,
+        'status': sub.status,
+    })
 
 
 @login_required(login_url='lms_login')
@@ -1646,7 +1758,443 @@ def student_receipt(request, student_id, course_id):
         'balance': balance,
         'payments': subs,
     }
+    # Generate PDF if requested
+    if request.GET.get('pdf'):
+        return generate_receipt_pdf(student, course, subs, amount_paid, amount_due, balance)
     return render(request, 'lms/student_receipt.html', context)
+
+
+def generate_receipt_pdf(student, course, subs, amount_paid, amount_due, balance):
+    import io
+    import secrets
+    import qrcode
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
+    from django.http import HttpResponse
+
+    # Get or create receipt code
+    last_sub = subs.order_by('-started_at').first()
+    if last_sub and not last_sub.receipt_code:
+        last_sub.receipt_code = 'GN-' + secrets.token_hex(6).upper()
+        last_sub.save()
+    receipt_code = last_sub.receipt_code if last_sub else 'GN-UNKNOWN'
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4,
+        rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+
+    styles = getSampleStyleSheet()
+    navy = colors.HexColor('#16213e')
+    green = colors.HexColor('#059669')
+    gray = colors.HexColor('#64748b')
+    red = colors.HexColor('#dc2626')
+
+    elements = []
+
+    # Header
+    header_style = ParagraphStyle('header', fontSize=18, fontName='Helvetica-Bold',
+        textColor=colors.white, alignment=TA_CENTER, spaceAfter=4)
+    sub_style = ParagraphStyle('sub', fontSize=9, fontName='Helvetica',
+        textColor=colors.HexColor('#94a3b8'), alignment=TA_CENTER)
+
+    # Header table with navy background
+    header_data = [[
+        Paragraph('GLORY NURSING HEALTHCARE TRAINING SCHOOL', header_style),
+    ], [
+        Paragraph('12032 N. Pennsylvania Ave, Oklahoma City, OK 73120 | (405) 968-5004 | glorynursing@yahoo.com', sub_style),
+    ]]
+    header_table = Table(header_data, colWidths=[17*cm])
+    header_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), navy),
+        ('PADDING', (0,0), (-1,-1), 14),
+        ('BOTTOMPADDING', (0,1), (-1,1), 16),
+    ]))
+    elements.append(header_table)
+    elements.append(Spacer(1, 0.5*cm))
+
+    # Receipt title
+    title_style = ParagraphStyle('title', fontSize=14, fontName='Helvetica-Bold',
+        textColor=navy, alignment=TA_CENTER, spaceAfter=4)
+    code_style = ParagraphStyle('code', fontSize=10, fontName='Helvetica',
+        textColor=gray, alignment=TA_CENTER, spaceAfter=12)
+    elements.append(Paragraph('OFFICIAL PAYMENT RECEIPT', title_style))
+    elements.append(Paragraph(f'Receipt No: {receipt_code}', code_style))
+
+    # QR Code
+    verify_url = f'https://glorynursingok.com/lms/verify/{receipt_code}/'
+    qr = qrcode.QRCode(version=1, box_size=4, border=2)
+    qr.add_data(verify_url)
+    qr.make(fit=True)
+    qr_img = qr.make_image(fill_color='black', back_color='white')
+    qr_buffer = io.BytesIO()
+    qr_img.save(qr_buffer, format='PNG')
+    qr_buffer.seek(0)
+    qr_image = Image(qr_buffer, width=3*cm, height=3*cm)
+
+    # Student info + QR side by side
+    info_style = ParagraphStyle('info', fontSize=10, fontName='Helvetica', spaceAfter=4)
+    bold_style = ParagraphStyle('bold', fontSize=10, fontName='Helvetica-Bold', spaceAfter=4)
+
+    from datetime import datetime
+    info_data = [
+        [Paragraph('<b>Student Name:</b>', info_style), Paragraph(student.get_full_name(), bold_style), '', qr_image],
+        [Paragraph('<b>Email:</b>', info_style), Paragraph(student.email, info_style), '', ''],
+        [Paragraph('<b>Program:</b>', info_style), Paragraph(course.title, info_style), '', ''],
+        [Paragraph('<b>Date:</b>', info_style), Paragraph(last_sub.started_at.strftime('%B %d, %Y') if last_sub else '', info_style), '', ''],
+        [Paragraph('<b>Receipt Code:</b>', info_style), Paragraph(receipt_code, bold_style), '', ''],
+    ]
+    info_table = Table(info_data, colWidths=[4*cm, 9*cm, 0.5*cm, 3.5*cm])
+    info_table.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('SPAN', (3,0), (3,4)),
+        ('ALIGN', (3,0), (3,4), 'CENTER'),
+        ('ROWBACKGROUNDS', (0,0), (1,-1), [colors.HexColor('#f8fafc'), colors.white]),
+        ('PADDING', (0,0), (-1,-1), 6),
+        ('LINEBELOW', (0,-1), (1,-1), 0.5, colors.HexColor('#e2e8f0')),
+    ]))
+    elements.append(info_table)
+    elements.append(Spacer(1, 0.5*cm))
+
+    # Payment summary
+    elements.append(Paragraph('PAYMENT SUMMARY', ParagraphStyle('section',
+        fontSize=10, fontName='Helvetica-Bold', textColor=gray,
+        spaceAfter=8, spaceBefore=8)))
+
+    breakdown = last_sub.breakdown if last_sub and last_sub.breakdown else {}
+    payment_rows = [
+        ['Description', 'Amount'],
+        ['Course Tuition', f"${breakdown.get('tuition', float(course.price)):.2f}"],
+    ]
+    if breakdown.get('state_exam'):
+        payment_rows.append(['State Exam Fee', f"${breakdown['state_exam']:.2f}"])
+    if breakdown.get('tb_test'):
+        payment_rows.append(['TB Test', f"${breakdown['tb_test']:.2f}"])
+    if breakdown.get('background_check'):
+        payment_rows.append(['Background Check', f"${breakdown['background_check']:.2f}"])
+    if breakdown.get('processing_fee'):
+        payment_rows.append(['Processing Fee (3.7%)', f"${breakdown['processing_fee']:.2f}"])
+    payment_rows.append(['TOTAL CHARGED', f"${amount_due:.2f}"])
+    payment_rows.append(['AMOUNT PAID', f"${amount_paid:.2f}"])
+    payment_rows.append(['BALANCE DUE', f"${balance:.2f}"])
+
+    pay_table = Table(payment_rows, colWidths=[12*cm, 5*cm])
+    pay_style = [
+        ('BACKGROUND', (0,0), (-1,0), navy),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 10),
+        ('ALIGN', (1,0), (1,-1), 'RIGHT'),
+        ('ROWBACKGROUNDS', (0,1), (-1,-4), [colors.HexColor('#f8fafc'), colors.white]),
+        ('PADDING', (0,0), (-1,-1), 8),
+        ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor('#e2e8f0')),
+        ('FONTNAME', (0,-3), (-1,-1), 'Helvetica-Bold'),
+        ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor('#f0fdf4') if balance <= 0 else colors.HexColor('#fee2e2')),
+        ('TEXTCOLOR', (1,-1), (1,-1), green if balance <= 0 else red),
+    ]
+    pay_table.setStyle(TableStyle(pay_style))
+    elements.append(pay_table)
+    elements.append(Spacer(1, 0.5*cm))
+
+    # Status badge
+    status_text = '✓ FULLY PAID' if balance <= 0 else f'⚠ BALANCE OUTSTANDING: ${balance:.2f}'
+    status_color = green if balance <= 0 else red
+    status_style = ParagraphStyle('status', fontSize=12, fontName='Helvetica-Bold',
+        textColor=status_color, alignment=TA_CENTER, spaceAfter=8)
+    elements.append(Paragraph(status_text, status_style))
+
+    # Verify note
+    verify_style = ParagraphStyle('verify', fontSize=8, fontName='Helvetica',
+        textColor=gray, alignment=TA_CENTER, spaceAfter=4)
+    elements.append(Paragraph(
+        f'Verify this receipt at: glorynursingok.com/lms/verify/{receipt_code}/', verify_style))
+    elements.append(Paragraph(
+        'This is an official receipt issued by Glory Nursing Healthcare Training School. '
+        'Scan the QR code or visit the verification URL to confirm authenticity.',
+        verify_style))
+
+    # Watermark function
+    def add_watermark(canvas, doc):
+        canvas.saveState()
+        canvas.setFont('Helvetica-Bold', 60)
+        canvas.setFillColor(colors.HexColor('#16213e'))
+        canvas.setFillAlpha(0.04)
+        canvas.translate(A4[0]/2, A4[1]/2)
+        canvas.rotate(45)
+        canvas.drawCentredString(0, 0, 'GLORY NURSING')
+        canvas.restoreState()
+
+    doc.build(elements, onFirstPage=add_watermark, onLaterPages=add_watermark)
+    buffer.seek(0)
+
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="Receipt_{receipt_code}.pdf"'
+    return response
+
+
+@login_required(login_url='lms_login')
+def final_exam(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    if not request.user.is_staff:
+        enrollment = get_object_or_404(Enrollment, course=course, student=request.user)
+
+    # Check payment
+    if not request.user.is_staff:
+        has_paid = Subscription.objects.filter(student=request.user, status='active').exists()
+        if not has_paid:
+            return redirect('enroll_page', course_id=course_id)
+
+    # Get final exam quiz
+    quiz = Quiz.objects.filter(lesson__module__course=course, is_final_exam=True).first()
+    if not quiz:
+        messages.warning(request, 'No final exam configured for this course.')
+        return redirect('course_classroom', course_id=course_id)
+
+    # Check if all lessons completed
+    total_lessons = Lesson.objects.filter(module__course=course).exclude(
+        quiz__is_final_exam=True).count()
+    completed = LessonProgress.objects.filter(
+        student=request.user, lesson__module__course=course, is_completed=True).count()
+    can_take = request.user.is_staff or completed >= total_lessons
+
+    questions = quiz.questions.all().order_by('?')  # randomize
+    processed = []
+    for q in questions:
+        opts = []
+        if q.option_a: opts.append(('A', q.option_a))
+        if q.option_b: opts.append(('B', q.option_b))
+        if q.option_c: opts.append(('C', q.option_c))
+        if q.option_d: opts.append(('D', q.option_d))
+        processed.append({'id': q.id, 'text': q.text, 'options': opts})
+
+    return render(request, 'lms/final_exam.html', {
+        'course': course,
+        'quiz': quiz,
+        'questions': processed,
+        'can_take': can_take,
+        'completed': completed,
+        'total_lessons': total_lessons,
+    })
+
+
+def verify_receipt(request, receipt_code):
+    from lms.models import Subscription
+    sub = Subscription.objects.filter(receipt_code=receipt_code).select_related('student').first()
+    if not sub:
+        return render(request, 'lms/verify_receipt.html', {'valid': False, 'code': receipt_code})
+    return render(request, 'lms/verify_receipt.html', {
+        'valid': True,
+        'code': receipt_code,
+        'student': sub.student.get_full_name(),
+        'program': sub.tier_name,
+        'amount': sub.amount_paid,
+        'date': sub.started_at,
+        'status': sub.status,
+    })
+
+
+@login_required(login_url='lms_login')
+def student_receipt(request, student_id, course_id):
+    if not request.user.is_staff:
+        return redirect('lms_dashboard')
+    from django.contrib.auth.models import User as AuthUser
+    student = get_object_or_404(AuthUser, id=student_id)
+    course = get_object_or_404(Course, id=course_id)
+    subs = Subscription.objects.filter(student=student)
+    amount_paid = float(sum(s.amount_paid for s in subs))
+    # Use total charged (including fees) as amount due if breakdown exists
+    last_sub = subs.order_by('-started_at').first()
+    if last_sub and last_sub.breakdown and last_sub.breakdown.get('total'):
+        amount_due = float(last_sub.breakdown['total'])
+    else:
+        amount_due = float(course.price)
+    balance = amount_due - amount_paid
+    context = {
+        'student': student,
+        'course': course,
+        'amount_paid': amount_paid,
+        'amount_due': amount_due,
+        'balance': balance,
+        'payments': subs,
+    }
+    # Generate PDF if requested
+    if request.GET.get('pdf'):
+        return generate_receipt_pdf(student, course, subs, amount_paid, amount_due, balance)
+    return render(request, 'lms/student_receipt.html', context)
+
+
+def generate_receipt_pdf(student, course, subs, amount_paid, amount_due, balance):
+    import io
+    import secrets
+    import qrcode
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
+    from django.http import HttpResponse
+
+    # Get or create receipt code
+    last_sub = subs.order_by('-started_at').first()
+    if last_sub and not last_sub.receipt_code:
+        last_sub.receipt_code = 'GN-' + secrets.token_hex(6).upper()
+        last_sub.save()
+    receipt_code = last_sub.receipt_code if last_sub else 'GN-UNKNOWN'
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4,
+        rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+
+    styles = getSampleStyleSheet()
+    navy = colors.HexColor('#16213e')
+    green = colors.HexColor('#059669')
+    gray = colors.HexColor('#64748b')
+    red = colors.HexColor('#dc2626')
+
+    elements = []
+
+    # Header
+    header_style = ParagraphStyle('header', fontSize=18, fontName='Helvetica-Bold',
+        textColor=colors.white, alignment=TA_CENTER, spaceAfter=4)
+    sub_style = ParagraphStyle('sub', fontSize=9, fontName='Helvetica',
+        textColor=colors.HexColor('#94a3b8'), alignment=TA_CENTER)
+
+    # Header table with navy background
+    header_data = [[
+        Paragraph('GLORY NURSING HEALTHCARE TRAINING SCHOOL', header_style),
+    ], [
+        Paragraph('12032 N. Pennsylvania Ave, Oklahoma City, OK 73120 | (405) 968-5004 | glorynursing@yahoo.com', sub_style),
+    ]]
+    header_table = Table(header_data, colWidths=[17*cm])
+    header_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), navy),
+        ('PADDING', (0,0), (-1,-1), 14),
+        ('BOTTOMPADDING', (0,1), (-1,1), 16),
+    ]))
+    elements.append(header_table)
+    elements.append(Spacer(1, 0.5*cm))
+
+    # Receipt title
+    title_style = ParagraphStyle('title', fontSize=14, fontName='Helvetica-Bold',
+        textColor=navy, alignment=TA_CENTER, spaceAfter=4)
+    code_style = ParagraphStyle('code', fontSize=10, fontName='Helvetica',
+        textColor=gray, alignment=TA_CENTER, spaceAfter=12)
+    elements.append(Paragraph('OFFICIAL PAYMENT RECEIPT', title_style))
+    elements.append(Paragraph(f'Receipt No: {receipt_code}', code_style))
+
+    # QR Code
+    verify_url = f'https://glorynursingok.com/lms/verify/{receipt_code}/'
+    qr = qrcode.QRCode(version=1, box_size=4, border=2)
+    qr.add_data(verify_url)
+    qr.make(fit=True)
+    qr_img = qr.make_image(fill_color='black', back_color='white')
+    qr_buffer = io.BytesIO()
+    qr_img.save(qr_buffer, format='PNG')
+    qr_buffer.seek(0)
+    qr_image = Image(qr_buffer, width=3*cm, height=3*cm)
+
+    # Student info + QR side by side
+    info_style = ParagraphStyle('info', fontSize=10, fontName='Helvetica', spaceAfter=4)
+    bold_style = ParagraphStyle('bold', fontSize=10, fontName='Helvetica-Bold', spaceAfter=4)
+
+    from datetime import datetime
+    info_data = [
+        [Paragraph('<b>Student Name:</b>', info_style), Paragraph(student.get_full_name(), bold_style), '', qr_image],
+        [Paragraph('<b>Email:</b>', info_style), Paragraph(student.email, info_style), '', ''],
+        [Paragraph('<b>Program:</b>', info_style), Paragraph(course.title, info_style), '', ''],
+        [Paragraph('<b>Date:</b>', info_style), Paragraph(last_sub.started_at.strftime('%B %d, %Y') if last_sub else '', info_style), '', ''],
+        [Paragraph('<b>Receipt Code:</b>', info_style), Paragraph(receipt_code, bold_style), '', ''],
+    ]
+    info_table = Table(info_data, colWidths=[4*cm, 9*cm, 0.5*cm, 3.5*cm])
+    info_table.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('SPAN', (3,0), (3,4)),
+        ('ALIGN', (3,0), (3,4), 'CENTER'),
+        ('ROWBACKGROUNDS', (0,0), (1,-1), [colors.HexColor('#f8fafc'), colors.white]),
+        ('PADDING', (0,0), (-1,-1), 6),
+        ('LINEBELOW', (0,-1), (1,-1), 0.5, colors.HexColor('#e2e8f0')),
+    ]))
+    elements.append(info_table)
+    elements.append(Spacer(1, 0.5*cm))
+
+    # Payment summary
+    elements.append(Paragraph('PAYMENT SUMMARY', ParagraphStyle('section',
+        fontSize=10, fontName='Helvetica-Bold', textColor=gray,
+        spaceAfter=8, spaceBefore=8)))
+
+    breakdown = last_sub.breakdown if last_sub and last_sub.breakdown else {}
+    payment_rows = [
+        ['Description', 'Amount'],
+        ['Course Tuition', f"${breakdown.get('tuition', float(course.price)):.2f}"],
+    ]
+    if breakdown.get('state_exam'):
+        payment_rows.append(['State Exam Fee', f"${breakdown['state_exam']:.2f}"])
+    if breakdown.get('tb_test'):
+        payment_rows.append(['TB Test', f"${breakdown['tb_test']:.2f}"])
+    if breakdown.get('background_check'):
+        payment_rows.append(['Background Check', f"${breakdown['background_check']:.2f}"])
+    if breakdown.get('processing_fee'):
+        payment_rows.append(['Processing Fee (3.7%)', f"${breakdown['processing_fee']:.2f}"])
+    payment_rows.append(['TOTAL CHARGED', f"${amount_due:.2f}"])
+    payment_rows.append(['AMOUNT PAID', f"${amount_paid:.2f}"])
+    payment_rows.append(['BALANCE DUE', f"${balance:.2f}"])
+
+    pay_table = Table(payment_rows, colWidths=[12*cm, 5*cm])
+    pay_style = [
+        ('BACKGROUND', (0,0), (-1,0), navy),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 10),
+        ('ALIGN', (1,0), (1,-1), 'RIGHT'),
+        ('ROWBACKGROUNDS', (0,1), (-1,-4), [colors.HexColor('#f8fafc'), colors.white]),
+        ('PADDING', (0,0), (-1,-1), 8),
+        ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor('#e2e8f0')),
+        ('FONTNAME', (0,-3), (-1,-1), 'Helvetica-Bold'),
+        ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor('#f0fdf4') if balance <= 0 else colors.HexColor('#fee2e2')),
+        ('TEXTCOLOR', (1,-1), (1,-1), green if balance <= 0 else red),
+    ]
+    pay_table.setStyle(TableStyle(pay_style))
+    elements.append(pay_table)
+    elements.append(Spacer(1, 0.5*cm))
+
+    # Status badge
+    status_text = '✓ FULLY PAID' if balance <= 0 else f'⚠ BALANCE OUTSTANDING: ${balance:.2f}'
+    status_color = green if balance <= 0 else red
+    status_style = ParagraphStyle('status', fontSize=12, fontName='Helvetica-Bold',
+        textColor=status_color, alignment=TA_CENTER, spaceAfter=8)
+    elements.append(Paragraph(status_text, status_style))
+
+    # Verify note
+    verify_style = ParagraphStyle('verify', fontSize=8, fontName='Helvetica',
+        textColor=gray, alignment=TA_CENTER, spaceAfter=4)
+    elements.append(Paragraph(
+        f'Verify this receipt at: glorynursingok.com/lms/verify/{receipt_code}/', verify_style))
+    elements.append(Paragraph(
+        'This is an official receipt issued by Glory Nursing Healthcare Training School. '
+        'Scan the QR code or visit the verification URL to confirm authenticity.',
+        verify_style))
+
+    # Watermark function
+    def add_watermark(canvas, doc):
+        canvas.saveState()
+        canvas.setFont('Helvetica-Bold', 60)
+        canvas.setFillColor(colors.HexColor('#16213e'))
+        canvas.setFillAlpha(0.04)
+        canvas.translate(A4[0]/2, A4[1]/2)
+        canvas.rotate(45)
+        canvas.drawCentredString(0, 0, 'GLORY NURSING')
+        canvas.restoreState()
+
+    doc.build(elements, onFirstPage=add_watermark, onLaterPages=add_watermark)
+    buffer.seek(0)
+
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="Receipt_{receipt_code}.pdf"'
+    return response
 
 
 def generic_payment(request):
