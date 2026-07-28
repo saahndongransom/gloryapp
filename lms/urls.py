@@ -24,6 +24,7 @@ urlpatterns = [
     path('preview/student/', views.student_preview, name='student_preview'),
     path('receipt/<int:student_id>/<int:course_id>/', views.student_receipt, name='student_receipt'),
     path('verify/<str:receipt_code>/', views.verify_receipt, name='verify_receipt'),
+    path('application/<int:journey_id>/download/', views.download_application, name='download_application'),
     path('course/<int:course_id>/final-exam/', views.final_exam, name='final_exam'),
     path('pay/', views.generic_payment, name='generic_payment'),
     path('pay/success/', views.generic_payment_success, name='generic_payment_success'),

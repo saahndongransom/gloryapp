@@ -741,8 +741,21 @@ def lms_dashboard_view(request):
                     'status': 'Paid' if balance <= 0 else 'Owing',
                 })
 
+        # Notifications - new applications last 7 days
+        from django.utils import timezone as tz2
+        from datetime import timedelta
+        from lms.models import StudentJourney as SJ3
+        week_ago = tz2.now() - timedelta(days=7)
+        new_applications = SJ3.objects.filter(
+            stage='form_submitted',
+            updated_at__gte=week_ago
+        ).order_by('-updated_at')
+        unread_count = new_applications.count()
+
         context = {
             'all_students': raw_students,
+            'new_applications': new_applications,
+            'unread_count': unread_count,
             'students_profiles': students_profiles,
             'abandoned_forms': abandoned_forms,
             'student_balances': student_balances,
@@ -1792,6 +1805,73 @@ def final_exam(request, course_id):
     })
 
 
+@login_required(login_url='lms_login')
+def download_application(request, journey_id):
+    if not request.user.is_staff:
+        return redirect('lms_dashboard')
+    from lms.models import StudentJourney
+    from django.http import HttpResponse
+    import os
+    journey = get_object_or_404(StudentJourney, id=journey_id)
+    pdf_file = journey.metadata.get('pdf_file')
+    if pdf_file:
+        pdf_path = f'/var/www/glorynursing/media/applications/{pdf_file}'
+        if os.path.exists(pdf_path):
+            with open(pdf_path, 'rb') as f:
+                response = HttpResponse(f.read(), content_type='application/pdf')
+                response['Content-Disposition'] = f'inline; filename="{pdf_file}"'
+                return response
+    # Fallback: generate summary PDF
+    import io
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER
+    meta = journey.metadata
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4,
+        rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+    styles = getSampleStyleSheet()
+    navy = colors.HexColor('#16213e')
+    elements = []
+    title_style = ParagraphStyle('title', fontSize=16, fontName='Helvetica-Bold',
+        textColor=navy, alignment=TA_CENTER, spaceAfter=4)
+    sub_style = ParagraphStyle('sub', fontSize=9, fontName='Helvetica',
+        textColor=colors.HexColor('#64748b'), alignment=TA_CENTER, spaceAfter=16)
+    elements.append(Paragraph('GLORY NURSING HEALTHCARE TRAINING SCHOOL', title_style))
+    elements.append(Paragraph('Application Submission Summary', sub_style))
+    fields = [
+        ['Field', 'Value'],
+        ['Full Name', meta.get('full_name', '—')],
+        ['Email', meta.get('email', journey.student_email)],
+        ['Phone', meta.get('phone', '—')],
+        ['Date of Birth', meta.get('dob', '—')],
+        ['Address', f"{meta.get('street', '')} {meta.get('city', '')} {meta.get('state', '')} {meta.get('zip', '')}".strip()],
+        ['Course Applied', meta.get('course_applied', journey.program or '—')],
+        ['How Heard', meta.get('how_heard', '—')],
+        ['Submitted', meta.get('submitted_at', str(journey.updated_at))[:19]],
+    ]
+    table = Table(fields, colWidths=[5*cm, 12*cm])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), navy),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 10),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.HexColor('#f8fafc'), colors.white]),
+        ('PADDING', (0,0), (-1,-1), 8),
+        ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor('#e2e8f0')),
+    ]))
+    elements.append(table)
+    doc.build(elements)
+    buffer.seek(0)
+    name = meta.get('full_name', journey.student_email).replace(' ', '_')
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="Application_{name}.pdf"'
+    return response
+
+
 def verify_receipt(request, receipt_code):
     from lms.models import Subscription
     sub = Subscription.objects.filter(receipt_code=receipt_code).select_related('student').first()
@@ -2052,6 +2132,73 @@ def final_exam(request, course_id):
         'completed': completed,
         'total_lessons': total_lessons,
     })
+
+
+@login_required(login_url='lms_login')
+def download_application(request, journey_id):
+    if not request.user.is_staff:
+        return redirect('lms_dashboard')
+    from lms.models import StudentJourney
+    from django.http import HttpResponse
+    import os
+    journey = get_object_or_404(StudentJourney, id=journey_id)
+    pdf_file = journey.metadata.get('pdf_file')
+    if pdf_file:
+        pdf_path = f'/var/www/glorynursing/media/applications/{pdf_file}'
+        if os.path.exists(pdf_path):
+            with open(pdf_path, 'rb') as f:
+                response = HttpResponse(f.read(), content_type='application/pdf')
+                response['Content-Disposition'] = f'inline; filename="{pdf_file}"'
+                return response
+    # Fallback: generate summary PDF
+    import io
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER
+    meta = journey.metadata
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4,
+        rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+    styles = getSampleStyleSheet()
+    navy = colors.HexColor('#16213e')
+    elements = []
+    title_style = ParagraphStyle('title', fontSize=16, fontName='Helvetica-Bold',
+        textColor=navy, alignment=TA_CENTER, spaceAfter=4)
+    sub_style = ParagraphStyle('sub', fontSize=9, fontName='Helvetica',
+        textColor=colors.HexColor('#64748b'), alignment=TA_CENTER, spaceAfter=16)
+    elements.append(Paragraph('GLORY NURSING HEALTHCARE TRAINING SCHOOL', title_style))
+    elements.append(Paragraph('Application Submission Summary', sub_style))
+    fields = [
+        ['Field', 'Value'],
+        ['Full Name', meta.get('full_name', '—')],
+        ['Email', meta.get('email', journey.student_email)],
+        ['Phone', meta.get('phone', '—')],
+        ['Date of Birth', meta.get('dob', '—')],
+        ['Address', f"{meta.get('street', '')} {meta.get('city', '')} {meta.get('state', '')} {meta.get('zip', '')}".strip()],
+        ['Course Applied', meta.get('course_applied', journey.program or '—')],
+        ['How Heard', meta.get('how_heard', '—')],
+        ['Submitted', meta.get('submitted_at', str(journey.updated_at))[:19]],
+    ]
+    table = Table(fields, colWidths=[5*cm, 12*cm])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), navy),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 10),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.HexColor('#f8fafc'), colors.white]),
+        ('PADDING', (0,0), (-1,-1), 8),
+        ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor('#e2e8f0')),
+    ]))
+    elements.append(table)
+    doc.build(elements)
+    buffer.seek(0)
+    name = meta.get('full_name', journey.student_email).replace(' ', '_')
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="Application_{name}.pdf"'
+    return response
 
 
 def verify_receipt(request, receipt_code):

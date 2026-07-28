@@ -60,7 +60,7 @@
         </div>
         {% endif %}
         {% if program.slug == 'onlinehybrid-certified-nursing-assistant' or 'cna-day' in program.slug or 'cna-evening' in program.slug or 'weekend-certified' in program.slug %}
-        <a href="{% url 'apply_cna' %}?program={{ program.slug }}" class="btn btn-primary" style="width:100%;text-align:center;margin-top:1.5rem">Apply Now</a>
+        <a href="/apply/cna/form/?program={{ program.slug }}" class="btn btn-primary" style="width:100%;text-align:center;margin-top:1.5rem">Apply Now</a>
         {% elif 'certified-medication-aide-online' in program.slug %}
         <a href="{% url 'apply_cma' %}" class="btn btn-primary" style="width:100%;text-align:center;margin-top:1.5rem">Apply Now</a>
         {% elif 'bls' in program.slug or 'cprbls' in program.slug %}

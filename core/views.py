@@ -549,14 +549,28 @@ def save_form_progress(request):
 
 def fill_form_cna(request):
     from lms.models import Course as LMSCourse
+    from core.models import Program as CoreProgram
     enroll_id = request.session.get('apply_enroll_id', 1)
-    program_slug = request.session.get('apply_program_slug', '')
+    program_slug = request.GET.get('program', '') or request.session.get('apply_program_slug', '')
     back_url = f'/apply/cna/?program={program_slug}' if program_slug else '/apply/cna/'
-    cna_courses = LMSCourse.objects.filter(program__icontains='CNA', is_published=True).exclude(program__icontains='HHA').order_by('price')
+    
+    # Get the specific program they're applying for
+    selected_program = CoreProgram.objects.filter(slug=program_slug).first() if program_slug else None
+    
+    # If physical program, pre-select its title; if online, show dropdown
+    if selected_program and not selected_program.is_online:
+        # Physical program - use program title as course_applied
+        cna_courses = [type('obj', (object,), {'title': selected_program.title, 'id': 0})]
+        preselected_course = selected_program.title
+    else:
+        cna_courses = LMSCourse.objects.filter(program__icontains='CNA', is_published=True).exclude(program__icontains='HHA').order_by('price')
+        preselected_course = cna_courses.first().title if cna_courses.exists() else ''
     return render(request, 'core/fill_form_cna.html', {
         'enroll_id': enroll_id,
         'back_url': back_url,
         'cna_courses': cna_courses,
+        'selected_program': selected_program,
+        'preselected_course': preselected_course,
     })
 
 
@@ -1109,13 +1123,21 @@ Glory Nursing Healthcare Training School
     # Track journey: form submitted
     try:
         from lms.models import StudentJourney
-        StudentJourney.objects.update_or_create(
-            student_email=student_email,
-            stage='form_submitted',
-            defaults={'program': get('course_applied'), 'metadata': {'full_name': full_name}}
-        )
-    except Exception:
-        pass
+        journey = StudentJourney.objects.filter(student_email=student_email).first()
+        if journey:
+            journey.stage = 'form_submitted'
+            journey.program = get('course_applied')
+            journey.metadata = {'full_name': full_name}
+            journey.save()
+        else:
+            StudentJourney.objects.create(
+                student_email=student_email,
+                stage='form_submitted',
+                program=get('course_applied'),
+                metadata={'full_name': full_name}
+            )
+    except Exception as e:
+        print(f"Journey update error: {e}")
 
     # Save PDF to server for admin download
     try:

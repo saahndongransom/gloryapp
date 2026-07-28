@@ -303,7 +303,6 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
 
 <div class="nav-label">Website</div>
     <button class="nav-item" onclick="switchTab('schedules',this)"><i class="fas fa-calendar-alt"></i>Class Schedules</button>
-    <button class="nav-item" onclick="switchTab('schedules',this)"><i class="fas fa-calendar-alt"></i>Class Schedules</button>
     <button class="nav-item" onclick="switchTab('programs',this)"><i class="fas fa-graduation-cap"></i>Programs</button>
     <button class="nav-item" onclick="switchTab('blog',this)"><i class="fas fa-newspaper"></i>Blog Posts</button>
     <button class="nav-item" onclick="switchTab('events',this)"><i class="fas fa-calendar-alt"></i>Events</button>
@@ -1462,9 +1461,10 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
                 <div style="font-size:12px;color:#64748b">Name: {{ app.metadata.full_name }}</div>
                 {% endif %}
               </div>
-              <div style="display:flex;gap:8px;flex-shrink:0">
+              <div style="display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap">
                 <a href="mailto:{{ app.student_email }}" style="font-size:11px;padding:6px 12px;border-radius:6px;background:#1a56db;color:#fff;text-decoration:none">✉️ Email</a>
-                <button onclick="switchTab('enrollments',this)" style="font-size:11px;padding:6px 12px;border-radius:6px;background:#059669;color:#fff;border:none;cursor:pointer">📋 View Pipeline</button>
+                <a href="/lms/application/{{ app.id }}/download/" target="_blank" style="font-size:11px;padding:6px 12px;border-radius:6px;background:#059669;color:#fff;text-decoration:none">⬇️ Download</a>
+                <button onclick="switchTab('enrollments',this)" style="font-size:11px;padding:6px 12px;border-radius:6px;background:#7c3aed;color:#fff;border:none;cursor:pointer">📋 Pipeline</button>
               </div>
             </div>
             {% endfor %}
