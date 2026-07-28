@@ -1350,6 +1350,26 @@ Glory Nursing Healthcare Training School""",
         print(f"Account creation error: {e}")
 
     request.session['application_submitted'] = True
+
+    # Track journey: form submitted
+    try:
+        from lms.models import StudentJourney
+        journey = StudentJourney.objects.filter(student_email=student_email).first()
+        if journey:
+            journey.stage = 'form_submitted'
+            journey.program = program_name
+            journey.metadata = {'full_name': full_name, 'email': student_email, 'phone': data.get('phone','')}
+            journey.save()
+        else:
+            StudentJourney.objects.create(
+                student_email=student_email,
+                stage='form_submitted',
+                program=program_name,
+                metadata={'full_name': full_name, 'email': student_email}
+            )
+    except Exception as e:
+        print(f"Simple form journey error: {e}")
+
     return JsonResponse({'success': True})
 
 
