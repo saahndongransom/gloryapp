@@ -1221,10 +1221,14 @@ def fill_form_simple(request, program_code):
     program_name = program_names.get(program_code.upper(), program_code)
     course = LMSCourse.objects.filter(program__iexact=program_code, is_published=True).order_by('price').first()
     course_id = course.id if course else ''
+    # BLS has online LMS access, HHA and others are physical
+    online_programs = ['BLS', 'ACMA']
+    is_online = program_code.upper() in online_programs
     return render(request, 'core/fill_form_simple.html', {
         'program_name': program_name,
         'program_code': program_code.upper(),
         'course_id': course_id,
+        'is_online': is_online,
         'back_url': '/contact/',
         'submit_url': f'/apply/simple/{program_code}/submit/',
     })
