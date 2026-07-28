@@ -59,7 +59,15 @@
           {% endfor %}
         </div>
         {% endif %}
-        <a href="/apply/" class="btn btn-primary" style="width:100%;text-align:center;margin-top:1.5rem">Apply Now</a>
+        {% if program.slug == 'onlinehybrid-certified-nursing-assistant' or 'cna-day' in program.slug or 'cna-evening' in program.slug or 'weekend-certified' in program.slug %}
+        <a href="{% url 'apply_cna' %}?program={{ program.slug }}" class="btn btn-primary" style="width:100%;text-align:center;margin-top:1.5rem">Apply Now</a>
+        {% elif 'certified-medication-aide-online' in program.slug %}
+        <a href="{% url 'apply_cma' %}" class="btn btn-primary" style="width:100%;text-align:center;margin-top:1.5rem">Apply Now</a>
+        {% elif 'bls' in program.slug or 'cprbls' in program.slug %}
+        <a href="{% url 'fill_form_simple' 'BLS' %}" class="btn btn-primary" style="width:100%;text-align:center;margin-top:1.5rem">Apply Now</a>
+        {% else %}
+        <a href="{% url 'contact' %}" class="btn btn-primary" style="width:100%;text-align:center;margin-top:1.5rem">Contact Us to Apply</a>
+        {% endif %}
         <a href="/contact/" class="btn btn-outline" style="width:100%;text-align:center;margin-top:.75rem">Ask a Question</a>
       </div>
       <div class="sidebar-card" style="margin-top:1.5rem">
