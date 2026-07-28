@@ -3,7 +3,36 @@ from django.utils.text import slugify
 from django.utils import timezone
 
 
+class ClassSchedule(models.Model):
+    program = models.ForeignKey('Program', on_delete=models.CASCADE, related_name='schedules_list')
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    start_time = models.TimeField(null=True, blank=True)
+    end_time = models.TimeField(null=True, blank=True)
+    days = models.CharField(max_length=100, help_text="e.g. Mon-Fri, Mon/Wed/Fri")
+    seats_total = models.IntegerField(default=15)
+    seats_filled = models.IntegerField(default=0)
+    notes = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['start_date']
+
+    def __str__(self):
+        return f"{self.program.short} — {self.start_date}"
+
+    @property
+    def seats_available(self):
+        return self.seats_total - self.seats_filled
+
+    @property
+    def is_full(self):
+        return self.seats_filled >= self.seats_total
+
+
 class Program(models.Model):
+    is_online = models.BooleanField(default=False, help_text="Online/Hybrid program with LMS access")
     CATEGORY_CHOICES = [
         ('nursing', 'Nursing'),
         ('allied_health', 'Allied Health'),

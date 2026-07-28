@@ -166,7 +166,23 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
 
 @media (max-width: 800px) {
   .classroom-grid { grid-template-columns: 1fr; }
-  .module-sidebar { display: none; }
+  .module-sidebar {
+    position: fixed; left: -300px; top: 0; height: 100vh;
+    z-index: 199; transition: left .25s; width: 280px;
+    background: #fff; box-shadow: 2px 0 10px rgba(0,0,0,.15);
+  }
+  .module-sidebar.open { left: 0; }
+  .sidebar-overlay { display: none; }
+  .mobile-menu-btn { display: flex !important; }
+}
+.sidebar-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5); z-index: 198;
+}
+.mobile-menu-btn {
+  display: none; background: none; border: none;
+  font-size: 20px; cursor: pointer; color: #0f172a;
+  padding: 4px 8px; align-items: center;
 }
 </style>
 {% endblock %}
@@ -175,7 +191,11 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
 <div class="classroom-shell">
 
   {# ── Topbar ── #}
+  <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
   <div class="classroom-topbar">
+    <button class="mobile-menu-btn" onclick="toggleSidebar()">
+      <i class="fas fa-bars"></i>
+    </button>
     <a href="{% url 'lms_dashboard' %}" class="topbar-back">
       <i class="fas fa-arrow-left"></i> Dashboard
     </a>
@@ -288,4 +308,16 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
     </div>
   </div>
 </div>
+<script>
+function toggleSidebar() {
+  var sidebar = document.querySelector('.module-sidebar');
+  var overlay = document.getElementById('sidebarOverlay');
+  var isOpen = sidebar.classList.toggle('open');
+  overlay.style.display = isOpen ? 'block' : 'none';
+}
+function closeSidebar() {
+  document.querySelector('.module-sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').style.display = 'none';
+}
+</script>
 {% endblock %}

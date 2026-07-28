@@ -198,11 +198,19 @@ def program_detail(request, slug):
 
     db_program = Program.objects.filter(slug=slug, is_active=True).first()
     if db_program:
+        from .models import ClassSchedule
+        from django.utils import timezone
+        upcoming_schedules = ClassSchedule.objects.filter(
+            program=db_program,
+            start_date__gte=timezone.now().date(),
+            is_active=True
+        ).order_by('start_date')[:5]
         return render(request, 'core/program_detail.html', {
             'program': db_program,
             'use_db': True,
             'page': 'programs',
             'reviews': reviews,
+            'upcoming_schedules': upcoming_schedules,
             'avg_rating': avg_rating,
             'review_count': review_count,
         })

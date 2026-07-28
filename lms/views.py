@@ -1,3 +1,5 @@
+import os
+import re
 import json
 import random
 import string
@@ -320,6 +322,33 @@ def lms_dashboard_view(request):
                         print(f"Reply email error: {e}")
                     messages.success(request, 'Reply sent!')
                 return redirect('/lms/dashboard/?tab=discussions')
+
+            elif action == 'save_schedule':
+                from core.models import ClassSchedule, Program as CoreProgram
+                prog_id = request.POST.get('schedule_program')
+                start_date = request.POST.get('start_date')
+                if prog_id and start_date:
+                    prog = get_object_or_404(CoreProgram, id=prog_id)
+                    ClassSchedule.objects.create(
+                        program=prog,
+                        start_date=start_date,
+                        end_date=request.POST.get('end_date') or None,
+                        start_time=request.POST.get('start_time') or None,
+                        end_time=request.POST.get('end_time') or None,
+                        days=request.POST.get('days', ''),
+                        seats_total=int(request.POST.get('seats_total', 15)),
+                        notes=request.POST.get('notes', ''),
+                    )
+                    messages.success(request, 'Schedule added!')
+                return redirect('/lms/dashboard/?tab=schedules')
+
+            elif action == 'delete_schedule':
+                from core.models import ClassSchedule
+                sch_id = request.POST.get('schedule_id')
+                if sch_id:
+                    ClassSchedule.objects.filter(id=sch_id).delete()
+                    messages.success(request, 'Schedule deleted.')
+                return redirect('/lms/dashboard/?tab=schedules')
 
             elif action == 'resolve_thread':
                 thread_id = request.POST.get('thread_id')
@@ -686,12 +715,22 @@ def lms_dashboard_view(request):
         # Financial balance data
         from lms.models import Enrollment as EnrollmentModel2
         student_balances = []
+        seen = set()
         for s in raw_students:
             s_subs = Subscription.objects.filter(student=s)
-            s_enrollments = EnrollmentModel2.objects.filter(student=s).select_related('course')
+            s_enrollments = EnrollmentModel2.objects.filter(student=s).select_related('course').distinct()
             for e in s_enrollments:
+                key = (s.id, e.course.id)
+                if key in seen:
+                    continue
+                seen.add(key)
                 paid = float(sum(sub.amount_paid for sub in s_subs))
-                due = float(e.course.price)
+                # Use subscription total if breakdown exists
+                last_sub = s_subs.order_by('-started_at').first()
+                if last_sub and last_sub.breakdown and last_sub.breakdown.get('total'):
+                    due = float(last_sub.breakdown['total'])
+                else:
+                    due = float(e.course.price)
                 balance = due - paid
                 student_balances.append({
                     'student': s,
@@ -714,6 +753,8 @@ def lms_dashboard_view(request):
             'open_tickets': SupportThread.objects.filter(is_resolved=False).select_related('user', 'lesson'),
             'all_certificates': Certificate.objects.all().select_related('student', 'course'),
             'all_subscriptions': Subscription.objects.all().select_related('student'),
+            'class_schedules': __import__('core.models', fromlist=['ClassSchedule']).ClassSchedule.objects.all().select_related('program').order_by('start_date'),
+            'physical_programs': __import__('core.models', fromlist=['Program']).Program.objects.filter(is_active=True, is_online=False),
             'total_students': raw_students.count(),
             'total_courses': Course.objects.count(),
             'total_revenue': float(total_revenue),
@@ -1326,14 +1367,47 @@ def serve_protected_content(request, content_id):
     mime_type, _ = mimetypes.guess_type(file_path)
     if not mime_type:
         mime_type = 'application/octet-stream'
-    # Use Nginx X-Accel-Redirect for fast video serving
-    # Strip MEDIA_ROOT from path to get the internal URL
-    media_root = str(settings.MEDIA_ROOT).rstrip('/')
-    relative_path = str(file_path).replace(media_root, '')
-    response = HttpResponse(content_type=mime_type)
-    response['X-Accel-Redirect'] = f'/protected_media{relative_path}'
+    # Range request support for video seeking
+    file_size = os.path.getsize(file_path)
+    range_header = request.META.get('HTTP_RANGE', '').strip()
+    
+    if range_header:
+        range_match = re.match(r'bytes=(\d+)-(\d*)', range_header)
+        if range_match:
+            first_byte = int(range_match.group(1))
+            last_byte = int(range_match.group(2)) if range_match.group(2) else file_size - 1
+            last_byte = min(last_byte, file_size - 1)
+            length = last_byte - first_byte + 1
+            def range_iterator(path, start, length, chunk=65536):
+                with open(path, 'rb') as f:
+                    f.seek(start)
+                    remaining = length
+                    while remaining > 0:
+                        chunk_data = f.read(min(chunk, remaining))
+                        if not chunk_data:
+                            break
+                        remaining -= len(chunk_data)
+                        yield chunk_data
+            response = StreamingHttpResponse(range_iterator(file_path, first_byte, length), 
+                                           status=206, content_type=mime_type)
+            response['Content-Range'] = f'bytes {first_byte}-{last_byte}/{file_size}'
+            response['Content-Length'] = str(length)
+        else:
+            response = StreamingHttpResponse(open(file_path, 'rb'), content_type=mime_type)
+            response['Content-Length'] = str(file_size)
+    else:
+        def file_iterator(path, chunk_size=65536):
+            with open(path, 'rb') as f:
+                while True:
+                    chunk = f.read(chunk_size)
+                    if not chunk:
+                        break
+                    yield chunk
+        response = StreamingHttpResponse(file_iterator(file_path), content_type=mime_type)
+        response['Content-Length'] = str(file_size)
+
+    response['Accept-Ranges'] = 'bytes'
     response['Content-Disposition'] = 'inline'
-    response['X-Content-Type-Options'] = 'nosniff'
     response['Cache-Control'] = 'private, max-age=3600'
     response['X-Frame-Options'] = 'SAMEORIGIN'
     return response
@@ -2510,12 +2584,40 @@ Oklahoma City, Oklahoma""",
                 course=course
             )
 
+            # Check if online or physical program
+            from core.models import Program as CoreProgram, ClassSchedule
+            from django.utils import timezone
+            program_obj = CoreProgram.objects.filter(course=course).first()
+            is_online = program_obj.is_online if program_obj else True
+
+            # Get upcoming schedules for physical programs
+            upcoming = []
+            if program_obj and not is_online:
+                upcoming_qs = ClassSchedule.objects.filter(
+                    program=program_obj,
+                    start_date__gte=timezone.now().date(),
+                    is_active=True
+                ).order_by('start_date')[:3]
+                for s in upcoming_qs:
+                    upcoming.append({
+                        'start_date': str(s.start_date),
+                        'end_date': str(s.end_date) if s.end_date else '',
+                        'start_time': s.start_time.strftime('%I:%M %p') if s.start_time else '',
+                        'end_time': s.end_time.strftime('%I:%M %p') if s.end_time else '',
+                        'days': s.days,
+                        'seats_available': s.seats_available,
+                        'notes': s.notes,
+                    })
+
             # Store success info in session
             request.session['enrollment_success'] = {
                 'name': first_name,
                 'course': course.title,
                 'username': username,
                 'email': email,
+                'is_online': is_online,
+                'program_title': program_obj.title if program_obj else course.title,
+                'upcoming_schedules': upcoming,
             }
             return redirect('enrollment_success')
 

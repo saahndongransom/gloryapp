@@ -302,6 +302,8 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
 
 
 <div class="nav-label">Website</div>
+    <button class="nav-item" onclick="switchTab('schedules',this)"><i class="fas fa-calendar-alt"></i>Class Schedules</button>
+    <button class="nav-item" onclick="switchTab('schedules',this)"><i class="fas fa-calendar-alt"></i>Class Schedules</button>
     <button class="nav-item" onclick="switchTab('programs',this)"><i class="fas fa-graduation-cap"></i>Programs</button>
     <button class="nav-item" onclick="switchTab('blog',this)"><i class="fas fa-newspaper"></i>Blog Posts</button>
     <button class="nav-item" onclick="switchTab('events',this)"><i class="fas fa-calendar-alt"></i>Events</button>
@@ -1853,6 +1855,96 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
 
 
 <!-- ══ PROGRAMS ══ -->
+      <!-- ══ CLASS SCHEDULES ══ -->
+      <div id="view-schedules" class="view-section">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+          <!-- Add Schedule -->
+          <div class="panel">
+            <div class="panel-title">📅 Add Class Schedule</div>
+            <form method="POST" action="{% url 'lms_dashboard' %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="save_schedule">
+              <div class="form-group">
+                <label class="form-label">Program</label>
+                <select name="schedule_program" class="form-control" required>
+                  <option value="">Select program...</option>
+                  {% for p in physical_programs %}
+                  <option value="{{ p.id }}">{{ p.title|truncatechars:40 }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Start Date</label>
+                  <input type="date" name="start_date" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">End Date</label>
+                  <input type="date" name="end_date" class="form-control">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Start Time</label>
+                  <input type="time" name="start_time" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">End Time</label>
+                  <input type="time" name="end_time" class="form-control">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Days</label>
+                  <input type="text" name="days" class="form-control" placeholder="e.g. Mon-Fri">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Total Seats</label>
+                  <input type="number" name="seats_total" class="form-control" value="15" min="1">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Notes</label>
+                <textarea name="notes" class="form-control" rows="2" placeholder="Any special instructions..."></textarea>
+              </div>
+              <button type="submit" class="btn-submit">Add Schedule</button>
+            </form>
+          </div>
+
+          <!-- All Schedules -->
+          <div class="panel">
+            <div class="panel-title">📋 Upcoming Schedules</div>
+            <div style="max-height:500px;overflow-y:auto">
+              {% for sch in class_schedules %}
+              <div style="padding:12px;border-bottom:1px solid #f1f5f9;{% if sch.is_full %}opacity:.6{% endif %}">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                  <span style="font-size:13px;font-weight:700;color:#0f172a">{{ sch.program.short }}</span>
+                  <span style="font-size:11px;background:{% if sch.is_full %}#fee2e2;color:#dc2626{% else %}#d1fae5;color:#059669{% endif %};padding:2px 8px;border-radius:10px;font-weight:600">
+                    {% if sch.is_full %}Full{% else %}{{ sch.seats_available }} seats{% endif %}
+                  </span>
+                </div>
+                <div style="font-size:12px;color:#64748b">
+                  📅 {{ sch.start_date|date:"M d, Y" }} {% if sch.end_date %}— {{ sch.end_date|date:"M d, Y" }}{% endif %}
+                </div>
+                <div style="font-size:12px;color:#64748b">
+                  🕐 {% if sch.start_time %}{{ sch.start_time|time:"g:i A" }}{% if sch.end_time %} - {{ sch.end_time|time:"g:i A" }}{% endif %}{% endif %} · {{ sch.days }}
+                </div>
+                {% if sch.notes %}<div style="font-size:11px;color:#94a3b8;margin-top:4px">{{ sch.notes }}</div>{% endif %}
+                <form method="POST" action="{% url 'lms_dashboard' %}" style="display:inline">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="delete_schedule">
+                  <input type="hidden" name="schedule_id" value="{{ sch.id }}">
+                  <button type="submit" style="font-size:10px;padding:2px 8px;border-radius:4px;border:none;cursor:pointer;background:#fee2e2;color:#dc2626;margin-top:4px">Delete</button>
+                </form>
+              </div>
+              {% empty %}
+              <div style="padding:40px;text-align:center;color:#94a3b8;font-size:13px">No schedules yet</div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div id="view-programs" class="view-section">
         <div class="two-col">
           <div class="panel">
