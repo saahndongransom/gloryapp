@@ -1690,6 +1690,25 @@ Glory Nursing Healthcare Training School""",
 
     request.session['application_submitted'] = True
 
+    # Track journey: form submitted
+    try:
+        from lms.models import StudentJourney
+        journey = StudentJourney.objects.filter(student_email=student_email).first()
+        if journey:
+            journey.stage = 'form_submitted'
+            journey.program = get('course_applied', 'CMA')
+            journey.metadata = {'full_name': full_name, 'email': student_email, 'phone': get('phone')}
+            journey.save()
+        else:
+            StudentJourney.objects.create(
+                student_email=student_email,
+                stage='form_submitted',
+                program=get('course_applied', 'CMA'),
+                metadata={'full_name': full_name, 'email': student_email}
+            )
+    except Exception as e:
+        print(f"CMA Journey error: {e}")
+
     response = HttpResponse(pdf_bytes, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="CMA_Application_{full_name.replace(" ", "_")}.pdf"'
     if email_error:
