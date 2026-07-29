@@ -565,12 +565,29 @@ def fill_form_cna(request):
     else:
         cna_courses = LMSCourse.objects.filter(program__icontains='CNA', is_published=True).exclude(program__icontains='HHA').order_by('price')
         preselected_course = cna_courses.first().title if cna_courses.exists() else ''
+    # Get upcoming schedules for this program
+    from core.models import ClassSchedule
+    from django.utils import timezone as tz3
+    cna_upcoming = []
+    if selected_program:
+        cna_upcoming = list(ClassSchedule.objects.filter(
+            program=selected_program,
+            start_date__gte=tz3.now().date(),
+            is_active=True
+        ).order_by('start_date').values('start_date', 'days', 'start_time')[:3])
+        # Convert dates to strings for JSON
+        for s in cna_upcoming:
+            s['start_date'] = str(s['start_date'])
+            s['start_time'] = str(s['start_time']) if s['start_time'] else ''
+
+    import json
     return render(request, 'core/fill_form_cna.html', {
         'enroll_id': enroll_id,
         'back_url': back_url,
         'cna_courses': cna_courses,
         'selected_program': selected_program,
         'preselected_course': preselected_course,
+        'cna_upcoming_json': json.dumps(cna_upcoming),
     })
 
 
@@ -1229,18 +1246,26 @@ def fill_form_simple(request, program_code):
     # Check if online based on program slug parameter
     program_slug = request.GET.get('program', '')
     # Check from database
-    from core.models import Program as CoreProgram2
+    from core.models import Program as CoreProgram2, ClassSchedule
+    from django.utils import timezone as tz_now
     prog_obj = CoreProgram2.objects.filter(slug=program_slug).first() if program_slug else None
     if prog_obj:
         is_online = prog_obj.is_online
+        upcoming = ClassSchedule.objects.filter(
+            program=prog_obj,
+            start_date__gte=tz_now.now().date(),
+            is_active=True
+        ).order_by('start_date')[:3]
     else:
         online_programs = ['BLS']
         is_online = program_code.upper() in online_programs
+        upcoming = []
     return render(request, 'core/fill_form_simple.html', {
         'program_name': program_name,
         'program_code': program_code.upper(),
         'course_id': course_id,
         'is_online': is_online,
+        'upcoming_schedules': upcoming,
         'back_url': '/contact/',
         'submit_url': f'/apply/simple/{program_code}/submit/',
     })
