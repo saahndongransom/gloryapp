@@ -19,7 +19,7 @@
         <div class="program-meta">
           <span><i class="fas fa-clock"></i> {{ program.duration }}</span>
           <span><i class="fas fa-book"></i> {{ program.hours }}</span>
-          {% if program.course %}<span style="color:#059669;font-weight:700"><i class="fas fa-tag"></i> Starting from ${{ program.course.price }}</span>{% endif %}
+          {% if program.price %}<span style="color:#059669;font-weight:700"><i class="fas fa-tag"></i> Starting from ${{ program.price }}</span>{% elif program.course %}<span style="color:#059669;font-weight:700"><i class="fas fa-tag"></i> Starting from ${{ program.course.price }}</span>{% endif %}
         </div>
         <p class="program-desc">{{ program.description|truncatechars:120 }}</p>
         <div class="program-schedules">

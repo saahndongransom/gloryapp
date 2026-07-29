@@ -33,6 +33,7 @@ class ClassSchedule(models.Model):
 
 class Program(models.Model):
     is_online = models.BooleanField(default=False, help_text="Online/Hybrid program with LMS access")
+    price = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text="Program price (overrides course price)")
     CATEGORY_CHOICES = [
         ('nursing', 'Nursing'),
         ('allied_health', 'Allied Health'),

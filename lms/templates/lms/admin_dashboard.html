@@ -1954,6 +1954,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
               <input type="hidden" name="action" value="save_program">
               <input type="hidden" name="program_id" id="programIdField" value="">
               <div class="form-group"><label class="form-label">Title</label><input type="text" name="prog_title" id="progTitle" class="form-control" placeholder="e.g. Certified Nursing Assistant (CNA)" required></div>
+              <div class="form-group"><label class="form-label">Price ($)</label><input type="number" name="prog_price" id="progPrice" class="form-control" placeholder="e.g. 600" step="0.01"></div>
               <div class="form-row">
                 <div class="form-group"><label class="form-label">Short Name</label><input type="text" name="prog_short" id="progShort" class="form-control" placeholder="CNA"></div>
                 <div class="form-group"><label class="form-label">Icon (emoji)</label><input type="text" name="prog_icon" id="progIcon" class="form-control" placeholder="🏥"></div>
@@ -2006,7 +2007,11 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
                     <div style="font-size:11px;color:var(--muted)">{{ prog.title|truncatechars:35 }}</div>
                     <div style="font-size:11px;color:var(--muted)">{{ prog.duration }} · {{ prog.hours }}</div>
                   </td>
-                  <td style="font-size:12px">{% if prog.course %}<span class="badge badge-active">${{ prog.course.price }}</span>{% else %}<span class="badge badge-warn">No course</span>{% endif %}</td>
+                  <td style="font-size:12px">
+                    {% if prog.price %}<span class="badge badge-active">${{ prog.price }}</span>
+                    {% elif prog.course %}<span class="badge badge-active">${{ prog.course.price }}</span>
+                    {% else %}<span class="badge badge-warn">No price</span>{% endif %}
+                  </td>
                   <td>{% if prog.is_active %}<span class="badge badge-active">Active</span>{% else %}<span class="badge badge-danger">Hidden</span>{% endif %}</td>
                   <td style="display:flex;gap:6px;flex-wrap:wrap">
                     <button onclick="editProgram({{ prog.id }},'{{ prog.title|escapejs }}','{{ prog.short|escapejs }}','{{ prog.icon }}','{{ prog.duration|escapejs }}','{{ prog.hours|escapejs }}','{{ prog.category }}','{{ prog.description|escapejs }}','{{ prog.schedules|escapejs }}',{% if prog.course %}{{ prog.course.id }}{% else %}''{% endif %},{{ prog.order }},{{ prog.is_active|yesno:'true,false' }})" style="background:var(--blue);color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer">Edit</button>

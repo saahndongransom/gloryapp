@@ -471,6 +471,7 @@ def lms_dashboard_view(request):
                         'order': int(request.POST.get('prog_order', 0)),
                         'is_active': 'prog_active' in request.POST,
                         'course': course_obj,
+                        'price': float(request.POST.get('prog_price', 0) or 0) or None,
                     }
                     if prog_id:
                         CoreProgram.objects.filter(id=prog_id).update(**{k:v for k,v in data.items() if k != 'course'})

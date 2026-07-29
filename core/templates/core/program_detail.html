@@ -44,7 +44,7 @@
         <h3>Quick Info</h3>
         <div class="info-row"><i class="fas fa-clock"></i><div><strong>Duration</strong><span>{{ program.duration }}</span></div></div>
         <div class="info-row"><i class="fas fa-book-open"></i><div><strong>Clock Hours</strong><span>{{ program.hours }}</span></div></div>
-        {% if program.course %}<div class="info-row"><i class="fas fa-tag" style="color:#059669"></i><div><strong>Tuition</strong><span style="color:#059669;font-weight:700">Starting from ${{ program.course.price }}</span></div></div>{% endif %}
+        {% if program.price %}<div class="info-row"><i class="fas fa-tag" style="color:#059669"></i><div><strong>Tuition</strong><span style="color:#059669;font-weight:700">Starting from ${{ program.price }}</span></div></div>{% elif program.course %}<div class="info-row"><i class="fas fa-tag" style="color:#059669"></i><div><strong>Tuition</strong><span style="color:#059669;font-weight:700">Starting from ${{ program.course.price }}</span></div></div>{% endif %}
         <div class="info-row"><i class="fas fa-award"></i><div><strong>Certification</strong><span>State & National Eligible</span></div></div>
         {% if upcoming_schedules %}
         <div style="margin-top:1.5rem;border-top:1px solid #e2e8f0;padding-top:1rem">
