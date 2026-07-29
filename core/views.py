@@ -1054,7 +1054,7 @@ Glory Nursing Online Portal''',
 We have received your completed application. Our admissions team will review it and contact you within 1-2 business days.
 
 Complete your payment here:
-https://glorynursingok.com/lms/pay/?name={full_name.replace(' ', '+')}&email={student_email}&reason={get('course_applied') or 'CMA Program'}&amount={cma_program_price or '900'}&amount={program_price or '600'}
+https://glorynursingok.com/lms/pay/?name={full_name.replace(' ', '+')}&email={student_email}&reason={get('course_applied') or 'CMA Program'}&amount={cma_program_price or '900'}&amount={program_price or '600'}amount={program_price or '600'}
 
 Questions? Call us at (405) 968-5004 or email glorynursing@yahoo.com
 
@@ -1121,7 +1121,7 @@ Username: {username}
 Password: {temp_password}
 
 💳 Complete your payment here:
-https://glorynursingok.com/lms/pay/?name={full_name.replace(' ', '+')}&email={student_email}&reason={get('course_applied') or 'CMA Program'}&amount={cma_program_price or '900'}&amount={program_price or '600'}
+https://glorynursingok.com/lms/pay/?name={full_name.replace(' ', '+')}&email={student_email}&reason={get('course_applied') or 'CMA Program'}&amount={cma_program_price or '900'}&amount={program_price or '600'}amount={program_price or '600'}
 
 Or login to your account and pay from your dashboard:
 https://glorynursingok.com/lms/login/
