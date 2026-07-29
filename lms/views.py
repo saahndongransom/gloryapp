@@ -1069,11 +1069,24 @@ def submit_quiz(request, quiz_id):
 def quiz_results(request, attempt_id):
     attempt = get_object_or_404(QuizAttempt, id=attempt_id, student=request.user)
     results_data = request.session.get(f'quiz_results_{attempt_id}', None)
+    lesson = attempt.quiz.lesson
+    # Get next lesson
+    next_lesson = Lesson.objects.filter(
+        module__course=lesson.module.course,
+        order__gt=lesson.order,
+        module__order__gte=lesson.module.order
+    ).order_by('module__order', 'order').first()
+    if not next_lesson:
+        next_lesson = Lesson.objects.filter(
+            module__course=lesson.module.course,
+            module__order__gt=lesson.module.order
+        ).order_by('module__order', 'order').first()
     context = {
         'attempt': attempt,
         'quiz': attempt.quiz,
         'results_data': results_data,
-        'lesson': attempt.quiz.lesson,
+        'lesson': lesson,
+        'next_lesson': next_lesson,
     }
     return render(request, 'lms/quiz_results.html', context)
 

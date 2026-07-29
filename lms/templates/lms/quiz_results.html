@@ -104,8 +104,8 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
       <i class="fas fa-arrow-left"></i> Back to Lesson
     </a>
     {% if attempt.passed %}
-      <a href="{% url 'course_classroom' lesson.module.course.id %}" class="btn btn-green">
-        <i class="fas fa-th-large"></i> Continue Course
+      <a href="{% if next_lesson %}{% url 'lesson_view' next_lesson.id %}{% else %}{% url 'course_classroom' lesson.module.course.id %}{% endif %}" class="btn btn-green">
+        <i class="fas fa-th-large"></i> {% if next_lesson %}Next Lesson{% else %}Back to Classroom{% endif %}
       </a>
     {% else %}
       <a href="{% url 'quiz_view' quiz.id %}" class="btn btn-primary">
