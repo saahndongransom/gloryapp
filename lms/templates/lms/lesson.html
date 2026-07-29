@@ -1225,6 +1225,25 @@ function checkAllComplete() {
     const hint = pending.length > 0 ? pending[0] : 'Complete lesson content';
     if (completeBtnText) completeBtnText.textContent = hint;
     if (markDoneBtnText) markDoneBtnText.textContent = hint;
+    
+    // If only quiz is pending, change button to Take Quiz
+    const allContentDone2 = contentTypes.every(t => reqsMet[t] !== false);
+    if (allContentDone2 && !quizPassedState && {{ quizzes|length }} > 0) {
+      if (completeBtn) {
+        completeBtn.className = 'complete-btn';
+        completeBtn.style.background = '#7c3aed';
+        completeBtn.style.borderColor = '#7c3aed';
+        completeBtn.innerHTML = '<i class="fas fa-clipboard-check"></i> Take Quiz';
+        completeBtn.onclick = null;
+        completeBtn.setAttribute('onclick', "window.location.href='{% if quizzes %}{% url 'quiz_view' quizzes.0.id %}{% endif %}'");
+      }
+      if (markDoneBtn) {
+        markDoneBtn.className = 'mark-done-btn';
+        markDoneBtn.style.background = '#7c3aed';
+        markDoneBtn.innerHTML = '<i class="fas fa-clipboard-check"></i> Take Quiz';
+        markDoneBtn.setAttribute('onclick', "window.location.href='{% if quizzes %}{% url 'quiz_view' quizzes.0.id %}{% endif %}'");
+      }
+    }
   }
 }
 
