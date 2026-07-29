@@ -1044,7 +1044,8 @@ Glory Nursing Online Portal''',
 
 We have received your completed application. Our admissions team will review it and contact you within 1-2 business days.
 
-Complete your payment at: https://glorynursingok.com/lms/pay/
+Complete your payment here:
+https://glorynursingok.com/lms/pay/?name={full_name.replace(' ', '+')}
 
 Questions? Call us at (405) 968-5004 or email glorynursing@yahoo.com
 
@@ -1681,7 +1682,8 @@ Glory Nursing Online Portal""",
 
 We have received your completed application. Our admissions team will review it and contact you within 1-2 business days.
 
-Complete your payment at: https://glorynursingok.com/lms/pay/
+Complete your payment here:
+https://glorynursingok.com/lms/pay/?name={full_name.replace(' ', '+')}
 
 Questions? Call us at (405) 968-5004 or email glorynursing@yahoo.com
 
