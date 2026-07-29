@@ -677,7 +677,8 @@ function submitApplication() {
       clearProgress();
       if (!isOnlineProgram) {
         var courseApplied = formData.course_applied || '';
-        var payUrl = '/lms/pay/?reason=' + encodeURIComponent(courseApplied) + '&name=' + encodeURIComponent((formData.first_name || '') + ' ' + (formData.last_name || ''));
+        var progPrice = '{{ selected_program.price|default:"" }}';
+        var payUrl = '/lms/pay/?reason=' + encodeURIComponent(courseApplied) + '&name=' + encodeURIComponent((formData.first_name || '') + ' ' + (formData.last_name || '')) + '&email=' + encodeURIComponent(formData.student_email || '') + (progPrice ? '&amount=' + progPrice : '');
         var upcoming = {{ cna_upcoming_json|safe }};
         var scheduleMsg = '';
         if (upcoming && upcoming.length > 0) {

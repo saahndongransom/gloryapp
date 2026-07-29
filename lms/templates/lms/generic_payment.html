@@ -198,4 +198,43 @@ async function handlePayment() {
   }
 }
 </script>
+
+<script>
+window.addEventListener('load', function() {
+  {% if prefill_name %}
+  var parts = '{{ prefill_name|escapejs }}'.trim().split(' ');
+  var fn = document.querySelector('input[name="first_name"]');
+  var ln = document.querySelector('input[name="last_name"]');
+  if (fn) fn.value = parts[0] || '';
+  if (ln) ln.value = parts.slice(1).join(' ') || '';
+  {% endif %}
+
+  {% if prefill_email %}
+  var em = document.querySelector('input[name="email"]');
+  if (em) em.value = '{{ prefill_email|escapejs }}';
+  {% endif %}
+
+  {% if prefill_reason %}
+  var reason = '{{ prefill_reason|escapejs }}'.toLowerCase();
+  var sel = document.querySelector('select[name="reason"]');
+  if (sel) {
+    for (var i = 0; i < sel.options.length; i++) {
+      var v = sel.options[i].value.toLowerCase();
+      if (reason.includes('cna') && v.includes('cna')) { sel.selectedIndex = i; break; }
+      else if (reason.includes('cma') && v.includes('cma')) { sel.selectedIndex = i; break; }
+      else if ((reason.includes('bls') || reason.includes('cpr')) && v.includes('bls')) { sel.selectedIndex = i; break; }
+      else if (reason.includes('hha') && v.includes('cna')) { sel.selectedIndex = i; break; }
+      else if (reason.includes('acma') && v.includes('cma')) { sel.selectedIndex = i; break; }
+      else if (reason.includes('renewal') && v.includes('cma')) { sel.selectedIndex = i; break; }
+    }
+  }
+  {% endif %}
+
+  {% if prefill_amount %}
+  var amt = document.getElementById('baseAmount');
+  if (amt) { amt.value = '{{ prefill_amount|escapejs }}'; updatePayTotal(); }
+  {% endif %}
+});
+</script>
+
 {% endblock %}
