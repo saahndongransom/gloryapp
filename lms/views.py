@@ -2524,6 +2524,8 @@ Glory Nursing Online Portal""",
         'prefill_name': request.GET.get('name', ''),
         'prefill_email': request.GET.get('email', ''),
         'prefill_amount': request.GET.get('amount', ''),
+        'prefill_first': request.GET.get('name', '').split(' ')[0],
+        'prefill_last': ' '.join(request.GET.get('name', '').split(' ')[1:]),
     }
     return render(request, 'lms/generic_payment.html', context)
 

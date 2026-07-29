@@ -79,11 +79,11 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">First Name *</label>
-          <input type="text" name="first_name" class="form-control" required placeholder="Jane" value="{{ prefill_name|cut:' '|truncatewords:1 }}">
+          <input type="text" name="first_name" class="form-control" required placeholder="Jane" id="firstNameInput" value="{{ prefill_first }}">
         </div>
         <div class="form-group">
           <label class="form-label">Last Name *</label>
-          <input type="text" name="last_name" class="form-control" required placeholder="Smith">
+          <input type="text" name="last_name" class="form-control" required placeholder="Smith" id="lastNameInput" value="{{ prefill_last }}">
         </div>
       </div>
 
@@ -203,8 +203,8 @@ async function handlePayment() {
 window.addEventListener('load', function() {
   {% if prefill_name %}
   var parts = '{{ prefill_name|escapejs }}'.trim().split(' ');
-  var fn = document.querySelector('input[name="first_name"]');
-  var ln = document.querySelector('input[name="last_name"]');
+  var fn = document.getElementById('firstNameInput');
+  var ln = document.getElementById('lastNameInput');
   if (fn) fn.value = parts[0] || '';
   if (ln) ln.value = parts.slice(1).join(' ') || '';
   {% endif %}
