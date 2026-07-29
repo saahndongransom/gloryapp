@@ -59,18 +59,20 @@
           {% endfor %}
         </div>
         {% endif %}
-        {% if program.is_online and 'cma' in program.slug and 'renewal' not in program.slug and 'acma' not in program.slug %}
+        {% if 'cna' in program.slug %}
+        <a href="/apply/cna/form/?program={{ program.slug }}" class="btn btn-primary" style="width:100%;text-align:center;margin-top:1.5rem">Apply Now</a>
+        {% elif 'certified-medication-aide-online' in program.slug %}
         <a href="{% url 'apply_cma' %}" class="btn btn-primary" style="width:100%;text-align:center;margin-top:1.5rem">Apply Now</a>
-        {% elif 'cna' in program.slug and program.is_online %}
-        <a href="/apply/cna/form/?program={{ program.slug }}" class="btn btn-primary" style="width:100%;text-align:center;margin-top:1.5rem">Apply Now</a>
-        {% elif 'cna' in program.slug and not program.is_online %}
-        <a href="/apply/cna/form/?program={{ program.slug }}" class="btn btn-primary" style="width:100%;text-align:center;margin-top:1.5rem">Apply Now</a>
         {% elif 'bls' in program.slug or 'cprbls' in program.slug %}
-        <a href="{% url 'fill_form_simple' 'BLS' %}" class="btn btn-primary" style="width:100%;text-align:center;margin-top:1.5rem">Apply Now</a>
-        {% elif 'acma' in program.slug or 'renewal' in program.slug or 'hha' in program.slug %}
-        <a href="/apply/simple/{{ program.short|urlencode }}/?program={{ program.slug }}" class="btn btn-primary" style="width:100%;text-align:center;margin-top:1.5rem">Apply Now</a>
+        <a href="/apply/simple/BLS/?program={{ program.slug }}" class="btn btn-primary" style="width:100%;text-align:center;margin-top:1.5rem">Apply Now</a>
+        {% elif 'acma' in program.slug or 'advanced-certified' in program.slug %}
+        <a href="/apply/simple/ACMA/?program={{ program.slug }}" class="btn btn-primary" style="width:100%;text-align:center;margin-top:1.5rem">Apply Now</a>
+        {% elif 'renewal' in program.slug %}
+        <a href="/apply/simple/CMARENEWAL/?program={{ program.slug }}" class="btn btn-primary" style="width:100%;text-align:center;margin-top:1.5rem">Apply Now</a>
         {% elif 'cma-traditional' in program.slug %}
-        <a href="/apply/cna/form/?program={{ program.slug }}" class="btn btn-primary" style="width:100%;text-align:center;margin-top:1.5rem">Apply Now</a>
+        <a href="/apply/simple/CMATRADITIONAL/?program={{ program.slug }}" class="btn btn-primary" style="width:100%;text-align:center;margin-top:1.5rem">Apply Now</a>
+        {% elif 'hha' in program.slug %}
+        <a href="/apply/simple/HHA/?program={{ program.slug }}" class="btn btn-primary" style="width:100%;text-align:center;margin-top:1.5rem">Apply Now</a>
         {% else %}
         <a href="{% url 'contact' %}" class="btn btn-primary" style="width:100%;text-align:center;margin-top:1.5rem">Contact Us to Apply</a>
         {% endif %}

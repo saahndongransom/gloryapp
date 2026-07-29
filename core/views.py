@@ -1217,17 +1217,24 @@ def fill_form_simple(request, program_code):
         'PHLEBOTOMY': 'Phlebotomy Technician',
         'EKG': 'EKG Technician',
         'CCMA': 'Certified Clinical Medical Assistant (CCMA)',
+        'ACMA': 'Advanced Certified Medication Aide (ACMA) - Insulin',
+        'ACMA TRADITIONAL': 'Advanced Certified Medication Aide Traditional (Insulin)',
+        'CMA RENEWAL': 'Certified Medication Aide Renewal',
+        'CMA TRADITIONAL': 'Certified Medication Aide Traditional',
+        'CNA TO HHA ADD ON': 'CNA to HHA Deeming Add-On',
     }
     program_name = program_names.get(program_code.upper(), program_code)
     course = LMSCourse.objects.filter(program__iexact=program_code, is_published=True).order_by('price').first()
     course_id = course.id if course else ''
     # Check if online based on program slug parameter
     program_slug = request.GET.get('program', '')
-    online_programs = ['BLS']
-    # ACMA online is online, ACMA traditional is physical
-    if program_code.upper() == 'ACMA':
-        is_online = 'traditional' not in program_slug.lower()
+    # Check from database
+    from core.models import Program as CoreProgram2
+    prog_obj = CoreProgram2.objects.filter(slug=program_slug).first() if program_slug else None
+    if prog_obj:
+        is_online = prog_obj.is_online
     else:
+        online_programs = ['BLS']
         is_online = program_code.upper() in online_programs
     return render(request, 'core/fill_form_simple.html', {
         'program_name': program_name,
