@@ -1,3 +1,4 @@
+from django.views.decorators.csrf import csrf_exempt
 import os
 import re
 import json
@@ -979,15 +980,13 @@ def quiz_view(request, quiz_id):
         if not has_paid:
             messages.warning(request, 'Please complete your payment to access assessments.')
             return redirect('enroll_page', course_id=quiz.lesson.module.course_id)
-        # Check lesson was completed
-        lesson_completed = LessonProgress.objects.filter(
-            student=request.user,
-            lesson=quiz.lesson,
-            is_completed=True
-        ).exists()
-        if not lesson_completed:
-            messages.warning(request, 'Please complete the lesson before taking the quiz.')
-            return redirect('lesson_view', lesson_id=quiz.lesson.id)
+        # Check lesson content was viewed (not necessarily completed - quiz is part of completion)
+        # Just check enrollment in the course
+        from lms.models import Enrollment as Enroll2
+        enrolled = Enroll2.objects.filter(student=request.user, course=quiz.lesson.module.course).exists()
+        if not enrolled:
+            messages.warning(request, 'Please enroll in this course to access assessments.')
+            return redirect('lms_dashboard')
     return render(request, 'lms/quiz.html', {'quiz': quiz})
 @login_required(login_url='lms_login')
 def submit_quiz(request, quiz_id):

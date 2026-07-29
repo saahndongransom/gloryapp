@@ -985,15 +985,7 @@ async function initSlides(contentId) {
   // Progress
   updateSlideProgress(contentId);
 
-  // Check if already completed (from server session)
-  {% for item in content_payloads %}{% if item.content_type == 'ppt' %}
-  if (contentId == '{{ item.id }}' && {{ request.session|default:"{}"|safe }}) {
-    fetch('/lms/content/' + contentId + '/progress/', {method: 'GET'})
-      .then(r => r.json())
-      .then(d => { if (d.done) unlockContent('ppt', contentId); })
-      .catch(function(){});
-  }
-  {% endif %}{% endfor %}
+
   // Check localStorage
   var storageKey = 'ppt_progress_' + contentId;
   var maxViewed = parseInt(localStorage.getItem(storageKey) || '0');
