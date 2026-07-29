@@ -651,6 +651,8 @@ def submit_form_cna(request):
     except:
         program_price = ''
 
+    buf = io.BytesIO()
+    c = rl_canvas.Canvas(buf, pagesize=letter)
     width, height = letter
 
     logo_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'static', 'core', 'images', 'glorylogo.png')
