@@ -101,7 +101,7 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
         <label class="form-label">Payment Amount ($) *</label>
         <div class="amount-wrap">
           <span>$</span>
-          <input type="number" id="baseAmount" class="form-control" required min="1" step="0.01" placeholder="0.00" oninput="updatePayTotal()">
+          <input type="number" id="baseAmount" class="form-control" required min="1" step="0.01" placeholder="0.00" oninput="updatePayTotal()" {% if prefill_amount %}value="{{ prefill_amount }}"{% endif %}>
         </div>
       </div>
       <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px">
@@ -174,8 +174,19 @@ async function initSquare() {
   } catch(e) {
     console.error('Square init error:', e);
   }
+  {% if prefill_amount %}
+  setTimeout(function() {
+    var el = document.getElementById('baseAmount');
+    if (el) { el.value = '{{ prefill_amount|escapejs }}'; updatePayTotal(); }
+  }, 1500);
+  {% endif %}
 }
 initSquare();
+{% if prefill_amount %}
+window.addEventListener('load', function() {
+  updatePayTotal();
+});
+{% endif %}
 
 async function handlePayment() {
   var btn = document.getElementById('payBtn');
@@ -231,8 +242,10 @@ window.addEventListener('load', function() {
   {% endif %}
 
   {% if prefill_amount %}
-  var amt = document.getElementById('baseAmount');
-  if (amt) { amt.value = '{{ prefill_amount|escapejs }}'; updatePayTotal(); }
+  setTimeout(function() {
+    var amt = document.getElementById('baseAmount');
+    if (amt) { amt.value = '{{ prefill_amount|escapejs }}'; updatePayTotal(); }
+  }, 500);
   {% endif %}
 });
 </script>

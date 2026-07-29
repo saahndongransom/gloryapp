@@ -1250,6 +1250,11 @@ function markComplete() {
   // Check if locked
   const completeBtn = document.getElementById('completeBtn');
   if (completeBtn.classList.contains('locked')) {
+    // If quiz is the only thing pending, redirect to quiz
+    if (!quizPassedState && {{ quizzes|length }} > 0) {
+      window.location.href = '{% if quizzes %}{% url "quiz_view" quizzes.0.id %}{% endif %}';
+      return;
+    }
     // Shake animation hint
     completeBtn.style.transform = 'translateX(-4px)';
     setTimeout(() => completeBtn.style.transform = 'translateX(4px)', 100);
