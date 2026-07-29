@@ -984,6 +984,13 @@ async function initSlides(contentId) {
 
   // Progress
   updateSlideProgress(contentId);
+
+  // Restore previous progress from localStorage
+  var storageKey = 'ppt_progress_' + contentId;
+  var maxViewed = parseInt(localStorage.getItem(storageKey) || '0');
+  if (maxViewed >= count - 1) {
+    unlockContent('ppt', contentId);
+  }
 }
 
 function changeSlide(contentId, delta) {
@@ -996,6 +1003,10 @@ function goToSlide(contentId, index) {
   const state = slideState[contentId];
   if (!state || index < 0 || index >= state.total) return;
   state.current = index;
+  // Track max slide viewed in localStorage
+  var storageKey = 'ppt_progress_' + contentId;
+  var maxViewed = parseInt(localStorage.getItem(storageKey) || '0');
+  if (index > maxViewed) localStorage.setItem(storageKey, index);
 
   // Update image
   document.getElementById('slideImg_' + contentId).src =
