@@ -639,6 +639,14 @@ def submit_form_cna(request):
 
     import os as _os
     full_name = f"{get('first_name')} {get('last_name')}".strip() or 'Applicant'
+    # Get program price for payment link
+    try:
+        from core.models import Program as CoreProg
+        course_applied = get('course_applied') or ''
+        _prog = CoreProg.objects.filter(title__icontains=course_applied[:20]).first() if course_applied else None
+        program_price = str(int(_prog.price)) if _prog and _prog.price else ''
+    except:
+        program_price = ''
 
     buf = io.BytesIO()
     c = rl_canvas.Canvas(buf, pagesize=letter)
