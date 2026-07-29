@@ -648,6 +648,7 @@ def submit_form_cna(request):
     except:
         program_price = ''
 
+    print(f"DEBUG program_price: '{program_price}'")
     buf = io.BytesIO()
     c = rl_canvas.Canvas(buf, pagesize=letter)
     width, height = letter
@@ -1053,7 +1054,7 @@ Glory Nursing Online Portal''',
 We have received your completed application. Our admissions team will review it and contact you within 1-2 business days.
 
 Complete your payment here:
-https://glorynursingok.com/lms/pay/?name={full_name.replace(' ', '+')}&email={student_email}&reason={get('course_applied') or 'CNA Program'}
+https://glorynursingok.com/lms/pay/?name={full_name.replace(' ', '+')}&email={student_email}&reason={get('course_applied') or 'CNA Program'}&amount={program_price or '600'}
 
 Questions? Call us at (405) 968-5004 or email glorynursing@yahoo.com
 
@@ -1120,7 +1121,7 @@ Username: {username}
 Password: {temp_password}
 
 💳 Complete your payment here:
-https://glorynursingok.com/lms/pay/?reason={get('course_applied') or 'CNA Program'}
+https://glorynursingok.com/lms/pay/?name={full_name.replace(' ', '+')}&email={student_email}&reason={get('course_applied') or 'CNA Program'}&amount={program_price or '600'}
 
 Or login to your account and pay from your dashboard:
 https://glorynursingok.com/lms/login/
