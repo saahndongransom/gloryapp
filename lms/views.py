@@ -2520,6 +2520,10 @@ Glory Nursing Online Portal""",
         'square_app_id': os.environ.get('SQUARE_APP_ID', ''),
         'location_id': os.environ.get('SQUARE_LOCATION_ID', ''),
         'square_env': os.environ.get('SQUARE_ENVIRONMENT', 'sandbox'),
+        'prefill_reason': request.GET.get('reason', ''),
+        'prefill_name': request.GET.get('name', ''),
+        'prefill_email': request.GET.get('email', ''),
+        'prefill_amount': request.GET.get('amount', ''),
     }
     return render(request, 'lms/generic_payment.html', context)
 

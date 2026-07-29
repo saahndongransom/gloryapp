@@ -79,7 +79,7 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">First Name *</label>
-          <input type="text" name="first_name" class="form-control" required placeholder="Jane">
+          <input type="text" name="first_name" class="form-control" required placeholder="Jane" value="{{ prefill_name|cut:' '|truncatewords:1 }}">
         </div>
         <div class="form-group">
           <label class="form-label">Last Name *</label>
@@ -89,7 +89,7 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 
       <div class="form-group">
         <label class="form-label">Email Address *</label>
-        <input type="email" name="email" class="form-control" required placeholder="jane@email.com">
+        <input type="email" name="email" class="form-control" required placeholder="jane@email.com" value="{{ prefill_email }}">
       </div>
 
       <div class="form-group">

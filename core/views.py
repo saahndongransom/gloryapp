@@ -1044,7 +1044,7 @@ Glory Nursing Online Portal''',
 
 We have received your completed application. Our admissions team will review it and contact you within 1-2 business days.
 
-Next step: Complete your enrollment payment at glorynursing.com
+Complete your payment at: https://glorynursingok.com/lms/pay/
 
 Questions? Call us at (405) 968-5004 or email glorynursing@yahoo.com
 
@@ -1110,7 +1110,11 @@ Website: https://glorynursingok.com/lms/login/
 Username: {username}
 Password: {temp_password}
 
-Please login and complete your enrollment payment to gain access to your course.
+💳 Complete your payment here:
+https://glorynursingok.com/lms/pay/?reason={get('course_applied') or 'CNA Program'}
+
+Or login to your account and pay from your dashboard:
+https://glorynursingok.com/lms/login/
 
 Questions? Call us at (405) 968-5004 or email glorynursing@yahoo.com
 
@@ -1677,7 +1681,7 @@ Glory Nursing Online Portal""",
 
 We have received your completed application. Our admissions team will review it and contact you within 1-2 business days.
 
-Next step: Complete your enrollment payment at glorynursing.com
+Complete your payment at: https://glorynursingok.com/lms/pay/
 
 Questions? Call us at (405) 968-5004 or email glorynursing@yahoo.com
 
