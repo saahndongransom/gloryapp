@@ -642,15 +642,15 @@ def submit_form_cna(request):
     # Get program price for payment link
     try:
         from core.models import Program as CoreProg
-        course_applied = get('course_applied') or ''
-        _prog = CoreProg.objects.filter(title__icontains=course_applied[:20]).first() if course_applied else None
+        _slug = request.session.get('apply_program_slug', '')
+        _prog = CoreProg.objects.filter(slug=_slug).first() if _slug else None
+        if not _prog:
+            course_applied = get('course_applied') or ''
+            _prog = CoreProg.objects.filter(title__icontains=course_applied[:25]).first() if course_applied else None
         program_price = str(int(_prog.price)) if _prog and _prog.price else ''
     except:
         program_price = ''
 
-    print(f"DEBUG program_price: '{program_price}'")
-    buf = io.BytesIO()
-    c = rl_canvas.Canvas(buf, pagesize=letter)
     width, height = letter
 
     logo_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'static', 'core', 'images', 'glorylogo.png')
