@@ -677,6 +677,8 @@ function submitApplication() {
       clearProgress();
       if (!isOnlineProgram) {
         var courseApplied = formData.course_applied || '';
+        var progSlug = '{{ selected_program.slug|default:"" }}';
+        formData['program_slug'] = progSlug;
         var progPrice = '{{ selected_program.price|default:"" }}' || 
           (courseApplied.includes('Evening') ? '700' : 
            courseApplied.includes('Weekend') ? '850' : 

@@ -494,7 +494,7 @@ def fill_pdf_cna(request):
     from pypdf import PdfReader
     page_count = len(PdfReader(pdf_path).pages)
     enroll_id = request.session.get('apply_enroll_id', 1)
-    program_slug = request.session.get('apply_program_slug', '')
+        _slug = request.session.get('apply_program_slug', '') or request.POST.get('program_slug', '')
     back_url = f'/apply/cna/?program={program_slug}' if program_slug else '/apply/cna/'
     return render(request, 'core/fill_pdf.html', {
         'pdf_name': 'CNA',
