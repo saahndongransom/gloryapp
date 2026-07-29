@@ -985,12 +985,23 @@ async function initSlides(contentId) {
   // Progress
   updateSlideProgress(contentId);
 
-  // Restore previous progress from localStorage
+  // Check if already completed (from server session)
+  {% for item in content_payloads %}{% if item.content_type == 'ppt' %}
+  if (contentId == '{{ item.id }}' && {{ request.session|default:"{}"|safe }}) {
+    fetch('/lms/content/' + contentId + '/progress/', {method: 'GET'})
+      .then(r => r.json())
+      .then(d => { if (d.done) unlockContent('ppt', contentId); })
+      .catch(function(){});
+  }
+  {% endif %}{% endfor %}
+  // Check localStorage
   var storageKey = 'ppt_progress_' + contentId;
   var maxViewed = parseInt(localStorage.getItem(storageKey) || '0');
-  if (maxViewed >= count - 1) {
-    unlockContent('ppt', contentId);
-  }
+  if (maxViewed >= count - 1) unlockContent('ppt', contentId);
+  
+  // Check server-side completion
+  var completedIds = [{% for cid in completed_content_ids %}'{{ cid }}',{% endfor %}];
+  if (completedIds.indexOf(String(contentId)) !== -1) unlockContent('ppt', contentId);
 }
 
 function changeSlide(contentId, delta) {
@@ -1020,7 +1031,14 @@ function goToSlide(contentId, index) {
   document.getElementById('slidePrev_' + contentId).disabled = index === 0;
   document.getElementById('slideNext_' + contentId).disabled = index === state.total - 1;
   // Unlock when last slide reached
-  if (index === state.total - 1) unlockContent('ppt', contentId);
+  if (index === state.total - 1) {
+    unlockContent('ppt', contentId);
+    // Save to server
+    fetch('/lms/content/' + contentId + '/progress/', {
+      method: 'POST',
+      headers: {'X-CSRFToken': '{{ csrf_token }}'}
+    }).catch(function(){});
+  }
 
   // Update thumbnails
   document.querySelectorAll('#slideThumbs_' + contentId + ' .slide-thumb').forEach((t, i) => {

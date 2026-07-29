@@ -14,6 +14,7 @@ urlpatterns = [
     path('classroom/<int:course_id>/', views.course_classroom, name='course_classroom'),
     path('lesson/<int:lesson_id>/', views.lesson_view, name='lesson_view'),
     path('lesson/<int:lesson_id>/complete/', views.complete_lesson, name='complete_lesson'),
+    path('content/<int:content_id>/progress/', views.save_content_progress, name='save_content_progress'),
     # Add this line to your urlpatterns in lms/urls.py
     path('quiz/<int:quiz_id>/', views.quiz_view, name='quiz_view'),
     # Add this line to lms/urls.py

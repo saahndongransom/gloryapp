@@ -1212,6 +1212,7 @@ def lesson_view(request, lesson_id):
     context = {
         'lesson': lesson,
         'content_payloads': content_payloads,
+        'completed_content_ids': [str(item.id) for item in content_payloads if request.session.get(f'content_done_{item.id}')],
         'final_exam_quizzes': final_exam_quizzes,
         'final_exam_lesson_ids': final_exam_lesson_ids,
         'hidden_module_ids': hidden_module_ids,
@@ -1229,6 +1230,23 @@ def lesson_view(request, lesson_id):
     }
     return render(request, 'lms/lesson.html', context)
 
+
+@login_required(login_url='lms_login')
+@csrf_exempt
+def save_content_progress(request, content_id):
+    from django.http import JsonResponse
+    from lms.models import ContentItem
+    if request.method == 'GET':
+        done = request.session.get(f'content_done_{content_id}', False)
+        return JsonResponse({'done': done})
+    if request.method != 'POST':
+        return JsonResponse({'ok': False})
+    item = get_object_or_404(ContentItem, id=content_id)
+    # Save progress to student session
+    key = f'content_done_{content_id}'
+    request.session[key] = True
+    request.session.modified = True
+    return JsonResponse({'ok': True})
 
 @login_required(login_url='lms_login')
 def complete_lesson(request, lesson_id):
