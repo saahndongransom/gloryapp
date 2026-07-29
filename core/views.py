@@ -494,7 +494,6 @@ def fill_pdf_cna(request):
     from pypdf import PdfReader
     page_count = len(PdfReader(pdf_path).pages)
     enroll_id = request.session.get('apply_enroll_id', 1)
-        _slug = request.session.get('apply_program_slug', '') or request.POST.get('program_slug', '')
     back_url = f'/apply/cna/?program={program_slug}' if program_slug else '/apply/cna/'
     return render(request, 'core/fill_pdf.html', {
         'pdf_name': 'CNA',
@@ -642,7 +641,7 @@ def submit_form_cna(request):
     # Get program price for payment link
     try:
         from core.models import Program as CoreProg
-        _slug = request.session.get('apply_program_slug', '')
+        _slug = data.get('program_slug', '') or request.session.get('apply_program_slug', '')
         _prog = CoreProg.objects.filter(slug=_slug).first() if _slug else None
         if not _prog:
             course_applied = get('course_applied') or ''
