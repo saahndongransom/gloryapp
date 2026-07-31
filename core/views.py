@@ -634,16 +634,17 @@ def submit_form_cna(request):
     full_name = f"{get('first_name')} {get('last_name')}".strip() or 'Applicant'
     # Get program price for payment link
     try:
-        from core.models import Program as CoreProg
-        _slug = data.get('program_slug', '') or request.session.get('apply_program_slug', '')
-        _prog = CoreProg.objects.filter(slug=_slug).first() if _slug else None
-        if not _prog:
-            course_applied = get('course_applied') or ''
-            _prog = CoreProg.objects.filter(title__icontains=course_applied[:25]).first() if course_applied else None
-        program_price = str(int(_prog.price)) if _prog and _prog.price else ''
-    except Exception as price_err:
+        program_price = data.get('program_price', '') or ''
+        if not program_price:
+            from core.models import Program as CoreProg
+            _slug = data.get('program_slug', '') or request.session.get('apply_program_slug', '')
+            _prog = CoreProg.objects.filter(slug=_slug).first() if _slug else None
+            if not _prog:
+                _ca = get('course_applied') or ''
+                _prog = CoreProg.objects.filter(title__icontains=_ca[:25]).first() if _ca else None
+            program_price = str(float(_prog.price)) if _prog and _prog.price else ''
+    except:
         program_price = ''
-
     buf = io.BytesIO()
     c = rl_canvas.Canvas(buf, pagesize=letter)
     width, height = letter
@@ -1049,7 +1050,7 @@ Glory Nursing Online Portal''',
 We have received your completed application. Our admissions team will review it and contact you within 1-2 business days.
 
 Complete your payment here:
-https://glorynursingok.com/lms/pay/?name={full_name.replace(' ', '+')}&email={student_email}&reason={get('course_applied') or 'CNA Program'}&amount={program_price or '600'}
+https://glorynursingok.com/lms/pay/?name={full_name.replace(' ', '+')}&email={student_email}&reason={get('course_applied') or 'CNA Program'}&amount={program_price or '600'}amount={float(program_price) if program_price else 600:.2f}
 
 Questions? Call us at (405) 968-5004 or email glorynursing@yahoo.com
 
@@ -1116,7 +1117,7 @@ Username: {username}
 Password: {temp_password}
 
 💳 Complete your payment here:
-https://glorynursingok.com/lms/pay/?name={full_name.replace(' ', '+')}&email={student_email}&reason={get('course_applied') or 'CNA Program'}&amount={program_price or '600'}
+https://glorynursingok.com/lms/pay/?name={full_name.replace(' ', '+')}&email={student_email}&reason={get('course_applied') or 'CNA Program'}&amount={program_price or '600'}amount={float(program_price) if program_price else 600:.2f}
 
 Or login to your account and pay from your dashboard:
 https://glorynursingok.com/lms/login/
