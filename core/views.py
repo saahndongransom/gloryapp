@@ -1278,7 +1278,7 @@ def fill_form_simple(request, program_code):
         'is_online': is_online,
         'upcoming_schedules': upcoming,
         'back_url': '/contact/',
-        'submit_url': f'/apply/simple/{program_code}/submit/',
+        'submit_url': f'/apply/simple/{program_code}/submit/?program={program_slug}',
     })
 
 
@@ -1324,7 +1324,7 @@ Glory Nursing Online Portal""",
 
         # Get program price
         from core.models import Program as CoreProg3
-        _pslug = request.GET.get('program', '')
+        _pslug = request.GET.get('program', '') or data.get('program_slug', '')
         _pprog = CoreProg3.objects.filter(slug=_pslug).first() if _pslug else None
         simple_price = str(float(_pprog.price)) if _pprog and _pprog.price else ''
 
