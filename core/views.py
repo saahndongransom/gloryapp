@@ -1322,11 +1322,20 @@ Glory Nursing Online Portal""",
         )
         msg.send()
 
+        # Get program price
+        from core.models import Program as CoreProg3
+        _pslug = request.GET.get('program', '')
+        _pprog = CoreProg3.objects.filter(slug=_pslug).first() if _pslug else None
+        simple_price = str(float(_pprog.price)) if _pprog and _pprog.price else ''
+
         EmailMessage(
             subject=f'Your Glory Nursing {program_name} Application Received',
             body=f"""Thank you for submitting your {program_name} application to Glory Nursing!
 
 We have received your application. Our admissions team will review it and contact you within 1-2 business days.
+
+Complete your payment here:
+https://glorynursingok.com/lms/pay/?name={full_name.replace(' ', '+')}&email={student_email}&reason={program_name}{f'&amount={simple_price}' if simple_price else ''}
 
 Questions? Call us at (405) 968-5004 or email glorynursing@yahoo.com
 
