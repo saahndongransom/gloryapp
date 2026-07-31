@@ -175,10 +175,13 @@ async function initSquare() {
     console.error('Square init error:', e);
   }
   {% if prefill_amount %}
-  setTimeout(function() {
+  function applyPrefill() {
     var el = document.getElementById('baseAmount');
     if (el) { el.value = '{{ prefill_amount|escapejs }}'; updatePayTotal(); }
-  }, 1500);
+  }
+  setTimeout(applyPrefill, 500);
+  setTimeout(applyPrefill, 1500);
+  setTimeout(applyPrefill, 3000);
   {% endif %}
 }
 initSquare();
