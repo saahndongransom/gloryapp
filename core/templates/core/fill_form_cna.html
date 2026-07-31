@@ -101,12 +101,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-s
     </div>
 
     <div class="form-group"><label>Course Applied For <span class="req">*</span></label>
+      {% if selected_program and not selected_program.is_online %}
+      <input type="hidden" data-field="course_applied" value="{{ selected_program.title }}">
+      <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;color:#166534">
+        ✅ {{ selected_program.title }}
+      </div>
+      {% else %}
       <select class="form-control" data-field="course_applied" required>
         <option value="">-- Select a schedule --</option>
         {% for course in cna_courses %}
         <option value="{{ course.title }}">{{ course.title }}</option>
         {% endfor %}
       </select>
+      {% endif %}
     </div>
   </div>
 
