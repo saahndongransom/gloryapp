@@ -611,12 +611,6 @@ def submit_form_cna(request):
     except Exception:
         return JsonResponse({'error': 'Invalid data'}, status=400)
 
-    print("=== CMA FORM DATA RECEIVED ===")
-    for k, v in data.items():
-        if not str(v).startswith('data:image'):
-            print(f"{k}: {v}")
-    print("=== END ===")
-
     student_email = data.get('student_email', '').strip()
     if not student_email:
         return JsonResponse({'error': 'Email is required'}, status=400)
@@ -647,7 +641,7 @@ def submit_form_cna(request):
             course_applied = get('course_applied') or ''
             _prog = CoreProg.objects.filter(title__icontains=course_applied[:25]).first() if course_applied else None
         program_price = str(int(_prog.price)) if _prog and _prog.price else ''
-    except:
+    except Exception as price_err:
         program_price = ''
 
     buf = io.BytesIO()
