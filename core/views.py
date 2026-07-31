@@ -611,6 +611,7 @@ def submit_form_cna(request):
     except Exception:
         return JsonResponse({'error': 'Invalid data'}, status=400)
 
+    print('DEBUG course_applied:', data.get('course_applied', 'MISSING'), 'program_price:', data.get('program_price', 'MISSING'))
     student_email = data.get('student_email', '').strip()
     if not student_email:
         return JsonResponse({'error': 'Email is required'}, status=400)
