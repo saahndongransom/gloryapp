@@ -1146,17 +1146,21 @@ Glory Nursing Healthcare Training School
                 ).send()
             except Exception as e:
                 print(f"Credentials email error: {e}")
-            # Create pending enrollment based on course_applied field
+            # Create pending enrollment only for online programs
             try:
                 from lms.models import Course as LMSCourse2, Enrollment
-                course_title = data.get('course_applied', '').strip()
-                pending_c = None
-                if course_title:
-                    pending_c = LMSCourse2.objects.filter(title=course_title, is_published=True).first()
-                if not pending_c:
-                    pending_c = LMSCourse2.objects.filter(is_published=True).order_by('price').first()
-                if pending_c:
-                    Enrollment.objects.get_or_create(student=new_user, course=pending_c)
+                from core.models import Program as CoreProg5
+                _pslug = data.get('program_slug', '')
+                _pprog = CoreProg5.objects.filter(slug=_pslug).first() if _pslug else None
+                if _pprog and _pprog.is_online and _pprog.course:
+                    Enrollment.objects.get_or_create(student=new_user, course=_pprog.course)
+                elif not _pprog:
+                    # Fallback: try to find course by title for online programs
+                    course_title = data.get('course_applied', '').strip()
+                    if course_title:
+                        pending_c = LMSCourse2.objects.filter(title=course_title, is_published=True).first()
+                        if pending_c:
+                            Enrollment.objects.get_or_create(student=new_user, course=pending_c)
             except Exception as enroll_err:
                 print(f"Pending enrollment error: {enroll_err}")
     except Exception as e:
@@ -1415,17 +1419,21 @@ Glory Nursing Healthcare Training School""",
                 ).send()
             except Exception as e:
                 print(f"Credentials email error: {e}")
-            # Create pending enrollment based on course_applied field
+            # Create pending enrollment only for online programs
             try:
                 from lms.models import Course as LMSCourse2, Enrollment
-                course_title = data.get('course_applied', '').strip()
-                pending_c = None
-                if course_title:
-                    pending_c = LMSCourse2.objects.filter(title=course_title, is_published=True).first()
-                if not pending_c:
-                    pending_c = LMSCourse2.objects.filter(is_published=True).order_by('price').first()
-                if pending_c:
-                    Enrollment.objects.get_or_create(student=new_user, course=pending_c)
+                from core.models import Program as CoreProg5
+                _pslug = data.get('program_slug', '')
+                _pprog = CoreProg5.objects.filter(slug=_pslug).first() if _pslug else None
+                if _pprog and _pprog.is_online and _pprog.course:
+                    Enrollment.objects.get_or_create(student=new_user, course=_pprog.course)
+                elif not _pprog:
+                    # Fallback: try to find course by title for online programs
+                    course_title = data.get('course_applied', '').strip()
+                    if course_title:
+                        pending_c = LMSCourse2.objects.filter(title=course_title, is_published=True).first()
+                        if pending_c:
+                            Enrollment.objects.get_or_create(student=new_user, course=pending_c)
             except Exception as enroll_err:
                 print(f"Pending enrollment error: {enroll_err}")
     except Exception as e:
@@ -1779,17 +1787,21 @@ Glory Nursing Healthcare Training School""",
                 ).send()
             except Exception as e:
                 print(f"Credentials email error: {e}")
-            # Create pending enrollment based on course_applied field
+            # Create pending enrollment only for online programs
             try:
                 from lms.models import Course as LMSCourse2, Enrollment
-                course_title = data.get('course_applied', '').strip()
-                pending_c = None
-                if course_title:
-                    pending_c = LMSCourse2.objects.filter(title=course_title, is_published=True).first()
-                if not pending_c:
-                    pending_c = LMSCourse2.objects.filter(is_published=True).order_by('price').first()
-                if pending_c:
-                    Enrollment.objects.get_or_create(student=new_user, course=pending_c)
+                from core.models import Program as CoreProg5
+                _pslug = data.get('program_slug', '')
+                _pprog = CoreProg5.objects.filter(slug=_pslug).first() if _pslug else None
+                if _pprog and _pprog.is_online and _pprog.course:
+                    Enrollment.objects.get_or_create(student=new_user, course=_pprog.course)
+                elif not _pprog:
+                    # Fallback: try to find course by title for online programs
+                    course_title = data.get('course_applied', '').strip()
+                    if course_title:
+                        pending_c = LMSCourse2.objects.filter(title=course_title, is_published=True).first()
+                        if pending_c:
+                            Enrollment.objects.get_or_create(student=new_user, course=pending_c)
             except Exception as enroll_err:
                 print(f"Pending enrollment error: {enroll_err}")
     except Exception as e:
