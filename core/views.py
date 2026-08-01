@@ -1078,13 +1078,18 @@ Glory Nursing Healthcare Training School
         email_error = str(e)
         print(f"Email error: {e}")
 
-    # Auto-create student account
+    # Auto-create student account (only for online programs)
     from django.contrib.auth.models import User as AuthUser
     import secrets, string
     account_created = False
     temp_password = None
+    # Check if this is an online program
+    from core.models import Program as CoreProg6
+    _pslug6 = data.get('program_slug', '')
+    _pprog6 = CoreProg6.objects.filter(slug=_pslug6).first() if _pslug6 else None
+    is_online_program = _pprog6.is_online if _pprog6 else True  # default True for safety
     try:
-        if not AuthUser.objects.filter(email=student_email).exists():
+        if is_online_program and not AuthUser.objects.filter(email=student_email).exists():
             username = student_email.split('@')[0].lower().replace('.','_')[:30]
             base_username = username
             counter = 1
