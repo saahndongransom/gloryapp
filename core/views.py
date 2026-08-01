@@ -1220,13 +1220,24 @@ Glory Nursing Healthcare Training School
         print(f"PDF save error: {e}")
 
     request.session['application_submitted'] = True
-    # Store pending course for payment redirect
-    from lms.models import Course as LMSCourse
-    pending_course = LMSCourse.objects.filter(
-        program__icontains='CNA', is_published=True
-    ).exclude(program__icontains='HHA').order_by('price').first()
-    if pending_course:
-        request.session['pending_course_id'] = pending_course.id
+    # Store pending course for payment redirect - use actual program applied for
+    try:
+        from lms.models import Course as LMSCourse
+        from core.models import Program as CoreProg4
+        _pslug = data.get('program_slug', '')
+        _pprog = CoreProg4.objects.filter(slug=_pslug).first() if _pslug else None
+        if _pprog and _pprog.course:
+            request.session['pending_course_id'] = _pprog.course.id
+        else:
+            # fallback to course by title
+            _ca = get('course_applied') or ''
+            pending_course = LMSCourse.objects.filter(title__icontains=_ca[:20], is_published=True).first()
+            if not pending_course:
+                pending_course = LMSCourse.objects.filter(program__icontains='CNA', is_published=True).exclude(program__icontains='HHA').order_by('price').first()
+            if pending_course:
+                request.session['pending_course_id'] = pending_course.id
+    except:
+        pass
 
     from django.http import HttpResponse
     response = HttpResponse(pdf_bytes, content_type='application/pdf')
