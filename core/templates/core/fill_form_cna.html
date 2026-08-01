@@ -661,6 +661,11 @@ function submitApplication() {
   collectFieldsInSection(currentSection);
 
   var isOnlineProgram = {% if selected_program and not selected_program.is_online %}false{% else %}true{% endif %};
+  
+  // Set program info BEFORE sending
+  formData['program_slug'] = '{{ selected_program.slug|default:"" }}';
+  formData['program_price'] = '{{ selected_program.price|default:"" }}';
+
   var btn = document.getElementById('submitBtn');
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
