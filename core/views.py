@@ -1382,11 +1382,14 @@ Glory Nursing Healthcare Training School
         print(f"Email error: {e}")
 
 
-    # Auto-create student account
+    # Auto-create student account (only for online programs)
     from django.contrib.auth.models import User as AuthUser
     import secrets, string
     try:
-        if not AuthUser.objects.filter(email=student_email).exists():
+        _pslug_s = request.GET.get("program", "")
+        _pprog_s = __import__("core.models", fromlist=["Program"]).Program.objects.filter(slug=_pslug_s).first() if _pslug_s else None
+        _is_online_s = _pprog_s.is_online if _pprog_s else True
+        if _is_online_s and not AuthUser.objects.filter(email=student_email).exists():
             username = student_email.split('@')[0].lower().replace('.','_')[:30]
             base_username = username
             counter = 1
@@ -1750,11 +1753,14 @@ Glory Nursing Healthcare Training School
         print(f"Email error: {e}")
 
 
-    # Auto-create student account
+    # Auto-create student account (only for online programs)
     from django.contrib.auth.models import User as AuthUser
     import secrets, string
     try:
-        if not AuthUser.objects.filter(email=student_email).exists():
+        _ca_cma = get("course_applied") or ""
+        _pprog_cma = __import__("core.models", fromlist=["Program"]).Program.objects.filter(title__icontains=_ca_cma[:20]).first() if _ca_cma else None
+        _is_online_cma = _pprog_cma.is_online if _pprog_cma else True
+        if _is_online_cma and not AuthUser.objects.filter(email=student_email).exists():
             username = student_email.split('@')[0].lower().replace('.','_')[:30]
             base_username = username
             counter = 1
