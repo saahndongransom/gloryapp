@@ -632,6 +632,7 @@ def submit_form_cna(request):
                 pass
 
     import os as _os
+    from urllib.parse import quote as url_quote
     full_name = f"{get('first_name')} {get('last_name')}".strip() or 'Applicant'
     # Get program price for payment link
     try:
@@ -646,6 +647,19 @@ def submit_form_cna(request):
             program_price = str(float(_prog.price)) if _prog and _prog.price else ''
     except:
         program_price = ''
+    # Fallback price from course name
+    if not program_price:
+        _ca = get('course_applied') or ''
+        if 'Evening' in _ca: program_price = '700'
+        elif 'Weekend' in _ca: program_price = '850'
+        elif 'HHA' in _ca: program_price = '200'
+        else: program_price = '600'
+    # Build safe payment URL
+    pay_reason = url_quote(get('course_applied') or 'CNA Program')
+    pay_name = url_quote(full_name)
+    pay_email = url_quote(student_email)
+    pay_amount = url_quote(str(program_price))
+    payment_link = f"https://glorynursingok.com/lms/pay/?name={pay_name}&email={pay_email}&reason={pay_reason}&amount={pay_amount}" 
     buf = io.BytesIO()
     c = rl_canvas.Canvas(buf, pagesize=letter)
     width, height = letter
@@ -1051,7 +1065,7 @@ Glory Nursing Online Portal''',
 We have received your completed application. Our admissions team will review it and contact you within 1-2 business days.
 
 Complete your payment here:
-https://glorynursingok.com/lms/pay/?name={full_name.replace(' ', '+')}&email={student_email}&reason={get('course_applied') or 'CNA Program'}&amount={program_price or '600'}
+{payment_link}
 
 Questions? Call us at (405) 968-5004 or email glorynursing@yahoo.com
 
@@ -1118,7 +1132,7 @@ Username: {username}
 Password: {temp_password}
 
 💳 Complete your payment here:
-https://glorynursingok.com/lms/pay/?name={full_name.replace(' ', '+')}&email={student_email}&reason={get('course_applied') or 'CNA Program'}&amount={program_price or '600'}
+{payment_link}
 
 Or login to your account and pay from your dashboard:
 https://glorynursingok.com/lms/login/
