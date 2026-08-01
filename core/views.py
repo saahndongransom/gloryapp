@@ -1118,7 +1118,7 @@ Username: {username}
 Password: {temp_password}
 
 💳 Complete your payment here:
-https://glorynursingok.com/lms/pay/?name={full_name.replace(' ', '+')}&email={student_email}&reason={get('course_applied') or 'CNA Program'}&amount={program_price or '600'}amount={float(program_price) if program_price else 600:.2f}
+https://glorynursingok.com/lms/pay/?name={full_name.replace(' ', '+')}&email={student_email}&reason={get('course_applied') or 'CNA Program'}&amount={program_price or '600'}
 
 Or login to your account and pay from your dashboard:
 https://glorynursingok.com/lms/login/
