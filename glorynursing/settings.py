@@ -101,7 +101,7 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = f'Glory Nursing LMS <{os.environ.get("EMAIL_HOST_USER", "")}>'
+DEFAULT_FROM_EMAIL = f'Glory Nursing Healthcare Training School <{os.environ.get("EMAIL_HOST_USER", "")}>'
 # ── File upload limits ──
 DATA_UPLOAD_MAX_MEMORY_SIZE = 524288000  # 500MB
 FILE_UPLOAD_MAX_MEMORY_SIZE = 524288000  # 500MB

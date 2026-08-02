@@ -49,7 +49,7 @@ We noticed you haven't logged into your Glory Nursing student portal in {days_in
 
 Your progress in {course_names} is waiting for you! Consistency is key to completing your certification on time.
 
-Log in now to continue: http://127.0.0.1:8000/lms/login/
+Log in now to continue: https://glorynursingok.com/lms/login/
 
 Need help? Contact us:
 Phone: (405) 968-5004
