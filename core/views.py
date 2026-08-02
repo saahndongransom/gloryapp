@@ -1473,14 +1473,17 @@ Glory Nursing Healthcare Training School""",
 
 def fill_form_cma(request):
     from lms.models import Course as LMSCourse
+    from core.models import Program as CoreProgram
     enroll_id = request.session.get('apply_enroll_id', 2)
-    program_slug = request.session.get('apply_program_slug', '')
+    program_slug = request.GET.get('program', '') or request.session.get('apply_program_slug', '')
     back_url = f'/apply/cma/?program={program_slug}' if program_slug else '/apply/cma/'
+    selected_program = CoreProgram.objects.filter(slug=program_slug).first() if program_slug else None
     cma_courses = LMSCourse.objects.filter(program__icontains='CMA', is_published=True).order_by('price')
     return render(request, 'core/fill_form_cma.html', {
         'enroll_id': enroll_id,
         'back_url': back_url,
         'cma_courses': cma_courses,
+        'selected_program': selected_program,
     })
 
 
