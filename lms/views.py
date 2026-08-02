@@ -1417,51 +1417,17 @@ def serve_protected_content(request, content_id):
     mime_type, _ = mimetypes.guess_type(file_path)
     if not mime_type:
         mime_type = 'application/octet-stream'
-    # Range request support for video seeking
-    file_size = os.path.getsize(file_path)
-    range_header = request.META.get('HTTP_RANGE', '').strip()
     
-    if range_header:
-        range_match = re.match(r'bytes=(\d+)-(\d*)', range_header)
-        if range_match:
-            first_byte = int(range_match.group(1))
-            last_byte = int(range_match.group(2)) if range_match.group(2) else file_size - 1
-            last_byte = min(last_byte, file_size - 1)
-            length = last_byte - first_byte + 1
-            def range_iterator(path, start, length, chunk=65536):
-                with open(path, 'rb') as f:
-                    f.seek(start)
-                    remaining = length
-                    while remaining > 0:
-                        chunk_data = f.read(min(chunk, remaining))
-                        if not chunk_data:
-                            break
-                        remaining -= len(chunk_data)
-                        yield chunk_data
-            response = StreamingHttpResponse(range_iterator(file_path, first_byte, length), 
-                                           status=206, content_type=mime_type)
-            response['Content-Range'] = f'bytes {first_byte}-{last_byte}/{file_size}'
-            response['Content-Length'] = str(length)
-        else:
-            response = StreamingHttpResponse(open(file_path, 'rb'), content_type=mime_type)
-            response['Content-Length'] = str(file_size)
-    else:
-        def file_iterator(path, chunk_size=65536):
-            with open(path, 'rb') as f:
-                while True:
-                    chunk = f.read(chunk_size)
-                    if not chunk:
-                        break
-                    yield chunk
-        response = StreamingHttpResponse(file_iterator(file_path), content_type=mime_type)
-        response['Content-Length'] = str(file_size)
-
-    response['Accept-Ranges'] = 'bytes'
+    # Use Nginx X-Accel-Redirect for fast video serving
+    media_root = str(settings.MEDIA_ROOT).rstrip('/')
+    relative_path = str(file_path).replace(media_root, '')
+    response = HttpResponse(content_type=mime_type)
+    response['X-Accel-Redirect'] = f'/protected_media{relative_path}'
     response['Content-Disposition'] = 'inline'
     response['Cache-Control'] = 'private, max-age=3600'
+    response['Accept-Ranges'] = 'bytes'
     response['X-Frame-Options'] = 'SAMEORIGIN'
     return response
-
 
 @login_required(login_url='lms_login')
 def serve_slide(request, content_id, slide_index):
