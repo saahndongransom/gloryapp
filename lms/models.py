@@ -189,6 +189,10 @@ class Subscription(models.Model):
     started_at = models.DateTimeField(auto_now_add=True)
     breakdown = models.JSONField(default=dict, blank=True)
     receipt_code = models.CharField(max_length=20, blank=True, unique=True, null=True)
+    amount_due = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    payment_due_date = models.DateField(null=True, blank=True)
+    payment_plan = models.CharField(max_length=20, default='full')
+    access_blocked = models.BooleanField(default=False)
 
 
 
