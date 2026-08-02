@@ -59,15 +59,16 @@ body {
 .lesson-grid {
   display: grid;
   grid-template-columns: 280px 1fr 260px;
-  flex: 1;
-  min-height: calc(100vh - 60px);
+  grid-template-rows: 1fr auto;
+  height: calc(100vh - 60px);
+  overflow: hidden;
 }
-.content-area { min-height: unset !important; height: auto !important; }
 
 /* ── Left nav ── */
 .module-nav {
   background: #fff; border-right: 1px solid var(--border);
   display: flex; flex-direction: column; overflow: hidden;
+  height: 100%;
 }
 .nav-head { padding: 18px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .nav-head h4 { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
@@ -84,22 +85,21 @@ body {
 .l-item.done .l-check { background: var(--green); border-color: var(--green); color: #fff; }
 
 /* ── Content area ── */
-.content-area { display: flex; flex-direction: column; overflow: hidden; background: #000; align-items: stretch; height: calc(100vh - 60px); }
-.youtube-wrapper { flex: 1; }
-.youtube-wrapper iframe { width: 100%; height: 100%; min-height: 400px; display: block; }
-.video-wrapper { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-.video-wrapper video { flex: 1; object-fit: contain; max-height: calc(100vh - 120px); }
+.content-area { display: flex; flex-direction: column; overflow-y: auto; background: #fff; align-items: stretch; align-self: start; }
+.youtube-wrapper { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; }
+.youtube-wrapper iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
 
 /* ══ VIDEO PLAYER ══ */
 .video-wrapper {
   position: relative;
   background: #000;
   width: 100%;
-  aspect-ratio: 16/9;
+  margin-top: 0;
+  flex-shrink: 0;
 }
 .video-wrapper video {
   width: 100%;
-  height: 100%;
+  height: auto;
   display: block;
   pointer-events: none;
   object-fit: contain;
@@ -213,7 +213,7 @@ body {
 .youtube-wrapper iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
 
 /* ── Lesson info below content ── */
-.lesson-info { background: #fff; padding: 24px 28px; flex-shrink: 0; }
+.lesson-info { background: #fff; padding: 16px 28px 8px; flex-shrink: 0; }
 .lesson-info h2 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
 .lesson-info p { font-size: 13px; color: var(--muted); line-height: 1.7; }
 
@@ -221,6 +221,7 @@ body {
 .right-panel {
   background: #fff; border-left: 1px solid var(--border);
   display: flex; flex-direction: column; overflow: hidden;
+  height: 100%;
 }
 .panel-tabs { display: flex; border-bottom: 1px solid var(--border); }
 .panel-tab {
@@ -425,7 +426,7 @@ body {
             controlsList="nodownload nofullscreen noremoteplayback"
             disablePictureInPicture
             oncontextmenu="return false"
-            style="display:block;width:100%;background:#000">
+            style="display:block;width:100%;">
             <source src="{% url 'serve_content' item.id %}" type="video/mp4">
           </video>
           <div class="video-overlay" id="overlay_{{ item.id }}" onclick="togglePlay('{{ item.id }}')"></div>
