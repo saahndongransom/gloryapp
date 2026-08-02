@@ -687,6 +687,7 @@ def lms_dashboard_view(request):
                 'progress_percentage': prog_ratio,
                 'last_score_attempt': last_attempt,
                 'has_paid': has_paid,
+            'active_sub': active_sub,
                 'form_submitted': form_submitted,
                 'form_started': form_started,
                 'payment_page_visited': payment_page_visited,
@@ -906,10 +907,12 @@ def lms_dashboard_view(request):
 
         pending_course_id = request.session.get('pending_course_id', '')
         has_paid = Subscription.objects.filter(student=user, status='active').exists()
+        active_sub = Subscription.objects.filter(student=user, status__in=['active','suspended']).first()
         context = {
             'user': user,
             'enrollments': enrollments,
             'has_paid': has_paid,
+            'active_sub': active_sub,
             'overall_progress': overall_progress,
             'avg_score': avg_score,
             'total_completed': total_completed,
