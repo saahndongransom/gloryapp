@@ -945,10 +945,13 @@ def course_classroom(request, course_id):
     else:
         enrollment = get_object_or_404(Enrollment, course_id=course_id, student=request.user)
         # Payment gate — must have active subscription
-        has_paid = Subscription.objects.filter(student=request.user, status='active').exists()
-        if not has_paid:
+        sub_check = Subscription.objects.filter(student=request.user, status__in=['active','suspended']).first()
+        if not sub_check:
             messages.warning(request, 'Please complete your payment to access course content.')
             return redirect('enroll_page', course_id=course_id)
+        if sub_check.access_blocked:
+            messages.warning(request, f'Your access has been suspended. Please pay outstanding balance to restore access.')
+            return redirect('lms_dashboard')
     modules = Module.objects.filter(course_id=course_id).order_by('order').prefetch_related(Prefetch('lessons', queryset=Lesson.objects.order_by('order')))
     course_lessons = Lesson.objects.filter(module__course_id=course_id)
     total = course_lessons.count()
