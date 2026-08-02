@@ -84,22 +84,25 @@ body {
 .l-item.done .l-check { background: var(--green); border-color: var(--green); color: #fff; }
 
 /* ── Content area ── */
-.content-area { display: flex; flex-direction: column; overflow: hidden; background: #000; align-items: stretch; }
+.content-area { display: flex; flex-direction: column; overflow: hidden; background: #000; align-items: stretch; height: calc(100vh - 60px); }
 .youtube-wrapper { flex: 1; }
 .youtube-wrapper iframe { width: 100%; height: 100%; min-height: 400px; display: block; }
-.video-wrapper { flex: 1; display: flex; flex-direction: column; }
-.video-wrapper video { flex: 1; object-fit: contain; }
+.video-wrapper { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.video-wrapper video { flex: 1; object-fit: contain; max-height: calc(100vh - 120px); }
 
 /* ══ VIDEO PLAYER ══ */
 .video-wrapper {
   position: relative;
   background: #000;
   width: 100%;
+  aspect-ratio: 16/9;
 }
 .video-wrapper video {
   width: 100%;
+  height: 100%;
   display: block;
-  pointer-events: none; /* disables right-click save */
+  pointer-events: none;
+  object-fit: contain;
 }
 .video-overlay {
   position: absolute; inset: 0;
