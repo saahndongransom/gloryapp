@@ -150,13 +150,16 @@ body {
 
 /* ══ SLIDE VIEWER ══ */
 .slide-wrapper {
-  flex: 1;
   display: flex;
   flex-direction: column;
   background: #1e293b;
-  max-width: 100%;
-  margin: 0 auto;
+  max-width: 640px;
+  margin: 16px auto;
   width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  flex-shrink: 0;
 }
 .slide-stage {
   flex: 1;
