@@ -948,6 +948,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const id = v.id.replace('vid_', '');
     v.addEventListener('timeupdate', () => {
       const pct = v.duration ? (v.currentTime / v.duration * 100) : 0;
+      // Update top lesson progress bar
+      var topBar = document.getElementById('lessonTopProgressBar');
+      var topPct = document.getElementById('lessonTopProgressPct');
+      if (topBar) topBar.style.width = Math.min(100, Math.round(pct)) + '%';
+      if (topPct) topPct.textContent = Math.min(100, Math.round(pct)) + '%';
       const fill = document.getElementById('pfill_' + id);
       const time = document.getElementById('time_' + id);
       if (fill) fill.style.width = pct + '%';
