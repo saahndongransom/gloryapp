@@ -1112,6 +1112,7 @@ function updateSlideProgress(contentId) {
   if (!state || state.total <= 1) return;
   const pct = (state.current / (state.total - 1)) * 100;
   document.getElementById('slideProg_' + contentId).style.width = pct + '%';
+  updateTopProgressBar(pct);
 }
 
 // ── Right panel tabs ──────────────────────────────────────────────
