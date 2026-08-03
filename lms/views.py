@@ -1076,16 +1076,32 @@ def quiz_results(request, attempt_id):
     attempt = get_object_or_404(QuizAttempt, id=attempt_id, student=request.user)
     results_data = request.session.get(f'quiz_results_{attempt_id}', None)
     lesson = attempt.quiz.lesson
-    # Get next lesson
+    course = lesson.module.course
+
+    # Check if this is the last regular (non-final) lesson with a quiz
+    final_exam_lesson_ids = list(Quiz.objects.filter(
+        is_final_exam=True, lesson__module__course=course
+    ).values_list('lesson_id', flat=True))
+
+    # Get next lesson - skip final exam lessons
     next_lesson = Lesson.objects.filter(
-        module__course=lesson.module.course,
+        module__course=course,
         order__gt=lesson.order,
         module__order__gte=lesson.module.order
-    ).order_by('module__order', 'order').first()
+    ).exclude(id__in=final_exam_lesson_ids).order_by('module__order', 'order').first()
+
     if not next_lesson:
         next_lesson = Lesson.objects.filter(
-            module__course=lesson.module.course,
+            module__course=course,
             module__order__gt=lesson.module.order
+        ).exclude(id__in=final_exam_lesson_ids).order_by('module__order', 'order').first()
+
+    # If no more regular lessons and student passed - redirect to final exam
+    final_exam_lesson = None
+    if not next_lesson and attempt.passed and final_exam_lesson_ids:
+        final_exam_lesson = Lesson.objects.filter(
+            id__in=final_exam_lesson_ids,
+            module__course=course
         ).order_by('module__order', 'order').first()
     context = {
         'attempt': attempt,
@@ -1093,6 +1109,7 @@ def quiz_results(request, attempt_id):
         'results_data': results_data,
         'lesson': lesson,
         'next_lesson': next_lesson,
+        'final_exam_lesson': final_exam_lesson,
     }
     return render(request, 'lms/quiz_results.html', context)
 
