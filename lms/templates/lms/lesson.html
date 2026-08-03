@@ -951,8 +951,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Update top lesson progress bar
       var topBar = document.getElementById('lessonTopProgressBar');
       var topPct = document.getElementById('lessonTopProgressPct');
-      if (topBar) topBar.style.width = Math.min(100, Math.round(pct)) + '%';
-      if (topPct) topPct.textContent = Math.min(100, Math.round(pct)) + '%';
+      updateTopProgressBar(pct);
       const fill = document.getElementById('pfill_' + id);
       const time = document.getElementById('time_' + id);
       if (fill) fill.style.width = pct + '%';
