@@ -657,7 +657,7 @@ body {
           <div style="height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden">
             <div id="timeProgressBar" style="height:100%;background:linear-gradient(90deg,#1a56db,#60a5fa);border-radius:4px;width:0%;transition:width 1s linear"></div>
           </div>
-          <div style="font-size:11px;color:#94a3b8;margin-top:6px">Minimum {{ lesson.estimated_duration|default:300|floatformat:0 }} seconds required to complete this lesson</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:6px">Must watch at least 80% of the video duration to complete this lesson</div>
         </div>
 
         <!-- Lesson Checklist -->
@@ -1211,10 +1211,25 @@ document.addEventListener('DOMContentLoaded', () => {
 // ── Mark complete ────────────────────────────────────────────────
 // ── Completion lock system ────────────────────────────────────
 // ── Minimum time tracker ────────────────────────────────────
-const LESSON_DURATION = {{ lesson.estimated_duration|default:300 }}; // seconds
+var LESSON_DURATION = 300; // default, updated when video loads
 var timeSpent = 0;
 var timeInterval = null;
 var timerActive = false;
+
+// Get actual video duration
+document.addEventListener('DOMContentLoaded', function() {
+  var vid = document.querySelector('video');
+  if (vid) {
+    vid.addEventListener('loadedmetadata', function() {
+      LESSON_DURATION = Math.floor(vid.duration * 0.8); // require 80% of video duration
+      var durLabel = document.getElementById('timeProgressLabel');
+      if (durLabel) {
+        var mins = Math.floor(LESSON_DURATION / 60);
+        durLabel.textContent = 'Need ' + mins + ' min to complete';
+      }
+    });
+  }
+});
 
 function startTimeTracker() {
   if (timerActive) return;
