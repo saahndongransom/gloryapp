@@ -84,11 +84,11 @@ body {
 .l-item.done .l-check { background: var(--green); border-color: var(--green); color: #fff; }
 
 /* ── Content area ── */
-.content-area { display: flex; flex-direction: column; overflow: hidden; background: #fff; align-items: stretch; }
+.content-area { display: flex; flex-direction: column; overflow: hidden; background: #000; align-items: stretch; }
 .youtube-wrapper { flex: 1; }
 .youtube-wrapper iframe { width: 100%; height: 100%; min-height: 400px; display: block; }
-.video-wrapper { display: flex; flex-direction: column; }
-.video-wrapper video { object-fit: contain; }
+.video-wrapper { flex: 1; display: flex; flex-direction: column; }
+.video-wrapper video { flex: 1; object-fit: contain; }
 
 /* ══ VIDEO PLAYER ══ */
 .video-wrapper {
@@ -417,7 +417,15 @@ body {
 
         {# ══ VIDEO PLAYER ══ #}
         {% if item.content_type == 'video' %}
-
+        <div style="background:#1e293b;padding:14px 20px;flex-shrink:0">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span style="font-size:12px;font-weight:700;color:#e2e8f0">Lesson Progress</span>
+            <span style="font-size:12px;font-weight:700;color:#3b82f6">{{ lesson_progress_pct|default:0 }}%</span>
+          </div>
+          <div style="width:100%;height:16px;background:rgba(255,255,255,0.1);border-radius:8px;overflow:hidden">
+            <div style="height:100%;background:linear-gradient(90deg,#3b82f6,#60a5fa);border-radius:8px;width:{{ lesson_progress_pct|default:0 }}%;transition:width .4s"></div>
+          </div>
+        </div>
         <div class="video-wrapper" id="videoWrapper_{{ item.id }}">
           <video id="vid_{{ item.id }}" preload="metadata"
             controlsList="nodownload nofullscreen noremoteplayback"
@@ -607,60 +615,6 @@ body {
       <div class="lesson-info">
         <h2>{{ lesson.title }}</h2>
         <p>Work through the materials above. Mark the lesson complete when you're done to track your progress.</p>
-        
-        <!-- Lesson Progress Bar -->
-        <div style="margin-top:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <span style="font-size:12px;font-weight:700;color:#374151">Lesson Progress</span>
-            <span id="lessonProgressPct" style="font-size:12px;font-weight:700;color:#1a56db">0%</span>
-          </div>
-          <div style="height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden">
-            <div id="lessonProgressBar" style="height:100%;background:linear-gradient(90deg,#1a56db,#60a5fa);border-radius:4px;width:0%;transition:width .4s"></div>
-          </div>
-        </div>
-
-        <!-- Learning Objectives -->
-        <div style="margin-top:20px;background:#eff6ff;border-radius:10px;padding:16px 18px">
-          <div style="font-size:13px;font-weight:700;color:#1a56db;margin-bottom:10px"><i class="fas fa-bullseye"></i> Learning Objectives</div>
-          <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:7px">
-            <li style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:#1e40af"><span style="color:#059669;font-size:11px;margin-top:2px">✓</span> Understand the key concepts covered in this lesson</li>
-            <li style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:#1e40af"><span style="color:#059669;font-size:11px;margin-top:2px">✓</span> Apply the knowledge to real-world healthcare scenarios</li>
-            <li style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:#1e40af"><span style="color:#059669;font-size:11px;margin-top:2px">✓</span> Prepare for the lesson quiz and certification exam</li>
-          </ul>
-        </div>
-
-        <!-- Key Takeaways -->
-        <div style="margin-top:16px">
-          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:10px"><i class="fas fa-key" style="color:#f59e0b"></i> Key Takeaways</div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <div style="background:#fffbeb;border-left:3px solid #f59e0b;padding:10px 14px;border-radius:0 8px 8px 0;font-size:12px;color:#78350f">Review the lesson content carefully before attempting the quiz</div>
-            <div style="background:#f0fdf4;border-left:3px solid #059669;padding:10px 14px;border-radius:0 8px 8px 0;font-size:12px;color:#166534">Take notes using the Notes tab on the right panel</div>
-            <div style="background:#faf5ff;border-left:3px solid #7c3aed;padding:10px 14px;border-radius:0 8px 8px 0;font-size:12px;color:#4c1d95">Ask questions in the Q&A section if you need clarification</div>
-          </div>
-        </div>
-
-        <!-- Instructor Notes -->
-        <div style="margin-top:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-            <div style="width:36px;height:36px;border-radius:50%;background:#1a56db;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0">G</div>
-            <div>
-              <div style="font-size:13px;font-weight:700;color:#0f172a">Instructor Note</div>
-              <div style="font-size:11px;color:#64748b">Glory Nursing Healthcare Training School</div>
-            </div>
-          </div>
-          <p style="font-size:12px;color:#475569;line-height:1.7">This lesson is part of your certification training. Make sure you understand all the concepts before moving to the next chapter. If you have any questions, use the Q&A section or contact us directly.</p>
-        </div>
-
-        <!-- Lesson Checklist -->
-        <div style="margin-top:16px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px">
-          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:10px"><i class="fas fa-tasks" style="color:#1a56db"></i> Lesson Checklist</div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <div style="display:flex;align-items:center;gap:10px;font-size:12px;color:#374151"><span style="width:18px;height:18px;border-radius:50%;background:#059669;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0"><i class="fas fa-check"></i></span> Watch the lesson video</div>
-            <div style="display:flex;align-items:center;gap:10px;font-size:12px;color:#374151"><span style="width:18px;height:18px;border-radius:50%;border:2px solid #e2e8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0"></span> Take notes</div>
-            <div style="display:flex;align-items:center;gap:10px;font-size:12px;color:#374151"><span style="width:18px;height:18px;border-radius:50%;border:2px solid #e2e8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0"></span> Complete the quiz</div>
-            <div style="display:flex;align-items:center;gap:10px;font-size:12px;color:#374151"><span style="width:18px;height:18px;border-radius:50%;border:2px solid #e2e8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0"></span> Mark lesson complete</div>
-          </div>
-        </div>
 
         {% for quiz in quizzes %}
         <div style="background:linear-gradient(135deg,#1e3a5f,var(--blue));color:#fff;border-radius:10px;padding:18px 22px;margin-top:16px;display:flex;align-items:center;justify-content:space-between;gap:16px">
@@ -1201,8 +1155,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── Mark complete ────────────────────────────────────────────────
 // ── Completion lock system ────────────────────────────────────
-
-
 const completionReqs = {
   video: false,   // must watch 80%
   ppt: false,     // must reach last slide
