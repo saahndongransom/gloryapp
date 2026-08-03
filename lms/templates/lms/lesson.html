@@ -440,12 +440,14 @@ body {
             controlsList="nodownload nofullscreen noremoteplayback"
             disablePictureInPicture
             oncontextmenu="return false"
-            style="display:block;width:100%;background:#000">
+            style="display:block;width:100%;background:#000"
+            onseeking="preventSeek(this)"
+            oncanplay="initSeekPrevention(this)">
             <source src="{% url 'serve_content' item.id %}" type="video/mp4">
           </video>
           <div class="video-overlay" id="overlay_{{ item.id }}" onclick="togglePlay('{{ item.id }}')"></div>
           <div class="video-controls" id="controls_{{ item.id }}">
-            <div class="progress-bar-container" id="pbar_{{ item.id }}" onclick="seekVideo(event, '{{ item.id }}')">
+            <div class="progress-bar-container" id="pbar_{{ item.id }}">
               <div class="progress-bar-fill" id="pfill_{{ item.id }}" style="width:0%"></div>
             </div>
             <div class="controls-row">
@@ -1212,6 +1214,24 @@ function sendChat() {
 function showReply(id) {
   const box = document.getElementById('replyBox_' + id);
   if (box) box.style.display = box.style.display === 'none' ? 'block' : 'none';
+}
+
+// ── Seek Prevention ──────────────────────────────────────────────
+function initSeekPrevention(video) {
+  video._lastTime = 0;
+  video.addEventListener('timeupdate', function() {
+    if (!video._seeking) {
+      video._lastTime = video.currentTime;
+    }
+  });
+}
+
+function preventSeek(video) {
+  if (video.currentTime > video._lastTime + 2) {
+    video._seeking = true;
+    video.currentTime = video._lastTime;
+    setTimeout(function() { video._seeking = false; }, 100);
+  }
 }
 
 // ── Notes ────────────────────────────────────────────────────────
