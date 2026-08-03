@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
 :root {
   --blue: #1a56db; --blue-lt: #eff6ff;
   --green: #059669; --green-lt: #f0fdf4;
@@ -43,11 +44,12 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
   display: grid;
   grid-template-columns: 268px 1fr 268px;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
 /* ── Left nav ── */
-.module-nav { background: #fff; border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+.module-nav { background: #fff; border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; height: 100%; }
 .nav-head { padding: 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .nav-head h4 { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
 .nav-head p { font-size: 11px; color: var(--muted); }
@@ -63,7 +65,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
 .l-item.done .l-check { background: var(--green); border-color: var(--green); color: #fff; }
 
 /* ── Content area ── */
-.content-area { display: flex; flex-direction: column; overflow-y: auto; background: #fff; }
+.content-area { display: flex; flex-direction: column; overflow-y: auto; background: #fff; height: 100%; }
 
 /* ══ VIDEO ══ */
 .video-wrapper { position: relative; background: #000; width: 100%; flex-shrink: 0; }
@@ -114,7 +116,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
 .lesson-info p { font-size: 13px; color: var(--muted); line-height: 1.7; }
 
 /* ── Right panel ── */
-.right-panel { background: #fff; border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+.right-panel { background: #fff; border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; height: 100%; }
 .panel-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .panel-tab { flex: 1; padding: 12px; text-align: center; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all .15s; }
 .panel-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
@@ -129,7 +131,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
 .note-save-btn { margin-top: 8px; width: 100%; background: var(--blue); color: #fff; border: none; padding: 9px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; }
 
 /* ── Action bar ── */
-.action-bar { background: #fff; border-top: 1px solid var(--border); padding: 12px 20px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.action-bar { background: #fff; border-top: 1px solid var(--border); padding: 12px 20px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; width: 100%; }
 .prev-btn { display: flex; align-items: center; gap: 6px; padding: 9px 18px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--muted); text-decoration: none; background: #fff; transition: all .15s; }
 .prev-btn:hover { border-color: var(--blue); color: var(--blue); }
 .next-btn { display: flex; align-items: center; gap: 6px; padding: 9px 18px; background: var(--blue); color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; text-decoration: none; cursor: pointer; transition: all .15s; }
