@@ -984,16 +984,6 @@ async function initSlides(contentId) {
 
   // Progress
   updateSlideProgress(contentId);
-
-
-  // Check localStorage
-  var storageKey = 'ppt_progress_' + contentId;
-  var maxViewed = parseInt(localStorage.getItem(storageKey) || '0');
-  if (maxViewed >= count - 1) unlockContent('ppt', contentId);
-  
-  // Check server-side completion
-  var completedIds = [{% for cid in completed_content_ids %}'{{ cid }}',{% endfor %}];
-  if (completedIds.indexOf(String(contentId)) !== -1) unlockContent('ppt', contentId);
 }
 
 function changeSlide(contentId, delta) {
@@ -1006,10 +996,6 @@ function goToSlide(contentId, index) {
   const state = slideState[contentId];
   if (!state || index < 0 || index >= state.total) return;
   state.current = index;
-  // Track max slide viewed in localStorage
-  var storageKey = 'ppt_progress_' + contentId;
-  var maxViewed = parseInt(localStorage.getItem(storageKey) || '0');
-  if (index > maxViewed) localStorage.setItem(storageKey, index);
 
   // Update image
   document.getElementById('slideImg_' + contentId).src =
@@ -1023,14 +1009,7 @@ function goToSlide(contentId, index) {
   document.getElementById('slidePrev_' + contentId).disabled = index === 0;
   document.getElementById('slideNext_' + contentId).disabled = index === state.total - 1;
   // Unlock when last slide reached
-  if (index === state.total - 1) {
-    unlockContent('ppt', contentId);
-    // Save to server
-    fetch('/lms/content/' + contentId + '/progress/', {
-      method: 'POST',
-      headers: {'X-CSRFToken': '{{ csrf_token }}'}
-    }).catch(function(){});
-  }
+  if (index === state.total - 1) unlockContent('ppt', contentId);
 
   // Update thumbnails
   document.querySelectorAll('#slideThumbs_' + contentId + ' .slide-thumb').forEach((t, i) => {
@@ -1246,25 +1225,6 @@ function checkAllComplete() {
     const hint = pending.length > 0 ? pending[0] : 'Complete lesson content';
     if (completeBtnText) completeBtnText.textContent = hint;
     if (markDoneBtnText) markDoneBtnText.textContent = hint;
-    
-    // If only quiz is pending, change button to Take Quiz
-    const allContentDone2 = contentTypes.every(t => reqsMet[t] !== false);
-    if (allContentDone2 && !quizPassedState && {{ quizzes|length }} > 0) {
-      if (completeBtn) {
-        completeBtn.className = 'complete-btn';
-        completeBtn.style.background = '#7c3aed';
-        completeBtn.style.borderColor = '#7c3aed';
-        completeBtn.innerHTML = '<i class="fas fa-clipboard-check"></i> Take Quiz';
-        completeBtn.onclick = null;
-        completeBtn.setAttribute('onclick', "window.location.href='{% if quizzes %}{% url 'quiz_view' quizzes.0.id %}{% endif %}'");
-      }
-      if (markDoneBtn) {
-        markDoneBtn.className = 'mark-done-btn';
-        markDoneBtn.style.background = '#7c3aed';
-        markDoneBtn.innerHTML = '<i class="fas fa-clipboard-check"></i> Take Quiz';
-        markDoneBtn.setAttribute('onclick', "window.location.href='{% if quizzes %}{% url 'quiz_view' quizzes.0.id %}{% endif %}'");
-      }
-    }
   }
 }
 
@@ -1290,11 +1250,6 @@ function markComplete() {
   // Check if locked
   const completeBtn = document.getElementById('completeBtn');
   if (completeBtn.classList.contains('locked')) {
-    // If quiz is the only thing pending, redirect to quiz
-    if (!quizPassedState && {{ quizzes|length }} > 0) {
-      window.location.href = '{% if quizzes %}{% url "quiz_view" quizzes.0.id %}{% endif %}';
-      return;
-    }
     // Shake animation hint
     completeBtn.style.transform = 'translateX(-4px)';
     setTimeout(() => completeBtn.style.transform = 'translateX(4px)', 100);
