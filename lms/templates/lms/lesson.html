@@ -607,6 +607,17 @@ body {
       <div class="lesson-info">
         <h2>{{ lesson.title }}</h2>
         <p>Work through the materials above. Mark the lesson complete when you're done to track your progress.</p>
+        
+        <!-- Lesson Progress Bar -->
+        <div style="margin-top:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span style="font-size:12px;font-weight:700;color:#374151">Lesson Progress</span>
+            <span id="lessonProgressPct" style="font-size:12px;font-weight:700;color:#1a56db">0%</span>
+          </div>
+          <div style="height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden">
+            <div id="lessonProgressBar" style="height:100%;background:linear-gradient(90deg,#1a56db,#60a5fa);border-radius:4px;width:0%;transition:width .4s"></div>
+          </div>
+        </div>
 
         <!-- Learning Objectives -->
         <div style="margin-top:20px;background:#eff6ff;border-radius:10px;padding:16px 18px">
