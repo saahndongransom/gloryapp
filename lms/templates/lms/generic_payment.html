@@ -79,17 +79,17 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">First Name *</label>
-          <input type="text" name="first_name" class="form-control" required placeholder="Jane" id="firstNameInput" value="{{ prefill_first }}">
+          <input type="text" name="first_name" class="form-control" required placeholder="Jane">
         </div>
         <div class="form-group">
           <label class="form-label">Last Name *</label>
-          <input type="text" name="last_name" class="form-control" required placeholder="Smith" id="lastNameInput" value="{{ prefill_last }}">
+          <input type="text" name="last_name" class="form-control" required placeholder="Smith">
         </div>
       </div>
 
       <div class="form-group">
         <label class="form-label">Email Address *</label>
-        <input type="email" name="email" class="form-control" required placeholder="jane@email.com" value="{{ prefill_email }}">
+        <input type="email" name="email" class="form-control" required placeholder="jane@email.com">
       </div>
 
       <div class="form-group">
@@ -98,78 +98,21 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
       </div>
 
       <div class="form-group">
-        <label class="form-label">Program Tuition ($) *</label>
+        <label class="form-label">Payment Amount ($) *</label>
         <div class="amount-wrap">
           <span>$</span>
-          <input type="number" id="baseAmount" class="form-control" required min="1" step="0.01" placeholder="0.00" oninput="updatePayTotal()" {% if prefill_amount %}value="{{ prefill_amount }}"{% endif %}>
+          <input type="number" id="baseAmount" class="form-control" required min="1" step="0.01" placeholder="0.00" oninput="updatePayTotal()">
         </div>
       </div>
-
-      <!-- Additional Fees -->
-      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:14px">
-        <div style="font-size:13px;font-weight:700;margin-bottom:4px">Additional Required Fees</div>
-        <div style="font-size:11px;color:#64748b;margin-bottom:12px">Included by default — uncheck if already paid.</div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9">
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
-            <input type="checkbox" id="addon_exam" value="180" onchange="updatePayTotal()" checked>
-            State Exam Fee
-          </label>
-          <span style="font-weight:700;font-size:13px">$180</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9">
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
-            <input type="checkbox" id="addon_tb" value="35" onchange="updatePayTotal()" checked>
-            TB Test
-          </label>
-          <span style="font-weight:700;font-size:13px">$35</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0">
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
-            <input type="checkbox" id="addon_bg" value="45" onchange="updatePayTotal()" checked>
-            Background Check
-          </label>
-          <span style="font-weight:700;font-size:13px">$45</span>
-        </div>
-      </div>
-
-      <!-- Payment Plan -->
-      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:14px">
-        <div style="font-size:13px;font-weight:700;margin-bottom:12px">Payment Plan</div>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border:1.5px solid #1a56db;border-radius:8px;cursor:pointer;background:#eff6ff" id="plan_full_label">
-            <input type="radio" name="pay_plan" value="full" checked onchange="selectPayPlan('full')" style="margin-top:2px">
-            <div><strong style="font-size:13px">Pay in Full</strong><br><span style="font-size:11px;color:#64748b">Pay total amount today</span></div>
-          </label>
-          <label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border:1.5px solid #e2e8f0;border-radius:8px;cursor:pointer" id="plan_half_label">
-            <input type="radio" name="pay_plan" value="half" onchange="selectPayPlan('half')" style="margin-top:2px">
-            <div><strong style="font-size:13px">Pay 50% Now</strong><br><span style="font-size:11px;color:#64748b">Half today, balance before class starts</span></div>
-          </label>
-          <label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border:1.5px solid #e2e8f0;border-radius:8px;cursor:pointer" id="plan_custom_label">
-            <input type="radio" name="pay_plan" value="custom" onchange="selectPayPlan('custom')" style="margin-top:2px">
-            <div><strong style="font-size:13px">Custom Amount</strong><br><span style="font-size:11px;color:#64748b">Minimum 50% required</span></div>
-          </label>
-        </div>
-        <div id="customAmountBox" style="display:none;margin-top:12px">
-          <label style="font-size:12px;font-weight:600">Amount to pay today (min 50%):</label>
-          <div class="amount-wrap" style="margin-top:4px">
-            <span>$</span>
-            <input type="number" id="customAmountInput" class="form-control" placeholder="0.00" min="0" step="0.01" oninput="updatePayTotal()">
-          </div>
-        </div>
-      </div>
-
       <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px">
         <div style="display:flex;justify-content:space-between;margin-bottom:6px;color:#374151">
-          <span>Tuition</span><span id="subtotalDisplay">$0.00</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:6px;color:#374151">
-          <span>Additional Fees</span><span id="addonDisplay">$0.00</span>
+          <span>Subtotal</span><span id="subtotalDisplay">$0.00</span>
         </div>
         <div style="display:flex;justify-content:space-between;margin-bottom:6px;color:#374151">
           <span>Card Processing Fee (3.7%)</span><span id="feeDisplay">$0.00</span>
         </div>
         <div style="display:flex;justify-content:space-between;font-weight:800;color:#065f46;border-top:1px solid #86efac;padding-top:8px">
-          <span>Total Due Today</span><span id="totalDisplay">$0.00</span>
+          <span>Total</span><span id="totalDisplay">$0.00</span>
         </div>
       </div>
       <input type="hidden" name="amount" id="finalAmount" value="0">
@@ -211,37 +154,11 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 <script src="https://web.squarecdn.com/v1/square.js"></script>
 {% endif %}
 <script>
-var currentPayPlan = 'full';
-
-function selectPayPlan(plan) {
-  currentPayPlan = plan;
-  ['full','half','custom'].forEach(function(p) {
-    var lbl = document.getElementById('plan_' + p + '_label');
-    if (lbl) lbl.style.border = p === plan ? '1.5px solid #1a56db' : '1.5px solid #e2e8f0';
-    if (lbl) lbl.style.background = p === plan ? '#eff6ff' : '';
-  });
-  document.getElementById('customAmountBox').style.display = plan === 'custom' ? 'block' : 'none';
-  updatePayTotal();
-}
-
 function updatePayTotal() {
   var base = parseFloat(document.getElementById('baseAmount').value) || 0;
-  var addons = 0;
-  ['addon_exam','addon_tb','addon_bg'].forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el && el.checked) addons += parseFloat(el.value) || 0;
-  });
-  var fullTotal = base + addons;
-  var payToday = fullTotal;
-  if (currentPayPlan === 'half') payToday = Math.ceil(fullTotal * 0.5 * 100) / 100;
-  else if (currentPayPlan === 'custom') {
-    var custom = parseFloat(document.getElementById('customAmountInput') && document.getElementById('customAmountInput').value) || 0;
-    payToday = Math.min(Math.max(custom, Math.ceil(fullTotal * 0.5 * 100) / 100), fullTotal);
-  }
-  var fee = Math.ceil(payToday * 0.037 * 100) / 100;
-  var total = Math.round((payToday + fee) * 100) / 100;
+  var fee = Math.ceil(base * 0.037 * 100) / 100;
+  var total = Math.round((base + fee) * 100) / 100;
   document.getElementById('subtotalDisplay').textContent = '$' + base.toFixed(2);
-  if (document.getElementById('addonDisplay')) document.getElementById('addonDisplay').textContent = '$' + addons.toFixed(2);
   document.getElementById('feeDisplay').textContent = '$' + fee.toFixed(2);
   document.getElementById('totalDisplay').textContent = '$' + total.toFixed(2);
   document.getElementById('finalAmount').value = total.toFixed(2);
@@ -257,22 +174,8 @@ async function initSquare() {
   } catch(e) {
     console.error('Square init error:', e);
   }
-  {% if prefill_amount %}
-  function applyPrefill() {
-    var el = document.getElementById('baseAmount');
-    if (el) { el.value = '{{ prefill_amount|escapejs }}'; updatePayTotal(); }
-  }
-  setTimeout(applyPrefill, 500);
-  setTimeout(applyPrefill, 1500);
-  setTimeout(applyPrefill, 3000);
-  {% endif %}
 }
 initSquare();
-{% if prefill_amount %}
-window.addEventListener('load', function() {
-  updatePayTotal();
-});
-{% endif %}
 
 async function handlePayment() {
   var btn = document.getElementById('payBtn');
@@ -295,45 +198,4 @@ async function handlePayment() {
   }
 }
 </script>
-
-<script>
-window.addEventListener('load', function() {
-  {% if prefill_name %}
-  var parts = '{{ prefill_name|escapejs }}'.trim().split(' ');
-  var fn = document.getElementById('firstNameInput');
-  var ln = document.getElementById('lastNameInput');
-  if (fn) fn.value = parts[0] || '';
-  if (ln) ln.value = parts.slice(1).join(' ') || '';
-  {% endif %}
-
-  {% if prefill_email %}
-  var em = document.querySelector('input[name="email"]');
-  if (em) em.value = '{{ prefill_email|escapejs }}';
-  {% endif %}
-
-  {% if prefill_reason %}
-  var reason = '{{ prefill_reason|escapejs }}'.toLowerCase();
-  var sel = document.querySelector('select[name="reason"]');
-  if (sel) {
-    for (var i = 0; i < sel.options.length; i++) {
-      var v = sel.options[i].value.toLowerCase();
-      if (reason.includes('cna') && v.includes('cna')) { sel.selectedIndex = i; break; }
-      else if (reason.includes('cma') && v.includes('cma')) { sel.selectedIndex = i; break; }
-      else if ((reason.includes('bls') || reason.includes('cpr')) && v.includes('bls')) { sel.selectedIndex = i; break; }
-      else if (reason.includes('hha') && v.includes('cna')) { sel.selectedIndex = i; break; }
-      else if (reason.includes('acma') && v.includes('cma')) { sel.selectedIndex = i; break; }
-      else if (reason.includes('renewal') && v.includes('cma')) { sel.selectedIndex = i; break; }
-    }
-  }
-  {% endif %}
-
-  {% if prefill_amount %}
-  setTimeout(function() {
-    var amt = document.getElementById('baseAmount');
-    if (amt) { amt.value = '{{ prefill_amount|escapejs }}'; updatePayTotal(); }
-  }, 500);
-  {% endif %}
-});
-</script>
-
 {% endblock %}

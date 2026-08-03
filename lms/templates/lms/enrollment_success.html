@@ -1,73 +1,37 @@
 {% extends 'lms/lms_base.html' %}
 {% block title %}Enrollment Successful | Glory Nursing{% endblock %}
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: #f9fafb; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+.card { background: #fff; border-radius: 20px; padding: 48px 40px; max-width: 480px; width: 100%; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.08); margin: 20px; }
+.icon { font-size: 64px; margin-bottom: 20px; }
+h1 { font-size: 24px; font-weight: 800; margin-bottom: 10px; color: #0f172a; }
+p { font-size: 14px; color: #6b7280; line-height: 1.7; margin-bottom: 8px; }
+.credentials { background: #f0fdf4; border: 1px solid #86efac; border-radius: 10px; padding: 16px 20px; margin: 20px 0; text-align: left; }
+.cred-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; }
+.cred-label { color: #6b7280; font-weight: 500; }
+.cred-val { font-weight: 700; color: #059669; }
+.login-btn { display: inline-flex; align-items: center; gap: 8px; background: #1a56db; color: #fff; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-size: 15px; font-weight: 700; margin-top: 8px; }
+.note { font-size: 12px; color: #9ca3af; margin-top: 16px; }
+</style>
+{% endblock %}
 {% block content %}
-<div style="min-height:80vh;display:flex;align-items:center;justify-content:center;padding:40px 20px;background:#f1f5f9">
-  <div style="max-width:560px;width:100%;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)">
-    
-    <div style="background:linear-gradient(135deg,#059669,#047857);padding:40px;text-align:center;color:#fff">
-      <div style="font-size:64px;margin-bottom:12px">🎉</div>
-      <h1 style="font-size:24px;font-weight:800;margin-bottom:6px">Payment Successful!</h1>
-      <p style="color:rgba(255,255,255,.8);font-size:15px">Welcome to Glory Nursing, {{ data.name }}!</p>
-    </div>
+<div class="card">
+  <div class="icon">🎉</div>
+  <h1>You're Enrolled!</h1>
+  <p>Welcome to Glory Nursing, <strong>{{ data.name }}</strong>!</p>
+  <p>Your enrollment in <strong>{{ data.course }}</strong> is confirmed.</p>
 
-    <div style="padding:32px">
-      <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:16px;margin-bottom:24px">
-        <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:4px">✅ Enrolled in:</div>
-        <div style="font-size:16px;font-weight:800;color:#0f172a">{{ data.course }}</div>
-      </div>
-
-      {% if data.is_online %}
-      <!-- Online program - show LMS access -->
-      <div style="margin-bottom:20px">
-        <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:12px">🖥️ Your LMS Login Details</div>
-        <div style="background:#f8fafc;border-radius:8px;padding:14px">
-          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e2e8f0;font-size:13px">
-            <span style="color:#64748b">Username</span>
-            <span style="font-weight:700">{{ data.username }}</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px">
-            <span style="color:#64748b">Email</span>
-            <span style="font-weight:700">{{ data.email }}</span>
-          </div>
-        </div>
-        <p style="font-size:12px;color:#64748b;margin-top:8px">Your login credentials have been sent to your email.</p>
-      </div>
-      <a href="{% url 'lms_dashboard' %}" style="display:block;background:#1a56db;color:#fff;text-align:center;padding:14px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;margin-bottom:12px">
-        🎓 Go to My LMS Dashboard
-      </a>
-      {% else %}
-      <!-- Physical program - show class schedule -->
-      <div style="margin-bottom:20px">
-        <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:12px">📅 Upcoming Class Dates</div>
-        {% if data.upcoming_schedules %}
-        {% for sch in data.upcoming_schedules %}
-        <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:14px;margin-bottom:10px;font-size:13px">
-          <div style="font-weight:700;color:#0f172a;margin-bottom:6px">📅 Starting {{ sch.start_date }}</div>
-          {% if sch.end_date %}<div style="color:#64748b">Ends: {{ sch.end_date }}</div>{% endif %}
-          {% if sch.start_time %}<div style="color:#64748b">🕐 {{ sch.start_time }}{% if sch.end_time %} - {{ sch.end_time }}{% endif %}</div>{% endif %}
-          {% if sch.days %}<div style="color:#64748b">📆 {{ sch.days }}</div>{% endif %}
-          <div style="color:#059669;font-weight:600;margin-top:4px">{{ sch.seats_available }} seats available</div>
-          {% if sch.notes %}<div style="color:#64748b;font-size:11px;margin-top:4px">{{ sch.notes }}</div>{% endif %}
-        </div>
-        {% endfor %}
-        {% else %}
-        <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:16px;font-size:13px;line-height:1.8;color:#0f172a">
-          Our admissions team will contact you within 1-2 business days with your class schedule and start date.
-        </div>
-        {% endif %}
-      </div>
-      <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:16px;margin-bottom:20px;font-size:13px;color:#0369a1">
-        <strong>📞 Next Steps:</strong><br>
-        Our team will call you at the number provided to confirm your class start date and provide any additional instructions.
-        <br><br>
-        <strong>Contact us:</strong> (405) 968-5004 or glorynursing@yahoo.com
-      </div>
-      {% endif %}
-
-      <div style="text-align:center;font-size:12px;color:#94a3b8">
-        A confirmation email has been sent to <strong>{{ data.email }}</strong>
-      </div>
-    </div>
+  <div class="credentials">
+    <div class="cred-row"><span class="cred-label">Username</span><span class="cred-val">{{ data.username }}</span></div>
+    <div class="cred-row"><span class="cred-label">Password</span><span class="cred-val">Check your email</span></div>
+    <div class="cred-row"><span class="cred-label">Email sent to</span><span class="cred-val">{{ data.email }}</span></div>
   </div>
+
+  <p>Your login credentials have been sent to your email. Log in now to start learning!</p>
+  <a href="{% url 'lms_login' %}" class="login-btn"><i class="fas fa-sign-in-alt"></i> Log In Now</a>
+  <p class="note">If you don't receive the email within 5 minutes, check your spam folder.</p>
 </div>
 {% endblock %}
