@@ -1290,6 +1290,12 @@ def fill_form_simple(request, program_code):
     course_id = course.id if course else ''
     # Check if online based on program slug parameter
     program_slug = request.GET.get('program', '')
+    # Override program_name with actual program title from database
+    if program_slug:
+        from core.models import Program as _CP
+        _p = _CP.objects.filter(slug=program_slug).first()
+        if _p:
+            program_name = _p.title
     # Check from database
     from core.models import Program as CoreProgram2, ClassSchedule
     from django.utils import timezone as tz_now
