@@ -35,6 +35,12 @@
       <a href="{% url 'fill_form_simple' 'HHA' %}" class="btn btn-primary btn-lg" style="margin-top:2rem">Apply for This Program</a>
       {% elif program.slug == "phlebotomy" or program.slug == "ekg" or program.slug == "medical-assistant" %}
       <a href="{% url 'contact' %}" class="btn btn-primary btn-lg" style="margin-top:2rem">Apply for This Program</a>
+      {% elif 'acma' in program.slug or 'advanced-certified' in program.slug %}
+      <a href="/apply/simple/ACMA/?program={{ program.slug }}" class="btn btn-primary btn-lg" style="margin-top:2rem">Apply for This Program</a>
+      {% elif 'renewal' in program.slug %}
+      <a href="/apply/simple/CMARENEWAL/?program={{ program.slug }}" class="btn btn-primary btn-lg" style="margin-top:2rem">Apply for This Program</a>
+      {% elif 'hha' in program.slug or 'cna-to-hha' in program.slug %}
+      <a href="/apply/simple/HHA/?program={{ program.slug }}" class="btn btn-primary btn-lg" style="margin-top:2rem">Apply for This Program</a>
       {% else %}
       <a href="{% url 'apply_cna' %}?program={{ program.slug }}" class="btn btn-primary btn-lg" style="margin-top:2rem">Apply for This Program</a>
       {% endif %}
