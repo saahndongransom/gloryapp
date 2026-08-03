@@ -413,6 +413,17 @@ body {
     <!-- Center: Content viewer -->
     <div class="content-area" id="contentArea" {% if not content_payloads %}style="background:#f8fafc;flex:0;min-height:0"{% endif %}>
 
+      <!-- Lesson Progress Bar - shows for all content types -->
+      <div style="background:#1e293b;padding:10px 18px;flex-shrink:0">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:12px;font-weight:700;color:#e2e8f0">Lesson Progress</span>
+          <div style="flex:1;height:16px;background:rgba(255,255,255,0.1);border-radius:8px;overflow:hidden">
+            <div id="lessonTopProgressBar" style="height:100%;background:linear-gradient(90deg,#3b82f6,#60a5fa);border-radius:8px;width:0%;transition:width .4s"></div>
+          </div>
+          <span id="lessonTopProgressPct" style="font-size:11px;font-weight:700;color:#3b82f6;white-space:nowrap">0%</span>
+        </div>
+      </div>
+
       {% for item in content_payloads %}
 
         {# ══ VIDEO PLAYER ══ #}
@@ -681,7 +692,18 @@ body {
       </div>
 
       <div class="panel-body" id="panel-resources">
-        {% for item in content_payloads %}
+        <!-- Lesson Progress Bar - shows for all content types -->
+      <div style="background:#1e293b;padding:10px 18px;flex-shrink:0">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:12px;font-weight:700;color:#e2e8f0">Lesson Progress</span>
+          <div style="flex:1;height:16px;background:rgba(255,255,255,0.1);border-radius:8px;overflow:hidden">
+            <div id="lessonTopProgressBar" style="height:100%;background:linear-gradient(90deg,#3b82f6,#60a5fa);border-radius:8px;width:0%;transition:width .4s"></div>
+          </div>
+          <span id="lessonTopProgressPct" style="font-size:11px;font-weight:700;color:#3b82f6;white-space:nowrap">0%</span>
+        </div>
+      </div>
+
+      {% for item in content_payloads %}
           <div class="resource-item">
             <div class="res-icon" style="background:
               {% if item.content_type == 'pdf' %}#fee2e2
