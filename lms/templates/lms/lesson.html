@@ -803,7 +803,15 @@ body {
     <button class="mark-done-btn locked" id="markDoneBtn" onclick="markComplete()">
       <i class="fas fa-lock" id="markDoneIcon"></i> <span id="markDoneBtnText">Complete locked</span>
     </button>
-    {% if next_lesson %}
+    {% if lesson_quizzes and not quiz_passed %}
+      <a href="{% url 'quiz_view' lesson_quizzes.0.id %}" class="next-btn" style="background:#7c3aed">
+        <i class="fas fa-clipboard-check"></i> Take Quiz First
+      </a>
+    {% elif redirect_to_final %}
+      <a href="{% url 'lesson_view' next_lesson.id %}" class="next-btn" style="background:linear-gradient(135deg,#7c3aed,#1a56db)">
+        <i class="fas fa-graduation-cap"></i> Final Exam 🎓
+      </a>
+    {% elif next_lesson %}
       <a href="{% url 'lesson_view' next_lesson.id %}" class="next-btn" id="nextBtn">Next <i class="fas fa-chevron-right"></i></a>
     {% else %}
       <a href="{% url 'course_classroom' lesson.module.course.id %}" class="next-btn" style="background:var(--green)">Finish Course <i class="fas fa-check"></i></a>

@@ -830,6 +830,9 @@ def lms_dashboard_view(request):
                 'completed_count': completed_count,
                 'total_lessons': course_lesson_count,
                 'next_lesson': next_lesson,
+        'quiz_passed': quiz_passed,
+        'redirect_to_final': redirect_to_final,
+        'lesson_quizzes': lesson_quizzes,
                 'module_count': enrollment.course.modules.count(),
             })
 
@@ -1220,7 +1223,30 @@ def lesson_view(request, lesson_id):
     ).values_list('lesson_id', flat=True))
 
     prev_lesson = all_lessons_list[current_idx - 1] if current_idx > 0 else None
-    next_lesson = all_lessons_list[current_idx + 1] if current_idx < len(all_lessons_list) - 1 else None
+    
+    # Get next lesson - exclude final exam lessons
+    next_lesson = None
+    for l in all_lessons_list[current_idx + 1:]:
+        if l.id not in final_exam_lesson_ids:
+            next_lesson = l
+            break
+    
+    # If no more regular lessons, point to final exam
+    redirect_to_final = False
+    if not next_lesson and final_exam_lesson_ids:
+        redirect_to_final = True
+        next_lesson = Lesson.objects.filter(id__in=final_exam_lesson_ids).order_by('module__order', 'order').first()
+    
+    # Check if current lesson has an unpassed quiz - force quiz before next lesson
+    lesson_quizzes = Quiz.objects.filter(lesson=lesson, is_final_exam=False)
+    quiz_passed = False
+    if lesson_quizzes.exists() and not request.user.is_staff:
+        from lms.models import QuizAttempt
+        quiz_passed = QuizAttempt.objects.filter(
+            student=request.user, quiz__in=lesson_quizzes, passed=True
+        ).exists()
+    elif not lesson_quizzes.exists():
+        quiz_passed = True  # no quiz required
 
     # Log lesson view activity
     if not request.user.is_staff:
