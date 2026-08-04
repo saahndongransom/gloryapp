@@ -1242,6 +1242,27 @@ function preventSeek(video) {
   }
 }
 
+// ── Lock sidebar lessons ─────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  var completedIds = [{% for id in completed_ids %}{{ id }},{% endfor %}];
+  var currentId = {{ lesson.id }};
+  var items = document.querySelectorAll('.l-item');
+  var lastCompleted = -1;
+  items.forEach(function(item, idx) {
+    var lessonId = parseInt(item.getAttribute('data-lesson-id'));
+    if (!lessonId) return;
+    var isCompleted = completedIds.indexOf(lessonId) !== -1;
+    var isCurrent = lessonId === currentId;
+    if (isCompleted) lastCompleted = idx;
+    if (!isCompleted && !isCurrent && idx > lastCompleted + 1) {
+      item.style.opacity = '0.4';
+      item.style.cursor = 'not-allowed';
+      item.style.pointerEvents = 'none';
+      item.title = 'Complete previous lessons first';
+    }
+  });
+});
+
 // ── Notes ────────────────────────────────────────────────────────
 function saveNotes() {
   const notes = document.getElementById('lessonNotes').value;
