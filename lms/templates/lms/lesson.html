@@ -1294,15 +1294,24 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ── Course Time Tracker ─────────────────────────────────────────
+function getCsrfToken() {
+  var cookies = document.cookie.split(';');
+  for (var i = 0; i < cookies.length; i++) {
+    var c = cookies[i].trim();
+    if (c.startsWith('csrftoken=')) return c.substring('csrftoken='.length);
+  }
+  return '';
+}
+
 var _timeBuffer = 0;
 var _timeInterval = setInterval(function() {
   if (!document.hidden) _timeBuffer++;
   if (_timeBuffer >= 30) {
     fetch('/lms/lesson/{{ lesson.id }}/log-time/', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCk('csrftoken')},
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
       body: JSON.stringify({seconds: _timeBuffer})
-    }).then(r => r.json()).then(function(d) {
+    }).then(function(r) { return r.json(); }).then(function(d) {
       if (d.ok && d.required_hours > 0) {
         var pct = Math.min(100, (d.total_hours / d.required_hours) * 100);
         var el = document.getElementById('courseHoursBar');
