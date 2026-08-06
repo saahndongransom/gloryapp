@@ -660,18 +660,7 @@ body {
         </div>
 
         <!-- Course Hours Progress -->
-        {% if course_required_hours > 0 %}
-        <div style="margin-top:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <div style="font-size:13px;font-weight:700;color:#0f172a"><i class="fas fa-clock" style="color:#7c3aed"></i> Course Time</div>
-            <span id="courseHoursLabel" style="font-size:12px;font-weight:700;color:#7c3aed">Loading...</span>
-          </div>
-          <div style="height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden">
-            <div id="courseHoursBar" style="height:100%;background:linear-gradient(90deg,#7c3aed,#a855f7);border-radius:4px;width:0%;transition:width .4s"></div>
-          </div>
-          <div style="font-size:11px;color:#94a3b8;margin-top:6px">{{ course_required_hours }} hours required to unlock final exam</div>
-        </div>
-        {% endif %}
+
 
         <!-- Lesson Checklist -->
         <div style="margin-top:16px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px">
@@ -706,6 +695,18 @@ body {
       </div>
 
       <div class="panel-body" id="panel-resources">
+        {% if course_required_hours > 0 %}
+        <div style="background:#f5f3ff;border-bottom:1px solid #e2e8f0;padding:14px 16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="font-size:12px;font-weight:700;color:#0f172a"><i class="fas fa-clock" style="color:#7c3aed"></i> Course Time</div>
+            <span id="courseHoursLabel" style="font-size:11px;font-weight:700;color:#7c3aed">Loading...</span>
+          </div>
+          <div style="height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden">
+            <div id="courseHoursBar" style="height:100%;background:linear-gradient(90deg,#7c3aed,#a855f7);border-radius:3px;width:0%;transition:width .4s"></div>
+          </div>
+          <div style="font-size:10px;color:#94a3b8;margin-top:4px">{{ course_required_hours }} hrs required for final exam</div>
+        </div>
+        {% endif %}
         <!-- Lesson Progress Bar - shows for all content types -->
       <div style="background:#1e293b;padding:10px 18px;flex-shrink:0">
         <div style="display:flex;align-items:center;gap:12px">
