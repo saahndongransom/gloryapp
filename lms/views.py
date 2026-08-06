@@ -1294,6 +1294,31 @@ def lesson_view(request, lesson_id):
 
 @login_required(login_url='lms_login')
 @csrf_exempt
+def log_lesson_time(request, lesson_id):
+    from django.http import JsonResponse
+    from lms.models import LessonTimeLog, Lesson
+    if request.method != 'POST':
+        return JsonResponse({'ok': False})
+    import json
+    data = json.loads(request.body)
+    seconds = int(data.get('seconds', 0))
+    if seconds <= 0:
+        return JsonResponse({'ok': False})
+    lesson = get_object_or_404(Lesson, id=lesson_id)
+    log, _ = LessonTimeLog.objects.get_or_create(student=request.user, lesson=lesson)
+    log.seconds_spent += seconds
+    log.save()
+    # Check total course hours
+    course = lesson.module.course
+    from django.db.models import Sum
+    total_seconds = LessonTimeLog.objects.filter(
+        student=request.user, lesson__module__course=course
+    ).aggregate(total=Sum('seconds_spent'))['total'] or 0
+    total_hours = round(total_seconds / 3600, 2)
+    return JsonResponse({'ok': True, 'total_hours': total_hours, 'required_hours': course.required_hours})
+
+@login_required(login_url='lms_login')
+@csrf_exempt
 def save_content_progress(request, content_id):
     from django.http import JsonResponse
     from lms.models import ContentItem

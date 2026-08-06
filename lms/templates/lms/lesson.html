@@ -1263,6 +1263,28 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
+// ── Course Time Tracker ─────────────────────────────────────────
+var _timeBuffer = 0;
+var _timeInterval = setInterval(function() {
+  if (!document.hidden) _timeBuffer++;
+  if (_timeBuffer >= 30) {
+    fetch('/lms/lesson/{{ lesson.id }}/log-time/', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCk('csrftoken')},
+      body: JSON.stringify({seconds: _timeBuffer})
+    }).then(r => r.json()).then(function(d) {
+      if (d.ok && d.required_hours > 0) {
+        var pct = Math.min(100, (d.total_hours / d.required_hours) * 100);
+        var el = document.getElementById('courseHoursBar');
+        var lb = document.getElementById('courseHoursLabel');
+        if (el) el.style.width = pct + '%';
+        if (lb) lb.textContent = d.total_hours.toFixed(1) + ' / ' + d.required_hours + ' hrs';
+      }
+    }).catch(function(){});
+    _timeBuffer = 0;
+  }
+}, 1000);
+
 // ── Notes ────────────────────────────────────────────────────────
 function saveNotes() {
   const notes = document.getElementById('lessonNotes').value;

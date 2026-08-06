@@ -15,6 +15,18 @@ class Course(models.Model):
     def __str__(self): 
         return f"{self.program} - {self.title}"
 
+class LessonTimeLog(models.Model):
+    student = models.ForeignKey(User, on_delete=models.CASCADE)
+    lesson = models.ForeignKey('Lesson', on_delete=models.CASCADE)
+    seconds_spent = models.PositiveIntegerField(default=0)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('student', 'lesson')
+
+    def __str__(self):
+        return f"{self.student.username} - {self.lesson.title} - {self.seconds_spent}s"
+
 class Module(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='modules')
     title = models.CharField(max_length=255)
