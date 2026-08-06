@@ -1314,6 +1314,7 @@ def lesson_view(request, lesson_id):
         'next_lesson': next_lesson,
         'lesson_number': current_idx + 1,
         'total_lessons': len(all_lessons_list),
+        'course_required_hours': course.required_hours,
         'completed_ids': completed_ids,
         'discussions': Discussion.objects.filter(lesson=lesson, parent=None).prefetch_related('replies__user').select_related('user'),
         'interactive_elements': standalone_elements,
