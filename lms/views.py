@@ -1330,6 +1330,15 @@ def lesson_view(request, lesson_id):
 def log_lesson_time(request, lesson_id):
     from django.http import JsonResponse
     from lms.models import LessonTimeLog, Lesson
+    if request.method == 'GET':
+        lesson = get_object_or_404(Lesson, id=lesson_id)
+        course = lesson.module.course
+        from django.db.models import Sum
+        total_secs = LessonTimeLog.objects.filter(
+            student=request.user, lesson__module__course=course
+        ).aggregate(total=Sum('seconds_spent'))['total'] or 0
+        total_hours = round(total_secs / 3600, 2)
+        return JsonResponse({'ok': True, 'total_hours': total_hours, 'required_hours': course.required_hours})
     if request.method != 'POST':
         return JsonResponse({'ok': False})
     import json
