@@ -687,6 +687,7 @@ def lms_dashboard_view(request):
                 'progress_percentage': prog_ratio,
                 'last_score_attempt': last_attempt,
                 'has_paid': has_paid,
+            'course_hours_data': course_hours_data,
                 'active_sub': Subscription.objects.filter(student=s, status__in=['active','suspended']).first(),
                 'form_submitted': form_submitted,
                 'form_started': form_started,
@@ -910,6 +911,23 @@ def lms_dashboard_view(request):
 
         pending_course_id = request.session.get('pending_course_id', '')
         has_paid = Subscription.objects.filter(student=user, status='active').exists()
+        # Course hours tracking
+        from lms.models import LessonTimeLog
+        from django.db.models import Sum
+        course_hours_data = []
+        for enrollment in Enrollment.objects.filter(student=user):
+            total_secs = LessonTimeLog.objects.filter(
+                student=user, lesson__module__course=enrollment.course
+            ).aggregate(total=Sum('seconds_spent'))['total'] or 0
+            total_hours = round(total_secs / 3600, 2)
+            req_hours = enrollment.course.required_hours
+            if req_hours > 0:
+                course_hours_data.append({
+                    'course': enrollment.course,
+                    'total_hours': total_hours,
+                    'required_hours': req_hours,
+                    'pct': min(100, round((total_hours / req_hours) * 100))
+                })
         active_sub = Subscription.objects.filter(student=user, status__in=['active','suspended']).first()
         context = {
             'user': user,
