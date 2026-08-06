@@ -10,6 +10,7 @@ class Course(models.Model):
     description = models.TextField(blank=True, default='')
     thumbnail = models.ImageField(upload_to='course_thumbnails/', blank=True, null=True)
     is_published = models.BooleanField(default=True)
+    required_hours = models.PositiveIntegerField(default=0, help_text='Minimum hours required to unlock final exam')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self): 
