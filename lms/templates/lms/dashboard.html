@@ -253,6 +253,16 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
     <main class="page-content">
 
       <div class="stats-row">
+        {% for ch in course_hours_data %}
+        <div class="stat-card" style="--accent-color: var(--purple)">
+          <div class="stat-label">{{ ch.course.title }} Hours</div>
+          <div class="stat-value">{{ ch.total_hours }}<span style="font-size:14px;font-weight:500;color:var(--muted)"> / {{ ch.required_hours }}hrs</span></div>
+          <div style="height:4px;background:#e5e7eb;border-radius:2px;margin-top:8px;overflow:hidden">
+            <div style="height:100%;background:var(--purple);border-radius:2px;width:{{ ch.pct }}%;transition:width .4s"></div>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">{{ ch.pct }}% of required time</div>
+        </div>
+        {% endfor %}
         <div class="stat-card" style="--accent-color: var(--blue)">
           <div class="stat-label">Overall Progress</div>
           <div class="stat-value">{{ overall_progress }}<span class="unit">%</span></div>
