@@ -834,6 +834,7 @@ def lms_dashboard_view(request):
         'quiz_passed': quiz_passed,
         'redirect_to_final': redirect_to_final,
         'lesson_quizzes': lesson_quizzes,
+        'course_required_hours': course.required_hours,
                 'module_count': enrollment.course.modules.count(),
             })
 
