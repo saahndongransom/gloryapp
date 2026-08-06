@@ -1007,13 +1007,26 @@ def quiz_view(request, quiz_id):
         if not has_paid:
             messages.warning(request, 'Please complete your payment to access assessments.')
             return redirect('enroll_page', course_id=quiz.lesson.module.course_id)
-        # Check lesson content was viewed (not necessarily completed - quiz is part of completion)
-        # Just check enrollment in the course
+        # Check enrollment
         from lms.models import Enrollment as Enroll2
         enrolled = Enroll2.objects.filter(student=request.user, course=quiz.lesson.module.course).exists()
         if not enrolled:
             messages.warning(request, 'Please enroll in this course to access assessments.')
             return redirect('lms_dashboard')
+        # Block final exam until required hours met
+        if quiz.is_final_exam:
+            course = quiz.lesson.module.course
+            if course.required_hours > 0:
+                from lms.models import LessonTimeLog
+                from django.db.models import Sum
+                total_secs = LessonTimeLog.objects.filter(
+                    student=request.user, lesson__module__course=course
+                ).aggregate(total=Sum('seconds_spent'))['total'] or 0
+                total_hours = round(total_secs / 3600, 2)
+                if total_hours < course.required_hours:
+                    remaining = round(course.required_hours - total_hours, 1)
+                    messages.warning(request, f'You need {remaining} more hours of study before taking the final exam. You have logged {total_hours} of {course.required_hours} required hours.')
+                    return redirect('course_classroom', course_id=course.id)
     return render(request, 'lms/quiz.html', {'quiz': quiz})
 @login_required(login_url='lms_login')
 def submit_quiz(request, quiz_id):
