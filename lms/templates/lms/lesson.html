@@ -659,6 +659,20 @@ body {
           <p style="font-size:12px;color:#475569;line-height:1.7">This lesson is part of your certification training. Make sure you understand all the concepts before moving to the next chapter. If you have any questions, use the Q&A section or contact us directly.</p>
         </div>
 
+        <!-- Course Hours Progress -->
+        {% if lesson.module.course.required_hours > 0 %}
+        <div style="margin-top:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="font-size:13px;font-weight:700;color:#0f172a"><i class="fas fa-clock" style="color:#7c3aed"></i> Course Time</div>
+            <span id="courseHoursLabel" style="font-size:12px;font-weight:700;color:#7c3aed">Loading...</span>
+          </div>
+          <div style="height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden">
+            <div id="courseHoursBar" style="height:100%;background:linear-gradient(90deg,#7c3aed,#a855f7);border-radius:4px;width:0%;transition:width .4s"></div>
+          </div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:6px">{{ lesson.module.course.required_hours }} hours required to unlock final exam</div>
+        </div>
+        {% endif %}
+
         <!-- Lesson Checklist -->
         <div style="margin-top:16px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px">
           <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:10px"><i class="fas fa-tasks" style="color:#1a56db"></i> Lesson Checklist</div>
