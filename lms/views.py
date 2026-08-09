@@ -831,10 +831,7 @@ def lms_dashboard_view(request):
                 'completed_count': completed_count,
                 'total_lessons': course_lesson_count,
                 'next_lesson': next_lesson,
-        'quiz_passed': quiz_passed,
-        'redirect_to_final': redirect_to_final,
-        'lesson_quizzes': lesson_quizzes,
-        'course_required_hours': course.required_hours,
+
                 'module_count': enrollment.course.modules.count(),
             })
 
@@ -916,7 +913,7 @@ def lms_dashboard_view(request):
         from lms.models import LessonTimeLog
         from django.db.models import Sum
         course_hours_data = []
-        for enrollment in Enrollment.objects.filter(student=user):
+        for enrollment in Enrollment.objects.filter(student=user).select_related('course'):
             total_secs = LessonTimeLog.objects.filter(
                 student=user, lesson__module__course=enrollment.course
             ).aggregate(total=Sum('seconds_spent'))['total'] or 0
