@@ -687,7 +687,6 @@ def lms_dashboard_view(request):
                 'progress_percentage': prog_ratio,
                 'last_score_attempt': last_attempt,
                 'has_paid': has_paid,
-            'course_hours_data': course_hours_data,
                 'active_sub': Subscription.objects.filter(student=s, status__in=['active','suspended']).first(),
                 'form_submitted': form_submitted,
                 'form_started': form_started,
