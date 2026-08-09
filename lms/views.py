@@ -695,6 +695,7 @@ def lms_dashboard_view(request):
                 'course_started': course_started,
             })
 
+        from django.db.models import Sum
         revenue_query = Subscription.objects.filter(status='active').aggregate(total=Sum('amount_paid'))
         total_revenue = revenue_query['total'] if revenue_query['total'] is not None else 0.00
         # Journey tracking data
