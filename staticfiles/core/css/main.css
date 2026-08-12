@@ -2500,8 +2500,7 @@ img { max-width: 100%; display: block; }
 @media (max-width: 768px) {
   .tuition-table-wrap { border-radius: 10px; }
   .tuition-table { min-width: unset; font-size: 0.82rem; }
-  .tuition-table thead th:nth-child(3) { display: none; }
-  .tuition-table td:nth-child(3) { display: none; }
+
   .tuition-table thead th { padding: 12px 10px; }
   .tuition-table td { padding: 12px 10px; }
   .tuition-program-name { gap: 8px; }
