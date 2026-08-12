@@ -1,3114 +1,2304 @@
-from django.views.decorators.csrf import csrf_exempt
-import os
-import re
-import json
-import random
-import string
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
-from django.contrib import messages
-from django.db.models import Sum, Prefetch
-from django.db import models
+import io
+from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
-from .models import (
-    Course, Module, Lesson, ContentItem, Quiz, Question, 
-    QuizAttempt, LessonProgress, Certificate, SupportThread, 
-    Enrollment, Subscription, Announcement, Discussion, StudentActivity, AuditLog,
-    CourseReview, StudentStreak, InteractiveElement, InteractiveCompletion
-)
-
-# =========================================================================
-# 1. SECURITY LIFECYCLE MANAGEMENT (AUTHENTICATION GATEWAYS)
-# =========================================================================
-
-def lms_login_view(request):
-    """Secure universal entry point. Redirects active sessions automatically."""
-    if request.user.is_authenticated:
-        return redirect('lms_dashboard')
-        
-    if request.method == 'POST':
-        # Step 2: verifying 2FA code (user already passed password check)
-        if request.POST.get('action') == 'verify_2fa':
-            from django_otp.plugins.otp_totp.models import TOTPDevice
-            pending_user_id = request.session.get('pending_2fa_user_id')
-            token = request.POST.get('token', '').strip()
-
-            if not pending_user_id:
-                return redirect('lms_login')
-
-            pending_user = User.objects.filter(id=pending_user_id).first()
-            device = TOTPDevice.objects.filter(user=pending_user, confirmed=True).first()
-
-            if device and device.verify_token(token):
-                login(request, pending_user)
-                del request.session['pending_2fa_user_id']
-                log_audit(request, pending_user, 'login', target_repr=f'{pending_user.username} logged in (2FA verified)')
-                return redirect('lms_dashboard')
-            else:
-                log_audit(request, pending_user, 'login_failed', target_repr=f'{pending_user.username} entered invalid 2FA code')
-                return render(request, 'lms/login.html', {'show_2fa': True, 'error': 'Invalid 2FA code. Please try again.'})
-
-        # Step 1: username/password
-        user_handle = request.POST.get('username', '').strip()
-        pass_string = request.POST.get('password', '').strip()
-        user = authenticate(request, username=user_handle, password=pass_string)
-        
-        if user is not None:
-            # Check if user has 2FA enabled
-            from django_otp.plugins.otp_totp.models import TOTPDevice
-            device = TOTPDevice.objects.filter(user=user, confirmed=True).first()
-
-            if device:
-                # Require 2FA code
-                request.session['pending_2fa_user_id'] = user.id
-                return render(request, 'lms/login.html', {'show_2fa': True})
-
-            login(request, user)
-            if user.is_staff:
-                log_audit(request, user, 'login', target_repr=f'{user.username} logged in')
-            else:
-                streak, _ = StudentStreak.objects.get_or_create(student=user)
-                streak.update_streak()
-            return redirect('lms_dashboard')
-        else:
-            # Log failed admin login attempts
-            try:
-                attempted_user = User.objects.filter(username=user_handle).first()
-                if attempted_user and attempted_user.is_staff:
-                    log_audit(request, attempted_user, 'login_failed', target_repr=f'Failed login attempt for {user_handle}')
-            except Exception:
-                pass
-            return render(request, 'lms/login.html', {'error': 'Invalid authentication security credentials.'})
-            
-    return render(request, 'lms/login.html')
-
-
-def lms_logout_view(request):
-    """Terminates active user session cache arrays and clears cookies."""
-    logout(request)
-    return redirect('lms_login')
-
-
-# =========================================================================
-# 2. THE UNIFIED MASTER CONTROL CENTER (ROLE-BASED TRAFFIC COP)
-# =========================================================================
-
-LMS_OFFLINE = True
-LMS_OFFLINE_MESSAGE = "The GloryLMS student portal is temporarily offline for maintenance. Please check back soon or contact us at glorynursing@yahoo.com"
-
-def lms_dashboard_view(request):
-    if not request.user.is_authenticated:
-        return redirect('lms_login')
-    user = request.user
-
-    # -------------------------------------------------------------------------
-    # ROUTE A: ADMINISTRATIVE OPERATOR DESK
-    # -------------------------------------------------------------------------
-    if user.is_staff:
-        if request.method == 'POST':
-            action = request.POST.get('action')
-
-            # --- INTERACTIVE CONTENT BUILDER ---
-            if action == 'add_interactive':
-                lesson_id = request.POST.get('lesson_id')
-                title = request.POST.get('title', '').strip()
-                element_type = request.POST.get('element_type')
-                points = int(request.POST.get('points', 10))
-                attached_to = request.POST.get('attached_to') or None
-                data_json = request.POST.get('data_json', '{}')
-
-                try:
-                    data = json.loads(data_json)
-                except Exception:
-                    data = {}
-
-                lesson_obj = Lesson.objects.filter(id=lesson_id).first()
-                if lesson_obj and title and element_type:
-                    elem = InteractiveElement.objects.create(
-                        lesson=lesson_obj,
-                        title=title,
-                        element_type=element_type,
-                        points=points,
-                        data=data,
-                        attached_to_id=attached_to,
-                        order=InteractiveElement.objects.filter(lesson=lesson_obj).count() + 1,
-                    )
-                    log_audit(request, user, 'create', target_model='InteractiveElement', target_id=elem.id, target_repr=f'Added {element_type} "{title}" to lesson {lesson_obj.title}')
-                return redirect('lms_dashboard')
-
-            elif action == 'delete_interactive':
-                element_id = request.POST.get('element_id')
-                elem = InteractiveElement.objects.filter(id=element_id).first()
-                if elem:
-                    title = elem.title
-                    elem.delete()
-                    log_audit(request, user, 'delete', target_model='InteractiveElement', target_id=element_id, target_repr=f'Deleted interactive element "{title}"')
-                return redirect('lms_dashboard')
-
-            # --- COURSE REVIEW MODERATION ---
-            if action == 'approve_review':
-                review_id = request.POST.get('review_id')
-                CourseReview.objects.filter(id=review_id).update(is_approved=True)
-                log_audit(request, user, 'update', target_model='CourseReview', target_id=review_id, target_repr='Approved a course review')
-                return redirect('lms_dashboard')
-
-            elif action == 'reject_review':
-                review_id = request.POST.get('review_id')
-                CourseReview.objects.filter(id=review_id).delete()
-                log_audit(request, user, 'delete', target_model='CourseReview', target_id=review_id, target_repr='Rejected/deleted a course review')
-                return redirect('lms_dashboard')
-
-            # --- USER PROVISIONING ENGINE ---
-            if action == 'create_student':
-                username = request.POST.get('username', '').strip()
-                email = request.POST.get('email', '').strip()
-                
-                if User.objects.filter(username=username).exists():
-                    messages.error(request, f"Error: Username '{username}' is already taken.")
-                elif User.objects.filter(email=email).exists():
-                    messages.error(request, f"Error: Email '{email}' is already registered.")
-                else:
-                    pwd = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
-                    new_user = User.objects.create_user(username=username, email=email, password=pwd)
-                    new_user.is_staff = False
-                    new_user.save()
-                    
-                    # Instantiate standardized active premium invoice records
-                    Subscription.objects.create(
-                        student=new_user, 
-                        tier_name="Premium Access Track", 
-                        amount_paid=250.00, 
-                        status='active'
-                    )
-                    
-                    try:
-                        from django.core.mail import send_mail
-                        send_mail(
-                            subject='Your Glory Nursing LMS Login Credentials',
-                            message=f"Welcome to Glory Nursing!\n\nUsername: {username}\nPassword: {pwd}\n\nLogin at: https://glorynursingok.com/lms/login/\n\nPlease change your password after first login.",
-                            from_email=None,
-                            recipient_list=[email],
-                            fail_silently=True,
-                        )
-                        email_status = "Credentials sent to their email."
-                    except Exception:
-                        email_status = "Email could not be sent — share credentials manually."
-
-                    messages.success(request, f"✅ Account Created! Username: {username} | Password: {pwd} | {email_status}")
-                return redirect('lms_dashboard')
-
-            # --- TESTING & ASSESSMENTS INJECTOR ---
-            elif action == 'create_quiz':
-                lesson_id = request.POST.get('lesson_id')
-                title = request.POST.get('title') or request.POST.get('quiz_title', '')
-                passing = request.POST.get('passing_score') or request.POST.get('pass_mark', 70)
-                time_limit = request.POST.get('time_limit', 0)
-                if lesson_id:
-                    les = get_object_or_404(Lesson, id=lesson_id)
-                    existing = Quiz.objects.filter(lesson=les).first()
-                    if existing:
-                        messages.warning(request, f"This lesson already has a quiz: '{existing.title}'. Please add questions to the existing quiz instead.")
-                    else:
-                        Quiz.objects.create(lesson=les, title=title, passing_score=passing, time_limit=time_limit)
-                        messages.success(request, f"Quiz '{title}' created successfully!")
-                return redirect('/lms/dashboard/?tab=testing')
-
-            elif action == 'create_question':
-                quiz_id = request.POST.get('quiz_id')
-                question_type = request.POST.get('question_type', 'multiple_choice')
-
-                if quiz_id:
-                    qz = get_object_or_404(Quiz, id=quiz_id)
-
-                    q_kwargs = {
-                        'quiz': qz,
-                        'text': request.POST.get('text'),
-                        'question_type': question_type,
-                    }
-
-                    if question_type in ('multiple_choice', 'image_choice'):
-                        q_kwargs.update({
-                            'option_a': request.POST.get('option_a', ''),
-                            'option_b': request.POST.get('option_b', ''),
-                            'option_c': request.POST.get('option_c', ''),
-                            'option_d': request.POST.get('option_d', ''),
-                            'correct_answer': request.POST.get('correct_answer', 'A'),
-                        })
-
-                    if question_type == 'image_choice' and request.FILES.get('image'):
-                        q_kwargs['image'] = request.FILES['image']
-
-                    if question_type == 'drag_drop_match':
-                        match_json = request.POST.get('match_data_json', '{}')
-                        try:
-                            q_kwargs['match_data'] = json.loads(match_json)
-                        except Exception:
-                            q_kwargs['match_data'] = {}
-
-                    Question.objects.create(**q_kwargs)
-                    messages.success(request, "Question added successfully.")
-                return redirect('lms_dashboard')
-
-            elif action == 'bulk_add_questions':
-                quiz_id = request.POST.get('quiz_id')
-                bulk_text = request.POST.get('bulk_text', '')
-                print(f"DEBUG bulk_add: quiz_id={quiz_id}, text_length={len(bulk_text)}, text_preview={bulk_text[:100]}")
-
-                if quiz_id and bulk_text.strip():
-                    qz = get_object_or_404(Quiz, id=quiz_id)
-
-                    # Split into question blocks by blank lines
-                    # Normalize line endings and split on blank lines
-                    import re
-                    normalized = bulk_text.replace('\r\n', '\n').replace('\r', '\n')
-                    blocks = [b.strip() for b in re.split(r'\n\s*\n', normalized.strip()) if b.strip()]
-                    created_count = 0
-                    errors = []
-
-                    for block in blocks:
-                        lines = [l.strip() for l in block.split('\n') if l.strip()]
-                        q_data = {'text': '', 'option_a': '', 'option_b': '', 'option_c': '', 'option_d': '', 'correct_answer': ''}
-
-                        for line in lines:
-                            if line.upper().startswith('Q:'):
-                                q_data['text'] = line[2:].strip()
-                            elif line.upper().startswith('A)'):
-                                q_data['option_a'] = line[2:].strip()
-                            elif line.upper().startswith('B)'):
-                                q_data['option_b'] = line[2:].strip()
-                            elif line.upper().startswith('C)'):
-                                q_data['option_c'] = line[2:].strip()
-                            elif line.upper().startswith('D)'):
-                                q_data['option_d'] = line[2:].strip()
-                            elif line.upper().startswith('CORRECT:'):
-                                ans = line.split(':', 1)[1].strip().upper()
-                                q_data['correct_answer'] = ans
-
-                        if q_data['text'] and q_data['option_a'] and q_data['option_b'] and q_data['option_c'] and q_data['option_d'] and q_data['correct_answer'] in ['A', 'B', 'C', 'D']:
-                            Question.objects.create(quiz=qz, **q_data)
-                            created_count += 1
-                        else:
-                            errors.append(q_data['text'] or block[:40])
-
-                    if created_count:
-                        messages.success(request, f"Bulk import: {created_count} question(s) added successfully.")
-                    if errors:
-                        messages.warning(request, f"Skipped {len(errors)} malformed question(s). Check the format and try again.")
-                return redirect('lms_dashboard')
-
-            # --- COMMUNICATIONS TICKET AUDITS ---
-            elif action == 'reply_discussion':
-                disc_id = request.POST.get('discussion_id')
-                reply_msg = request.POST.get('reply_message', '').strip()
-                if disc_id and reply_msg:
-                    original = get_object_or_404(Discussion, id=disc_id)
-                    Discussion.objects.create(
-                        lesson=original.lesson,
-                        user=request.user,
-                        message=reply_msg,
-                        parent=original
-                    )
-                    try:
-                        from django.core.mail import EmailMessage
-                        body_text = f"Hi {original.user.first_name or original.user.username},\n\nAn instructor replied to your question:\n\nYour question: {original.message}\n\nReply: {reply_msg}\n\nLog in to view: https://glorynursingok.com/lms/lesson/{original.lesson.id}/\n\nGlory Nursing Healthcare Training School"
-                        EmailMessage(
-                            subject=f'Instructor replied to your question',
-                            body=body_text,
-                            from_email=None,
-                            to=[original.user.email],
-                        ).send()
-                    except Exception as e:
-                        print(f"Reply email error: {e}")
-                    messages.success(request, 'Reply sent!')
-                return redirect('/lms/dashboard/?tab=discussions')
-
-            elif action == 'save_schedule':
-                from core.models import ClassSchedule, Program as CoreProgram
-                prog_id = request.POST.get('schedule_program')
-                start_date = request.POST.get('start_date')
-                if prog_id and start_date:
-                    prog = get_object_or_404(CoreProgram, id=prog_id)
-                    ClassSchedule.objects.create(
-                        program=prog,
-                        start_date=start_date,
-                        end_date=request.POST.get('end_date') or None,
-                        start_time=request.POST.get('start_time') or None,
-                        end_time=request.POST.get('end_time') or None,
-                        days=request.POST.get('days', ''),
-                        seats_total=int(request.POST.get('seats_total', 15)),
-                        notes=request.POST.get('notes', ''),
-                    )
-                    messages.success(request, 'Schedule added!')
-                return redirect('/lms/dashboard/?tab=schedules')
-
-            elif action == 'delete_schedule':
-                from core.models import ClassSchedule
-                sch_id = request.POST.get('schedule_id')
-                if sch_id:
-                    ClassSchedule.objects.filter(id=sch_id).delete()
-                    messages.success(request, 'Schedule deleted.')
-                return redirect('/lms/dashboard/?tab=schedules')
-
-            elif action == 'resolve_thread':
-                thread_id = request.POST.get('thread_id')
-                thread = get_object_or_404(SupportThread, id=thread_id)
-                thread.is_resolved = True
-                thread.save()
-                messages.success(request, "Interactive communication string marked resolved.")
-                return redirect('lms_dashboard')
-
-            # --- VERIFIED COMPLETION ISSUANCES ---
-            elif action == 'issue_certificate':
-                student_id = request.POST.get('student_id')
-                course_id = request.POST.get('course_id')
-                if student_id and course_id:
-                    st = get_object_or_404(User, id=student_id)
-                    cs = get_object_or_404(Course, id=course_id)
-                    code = f"CERT-{cs.program}-" + ''.join(random.choices(string.digits, k=6))
-                    Certificate.objects.get_or_create(student=st, course=cs, defaults={'certificate_code': code})
-                    messages.success(request, f"Certificate hash reference {code} initialized.")
-                return redirect('lms_dashboard')
-
-            # --- DATA MEDIA PAYLOAD MANAGEMENT ---
-            elif action == 'upload_content':
-                lesson_id = request.POST.get('lesson_id')
-                title = request.POST.get('title')
-                content_type = request.POST.get('content_type')
-                video_url = request.POST.get('video_url', '').strip()
-                file_attachment = request.FILES.get('file_attachment')
-                if lesson_id and title:
-                    target_lesson = get_object_or_404(Lesson, id=lesson_id)
-                    text_content = request.POST.get('text_content', '').strip()
-                    content_item = ContentItem.objects.create(
-                        lesson=target_lesson, title=title, content_type=content_type,
-                        file_attachment=file_attachment, video_url=video_url,
-                        text_content=text_content if text_content else None
-                    )
-                    if content_type == 'ppt' and file_attachment:
-                        try:
-                            slide_count = convert_ppt_to_images(content_item)
-                            messages.success(request, f"'{title}' uploaded and converted to {slide_count} slides.")
-                        except Exception as e:
-                            messages.warning(request, f"'{title}' uploaded but slide conversion failed: {str(e)}")
-                    else:
-                        messages.success(request, f"'{title}' uploaded successfully.")
-                return redirect('lms_dashboard')
-
-            # --- BASE CURRICULUM STRUCTURAL DATA BLOCKS ---
-            elif action == 'create_course':
-                Course.objects.create(title=request.POST.get('title'), program=request.POST.get('program'))
-                messages.success(request, "Base training course program deployed.")
-                return redirect('lms_dashboard')
-            
-            elif action == 'create_module':
-                cs = get_object_or_404(Course, id=request.POST.get('course_id'))
-                Module.objects.create(course=cs, title=request.POST.get('title'), order=request.POST.get('order', 1))
-                messages.success(request, "Learning module unit compiled to curriculum architecture.")
-                return redirect('lms_dashboard')
-            
-            elif action == 'create_lesson':
-                md = get_object_or_404(Module, id=request.POST.get('module_id'))
-                Lesson.objects.create(module=md, title=request.POST.get('title'), order=request.POST.get('order', 1))
-                messages.success(request, "Specific lesson milestone anchored successfully.")
-                return redirect('lms_dashboard')
-            
-            elif action == 'create_enrollment':
-                st = get_object_or_404(User, id=request.POST.get('student_id'))
-                cs = get_object_or_404(Course, id=request.POST.get('course_id'))
-                Enrollment.objects.get_or_create(student=st, course=cs)
-                messages.success(request, f"Access portal mapped successfully for {st.username}.")
-                return redirect('lms_dashboard')
-            elif action == 'delete_course':
-                course = get_object_or_404(Course, id=request.POST.get('course_id'))
-                course.delete()
-                messages.success(request, "Course deleted successfully.")
-                return redirect('lms_dashboard')
-
-            elif action == 'delete_module':
-                module = get_object_or_404(Module, id=request.POST.get('module_id'))
-                module.delete()
-                messages.success(request, "Module deleted successfully.")
-                return redirect('lms_dashboard')
-
-            elif action == 'delete_lesson':
-                lesson = get_object_or_404(Lesson, id=request.POST.get('lesson_id'))
-                lesson.delete()
-                messages.success(request, "Lesson deleted successfully.")
-                return redirect('lms_dashboard')
-
-            elif action == 'create_announcement':
-                title = request.POST.get('title', '').strip()
-                message = request.POST.get('message', '').strip()
-                if title and message:
-                    Announcement.objects.create(title=title, message=message, created_by=request.user)
-                    messages.success(request, f"Announcement '{title}' posted.")
-                return redirect('lms_dashboard')
-
-            elif action == 'delete_announcement':
-                ann = get_object_or_404(Announcement, id=request.POST.get('announcement_id'))
-                ann.delete()
-                messages.success(request, "Announcement deleted.")
-                return redirect('lms_dashboard')
-
-            # --- WEBSITE PROGRAMS ---
-            elif action == 'save_program':
-                from core.models import Program as CoreProgram
-                prog_id = request.POST.get('program_id')
-                title = request.POST.get('prog_title', '').strip()
-                if title:
-                    course_id = request.POST.get('prog_course') or None
-                    course_obj = Course.objects.filter(id=course_id).first() if course_id else None
-                    data = {
-                        'title': title,
-                        'short': request.POST.get('prog_short', ''),
-                        'icon': request.POST.get('prog_icon', '🏥'),
-                        'duration': request.POST.get('prog_duration', ''),
-                        'hours': request.POST.get('prog_hours', ''),
-                        'category': request.POST.get('prog_category', 'nursing'),
-                        'description': request.POST.get('prog_description', ''),
-                        'schedules': request.POST.get('prog_schedules', ''),
-                        'order': int(request.POST.get('prog_order', 0)),
-                        'is_active': 'prog_active' in request.POST,
-                        'course': course_obj,
-                        'price': float(request.POST.get('prog_price', 0) or 0) or None,
-                    }
-                    if prog_id:
-                        CoreProgram.objects.filter(id=prog_id).update(**{k:v for k,v in data.items() if k != 'course'})
-                        CoreProgram.objects.filter(id=prog_id).update(course=course_obj)
-                        if request.FILES.get('prog_image'):
-                            prog_obj = CoreProgram.objects.get(id=prog_id)
-                            prog_obj.image = request.FILES['prog_image']
-                            prog_obj.save()
-                        messages.success(request, f"Program '{title}' updated.")
-                    else:
-                        from django.utils.text import slugify
-                        data['slug'] = slugify(title)
-                        prog_obj = CoreProgram.objects.create(**data)
-                        if request.FILES.get('prog_image'):
-                            prog_obj.image = request.FILES['prog_image']
-                            prog_obj.save()
-                        messages.success(request, f"Program '{title}' created.")
-                return redirect('lms_dashboard')
-
-            elif action == 'delete_program':
-                from core.models import Program as CoreProgram
-                prog = CoreProgram.objects.filter(id=request.POST.get('program_id')).first()
-                if prog:
-                    prog.delete()
-                    messages.success(request, "Program deleted.")
-                return redirect('lms_dashboard')
-
-            # --- WEBSITE BLOG POSTS ---
-            elif action == 'save_blog':
-                from core.models import BlogPost
-                title = request.POST.get('blog_title', '').strip()
-                if title:
-                    from django.utils.text import slugify
-                    slug = slugify(title)
-                    # Make unique slug
-                    base_slug = slug
-                    counter = 1
-                    while BlogPost.objects.filter(slug=slug).exists():
-                        slug = f"{base_slug}-{counter}"
-                        counter += 1
-                    BlogPost.objects.create(
-                        title=title,
-                        slug=slug,
-                        excerpt=request.POST.get('blog_excerpt', ''),
-                        content=request.POST.get('blog_content', ''),
-                        image=request.FILES.get('blog_image'),
-                        published_date=request.POST.get('blog_date') or None,
-                        is_published='blog_published' in request.POST,
-                    )
-                    messages.success(request, f"Blog post '{title}' saved.")
-                return redirect('lms_dashboard')
-
-            elif action == 'delete_blog':
-                from core.models import BlogPost
-                post = BlogPost.objects.filter(id=request.POST.get('blog_id')).first()
-                if post:
-                    post.delete()
-                    messages.success(request, "Blog post deleted.")
-                return redirect('lms_dashboard')
-
-            # --- WEBSITE EVENTS ---
-            elif action == 'save_event':
-                from core.models import Event
-                title = request.POST.get('event_title', '').strip()
-                if title:
-                    Event.objects.create(
-                        title=title,
-                        description=request.POST.get('event_description', ''),
-                        event_date=request.POST.get('event_date'),
-                        start_time=request.POST.get('event_start'),
-                        end_time=request.POST.get('event_end') or None,
-                        location=request.POST.get('event_location', ''),
-                        registration_open='event_registration' in request.POST,
-                        is_active=True,
-                    )
-                    messages.success(request, f"Event '{title}' saved.")
-                return redirect('lms_dashboard')
-
-            elif action == 'delete_event':
-                from core.models import Event
-                event = Event.objects.filter(id=request.POST.get('event_id')).first()
-                if event:
-                    event.delete()
-                    messages.success(request, "Event deleted.")
-                return redirect('lms_dashboard')
-
-
-            elif action == 'edit_content':
-                ci_id = request.POST.get('content_id')
-                ci = get_object_or_404(ContentItem, id=ci_id)
-                ci.title = request.POST.get('title', ci.title).strip()
-                if request.POST.get('video_url'):
-                    ci.video_url = request.POST.get('video_url').strip()
-                if request.FILES.get('file_attachment'):
-                    ci.file_attachment = request.FILES['file_attachment']
-                ci.save()
-                messages.success(request, f"Content '{ci.title}' updated successfully!")
-                return redirect('lms_dashboard')
-
-            elif action == 'delete_content':
-                ci = get_object_or_404(ContentItem, id=request.POST.get('content_id'))
-                # Delete slide images if PPT
-                import shutil
-                slides_dir = os.path.join(settings.MEDIA_ROOT, 'slides', str(ci.id))
-                if os.path.exists(slides_dir):
-                    shutil.rmtree(slides_dir)
-                ci.delete()
-                messages.success(request, "Content item deleted.")
-                return redirect('lms_dashboard')
-
-            elif action == 'edit_course':
-                course_id = request.POST.get('course_id')
-                course = get_object_or_404(Course, id=course_id)
-                course.title = request.POST.get('title', course.title).strip()
-                course.program = request.POST.get('program', course.program).strip()
-                course.price = float(request.POST.get('price', course.price) or 0)
-                course.is_published = request.POST.get('is_published') == 'on'
-                course.save()
-                messages.success(request, f"Course '{course.title}' updated successfully!")
-                return redirect('lms_dashboard')
-
-            elif action == 'edit_module':
-                module_id = request.POST.get('module_id')
-                module = get_object_or_404(Module, id=module_id)
-                module.title = request.POST.get('title', module.title).strip()
-                module.order = int(request.POST.get('order', module.order) or module.order)
-                module.save()
-                messages.success(request, f"Module '{module.title}' updated successfully!")
-                return redirect('lms_dashboard')
-
-            elif action == 'edit_lesson':
-                lesson_id = request.POST.get('lesson_id')
-                lesson = get_object_or_404(Lesson, id=lesson_id)
-                lesson.title = request.POST.get('title', lesson.title).strip()
-                lesson.order = int(request.POST.get('order', lesson.order) or lesson.order)
-                lesson.save()
-                messages.success(request, f"Lesson '{lesson.title}' updated successfully!")
-                return redirect('lms_dashboard')
-
-            elif action == 'create_full_course':
-                title = request.POST.get('title', '').strip()
-                program = request.POST.get('program', '').strip()
-                structure_json = request.POST.get('structure', '[]')
-                edit_course_id = request.POST.get('edit_course_id', '').strip()
-                if title and program:
-                    price = float(request.POST.get('price', 0) or 0)
-                    if edit_course_id:
-                        # UPDATE existing course
-                        course = get_object_or_404(Course, id=edit_course_id)
-                        course.title = title
-                        course.program = program
-                        course.price = price
-                        course.save()
-                        # Add new modules/lessons without deleting existing ones
-                        existing_mod_titles = set(course.modules.values_list('title', flat=True))
-                        max_mod_order = course.modules.aggregate(m=models.Max('order'))['m'] or 0
-                        action_msg = f"Course '{title}' updated successfully!"
-                    else:
-                        # CREATE new course
-                        course = Course.objects.create(title=title, program=program, price=price, is_published=True)
-                        existing_mod_titles = set()
-                        max_mod_order = 0
-                        action_msg = f"Course '{title}' created successfully!"
-                    try:
-                        structure = json.loads(structure_json)
-                        for mod_data in structure:
-                            mod_title = mod_data.get('title', '').strip()
-                            if not mod_title:
-                                continue
-                            if mod_title in existing_mod_titles:
-                                # Add new lessons to existing module
-                                module = course.modules.filter(title=mod_title).first()
-                                existing_les = set(module.lessons.values_list('title', flat=True))
-                                max_les = module.lessons.aggregate(m=models.Max('order'))['m'] or 0
-                                for les_data in mod_data.get('lessons', []):
-                                    les_title = les_data.get('title', '').strip()
-                                    if les_title and les_title not in existing_les:
-                                        max_les += 1
-                                        Lesson.objects.create(module=module, title=les_title, order=max_les)
-                            else:
-                                max_mod_order += 1
-                                module = Module.objects.create(course=course, title=mod_title, order=max_mod_order)
-                                for les_order, les_data in enumerate(mod_data.get('lessons', []), start=1):
-                                    les_title = les_data.get('title', '').strip()
-                                    if les_title:
-                                        Lesson.objects.create(module=module, title=les_title, order=les_order)
-                    except (json.JSONDecodeError, KeyError):
-                        pass
-                    messages.success(request, action_msg)
-                return redirect('lms_dashboard')
-
-        # --- REVENUE & ANALYTICS METRICS AGGREGATION ---
-        students_profiles = []
-        raw_students = User.objects.filter(is_staff=False)
-        total_lessons_count = Lesson.objects.count()
-
-        for s in raw_students:
-            completed_count = LessonProgress.objects.filter(student_id=s.id, is_completed=True).count()
-            prog_ratio = int((completed_count / total_lessons_count) * 100) if total_lessons_count > 0 else 0
-            last_attempt = QuizAttempt.objects.filter(student_id=s.id).order_by('-timestamp').first()
-            
-            has_paid = Subscription.objects.filter(student=s, status='active').exists()
-            from lms.models import StudentJourney, LessonProgress as LP2
-            s_journeys = {j.stage: j for j in StudentJourney.objects.filter(student_email=s.email)}
-            form_submitted = 'form_submitted' in s_journeys
-            form_started = s_journeys.get('form_started')
-            payment_page_visited = 'payment_page' in s_journeys
-            last_progress = LP2.objects.filter(student=s).select_related('lesson__module__course').order_by('-id').first()
-            course_started = last_progress is not None
-            students_profiles.append({
-                'user_obj': s,
-                'progress_percentage': prog_ratio,
-                'last_score_attempt': last_attempt,
-                'has_paid': has_paid,
-                'active_sub': Subscription.objects.filter(student=s, status__in=['active','suspended']).first(),
-                'form_submitted': form_submitted,
-                'form_started': form_started,
-                'payment_page_visited': payment_page_visited,
-                'last_progress': last_progress,
-                'course_started': course_started,
-            })
-
-        from django.db.models import Sum
-        revenue_query = Subscription.objects.filter(status='active').aggregate(total=Sum('amount_paid'))
-        total_revenue = revenue_query['total'] if revenue_query['total'] is not None else 0.00
-        # Journey tracking data
-        from lms.models import StudentJourney as SJ2
-        all_journeys = SJ2.objects.all()
-        journey_by_email = {}
-        for j in all_journeys:
-            if j.student_email not in journey_by_email:
-                journey_by_email[j.student_email] = {}
-            journey_by_email[j.student_email][j.stage] = j
-
-        from django.contrib.auth.models import User as AuthUser2
-        existing_emails = set(AuthUser2.objects.values_list('email', flat=True))
-        abandoned_forms = [
-            stages['form_started']
-            for email, stages in journey_by_email.items()
-            if email not in existing_emails and 'form_started' in stages
-        ]
-
-
-        # Financial balance data
-        from lms.models import Enrollment as EnrollmentModel2
-        student_balances = []
-        seen = set()
-        for s in raw_students:
-            s_subs = Subscription.objects.filter(student=s)
-            s_enrollments = EnrollmentModel2.objects.filter(student=s).select_related('course').distinct()
-            for e in s_enrollments:
-                key = (s.id, e.course.id)
-                if key in seen:
-                    continue
-                seen.add(key)
-                paid = float(sum(sub.amount_paid for sub in s_subs))
-                # Use subscription total if breakdown exists
-                last_sub = s_subs.order_by('-started_at').first()
-                if last_sub and last_sub.breakdown and last_sub.breakdown.get('total'):
-                    due = float(last_sub.breakdown['total'])
-                else:
-                    due = float(e.course.price)
-                balance = due - paid
-                student_balances.append({
-                    'student': s,
-                    'course': e.course,
-                    'amount_due': due,
-                    'amount_paid': paid,
-                    'balance': balance,
-                    'status': 'Paid' if balance <= 0 else 'Owing',
-                })
-
-        # Notifications - new applications last 7 days
-        from django.utils import timezone as tz2
-        from datetime import timedelta
-        from lms.models import StudentJourney as SJ3
-        week_ago = tz2.now() - timedelta(days=7)
-        new_applications = SJ3.objects.filter(
-            stage='form_submitted',
-            updated_at__gte=week_ago
-        ).order_by('-updated_at')
-        unread_count = new_applications.count()
-
-        context = {
-            'all_students': raw_students,
-            'new_applications': new_applications,
-            'unread_count': unread_count,
-            'students_profiles': students_profiles,
-            'abandoned_forms': abandoned_forms,
-            'student_balances': student_balances,
-            'all_courses': Course.objects.all(),
-            'all_modules': Module.objects.all(),
-            'all_lessons': Lesson.objects.all(),
-            'all_quizzes': Quiz.objects.all().select_related('lesson'),
-            'open_tickets': SupportThread.objects.filter(is_resolved=False).select_related('user', 'lesson'),
-            'all_certificates': Certificate.objects.all().select_related('student', 'course'),
-            'all_subscriptions': Subscription.objects.all().select_related('student'),
-            'class_schedules': __import__('core.models', fromlist=['ClassSchedule']).ClassSchedule.objects.all().select_related('program').order_by('start_date'),
-            'physical_programs': __import__('core.models', fromlist=['Program']).Program.objects.filter(is_active=True, is_online=False),
-            'total_students': raw_students.count(),
-            'total_courses': Course.objects.count(),
-            'total_revenue': float(total_revenue),
-            'chart_data_json': json.dumps([400, 900, 1500, 2900, int(total_revenue)]),
-            'all_content_items': ContentItem.objects.all().select_related('lesson__module__course'),
-            'all_announcements': Announcement.objects.all(),
-            'all_discussions': Discussion.objects.filter(parent=None).select_related('user', 'lesson__module__course').prefetch_related('replies__user').order_by('-created_at')[:50],
-            'all_activities': StudentActivity.objects.all().select_related('student', 'course', 'lesson').order_by('-created_at')[:100],
-            'revenue_data': get_revenue_report(),
-            'audit_logs': AuditLog.objects.select_related('user').all()[:100],
-            'pending_reviews': CourseReview.objects.filter(is_approved=False).select_related('student', 'course'),
-            'all_courses': Course.objects.prefetch_related('modules__lessons'),
-            'all_interactive_elements': InteractiveElement.objects.select_related('lesson').order_by('-id'),
-            'approved_reviews': CourseReview.objects.filter(is_approved=True).select_related('student', 'course'),
-            'page': 'lms_admin_dashboard',
-            'all_programs': __import__('core.models', fromlist=['Program']).Program.objects.filter(is_active=True).order_by('order'),
-            'all_blog_posts': __import__('core.models', fromlist=['BlogPost']).BlogPost.objects.all().order_by('-published_date'),
-            'all_events': __import__('core.models', fromlist=['Event']).Event.objects.all().order_by('event_date'),
-        }
-        return render(request, 'lms/admin_dashboard.html', context)
-
-    # -------------------------------------------------------------------------
-    # ROUTE B: AUTHENTICATED STUDENT LEARNER RUNTIME ENVIRONMENT
-    # -------------------------------------------------------------------------
+from django.views.decorators.http import require_POST
+from django.contrib import messages
+from .models import Program
+
+PROGRAMS = [
+    {
+        'slug': 'cna',
+        'title': 'Certified Nursing Assistant (CNA)',
+        'short': 'CNA',
+        'icon': '🏥',
+        'duration': '2–4 Weeks',
+        'hours': '77 Clock Hours',
+        'description': 'The CNA program prepares students with the knowledge and hands-on clinical skills needed to pass the Oklahoma CNA certification exam and become certified Long-Term Care Nurse Aides.',
+        'schedules': ['Weekday Classes', 'Evening Classes', 'Weekend Classes', 'Online Hybrid'],
+        'category': 'nursing',
+    },
+    {
+        'slug': 'cma',
+        'title': 'Certified Medication Aide (CMA)',
+        'short': 'CMA',
+        'icon': '💊',
+        'duration': '2–3 Weeks',
+        'hours': '50 Clock Hours',
+        'description': 'The CMA program trains students to safely administer medications under licensed nurse supervision, preparing them for the Oklahoma CMA certification exam.',
+        'schedules': ['Weekday Classes', 'Evening Classes', 'Weekend Classes', 'Online Hybrid'],
+        'category': 'nursing',
+    },
+    {
+        'slug': 'hha',
+        'title': 'Home Health Aide (HHA)',
+        'short': 'HHA',
+        'icon': '🏠',
+        'duration': '1 Week',
+        'hours': '16 Clock Hours',
+        'description': 'Designed for CNAs who want to expand their skills and work as Certified Home Health Aides in home health or residential care settings.',
+        'schedules': ['Weekday Classes', 'Online Hybrid'],
+        'category': 'nursing',
+    },
+    {
+        'slug': 'bls-cpr',
+        'title': 'Basic Life Support (BLS) / CPR',
+        'short': 'BLS/CPR',
+        'icon': '❤️',
+        'duration': '1 Day',
+        'hours': '6 Clock Hours',
+        'description': 'AHA-certified BLS/CPR course for healthcare providers. Initial and renewal options available, led by AHA-trained certified instructors.',
+        'schedules': ['Weekday Classes', 'Weekend Classes'],
+        'category': 'life_support',
+    },
+    {
+        'slug': 'phlebotomy',
+        'title': 'Certified Phlebotomy Technician',
+        'short': 'Phlebotomy',
+        'icon': '🩸',
+        'duration': '6–8 Weeks',
+        'hours': '130 Clock Hours',
+        'description': 'Graduates are eligible to sit for the NHA National Certification Exam and pursue entry-level phlebotomy positions in hospitals, clinics, and diagnostic labs.',
+        'schedules': ['Weekday Classes', 'Evening Classes', 'Weekend Classes', 'Online Hybrid'],
+        'category': 'allied_health',
+    },
+    {
+        'slug': 'ekg',
+        'title': 'Certified EKG Technician',
+        'short': 'EKG',
+        'icon': '📈',
+        'duration': '6–8 Weeks',
+        'hours': '130 Clock Hours',
+        'description': 'Prepares students to sit for the NHA Certified EKG Technician (CET) Exam and become nationally certified electrocardiograph technicians.',
+        'schedules': ['Weekday Classes', 'Evening Classes', 'Weekend Classes', 'Online Hybrid'],
+        'category': 'allied_health',
+    },
+    {
+        'slug': 'medical-assistant',
+        'title': 'Certified Clinical Medical Assistant',
+        'short': 'CCMA',
+        'icon': '🩺',
+        'duration': '10–12 Weeks',
+        'hours': '360 Clock Hours',
+        'description': 'A comprehensive program preparing students to become Nationally Certified Clinical Medical Assistants (CCMA) through the NHA certification exam.',
+        'schedules': ['Weekday Classes', 'Evening Classes', 'Weekend Classes', 'Online Hybrid'],
+        'category': 'allied_health',
+    },
+    {
+        'slug': 'medical-billing-coding',
+        'title': 'Medical Billing & Coding Specialist',
+        'short': 'CBCS',
+        'icon': '💻',
+        'duration': '7–9 Weeks',
+        'hours': '160 Clock Hours',
+        'description': 'Prepares students for the CBCS National Certification Exam through NHA, CPC (AAPC), or CCA (AHIMA) — available fully online.',
+        'schedules': ['Online Hybrid Flex', '100% Online Self-Paced'],
+        'category': 'allied_health',
+    },
+]
+
+TESTIMONIALS = [
+    {
+        'name': 'Sarah M.',
+        'program': 'CNA Graduate',
+        'text': 'Glory Nursing gave me the confidence and skills to launch my healthcare career. The instructors were professional and caring. I passed my CNA exam on the first try!',
+    },
+    {
+        'name': 'James K.',
+        'program': 'BLS/CPR Graduate',
+        'text': 'Quick, efficient, and very professional. The BLS class was thorough and the instructor made everything easy to understand. Highly recommend Glory Nursing!',
+    },
+    {
+        'name': 'Adaeze O.',
+        'program': 'CMA Graduate',
+        'text': 'From CNA to CMA — Glory Nursing supported me every step of the way. Small class sizes meant I got personal attention. Now I work full-time in a nursing home!',
+    },
+]
+
+
+def home(request):
+    from .models import Program, BlogPost, Event
+    from django.utils import timezone
+    db_programs = Program.objects.filter(is_active=True)
+    if db_programs.exists():
+        featured_programs = db_programs[:6]
+        use_db = True
     else:
-        raw_enrollments = Enrollment.objects.filter(student=user).select_related('course')
-        total_lessons = Lesson.objects.count()
+        featured_programs = PROGRAMS[:6]
+        use_db = False
 
-        enrollments = []
-        for enrollment in raw_enrollments:
-            course_lessons = Lesson.objects.filter(module__course=enrollment.course)
-            course_lesson_count = course_lessons.count()
-            completed_count = LessonProgress.objects.filter(
-                student=user,
-                lesson__in=course_lessons,
-                is_completed=True
-            ).count()
-            progress = int((completed_count / course_lesson_count) * 100) if course_lesson_count > 0 else 0
+    latest_posts = BlogPost.objects.filter(is_published=True)[:3]
+    upcoming_events = Event.objects.filter(
+        is_active=True,
+        event_date__gte=timezone.now().date()
+    )[:3]
 
-            # Find last lesson accessed
-            last_progress = LessonProgress.objects.filter(
-                student=user,
-                lesson__in=course_lessons
-            ).order_by('-updated_at').first()
+    # Resume where you left off (for logged-in students)
+    continue_lesson = None
+    continue_course = None
+    if request.user.is_authenticated and not request.user.is_staff:
+        from lms.models import LessonProgress, Enrollment
+        last_progress = LessonProgress.objects.filter(
+            student=request.user
+        ).select_related('lesson__module__course').order_by('-updated_at').first()
 
-            next_lesson = None
-            if last_progress:
-                next_lesson = last_progress.lesson
-            else:
+        if last_progress:
+            continue_lesson = last_progress.lesson
+            continue_course = last_progress.lesson.module.course
+        else:
+            # No progress yet - point to first lesson of first enrollment
+            enrollment = Enrollment.objects.filter(student=request.user).select_related('course').first()
+            if enrollment:
                 first_module = enrollment.course.modules.order_by('order').first()
                 if first_module:
-                    next_lesson = first_module.lessons.order_by('order').first()
+                    continue_lesson = first_module.lessons.order_by('order').first()
+                    continue_course = enrollment.course
 
-            enrollments.append({
-                'course': enrollment.course,
-                'progress_percentage': progress,
-                'completed_count': completed_count,
-                'total_lessons': course_lesson_count,
-                'next_lesson': next_lesson,
-
-                'module_count': enrollment.course.modules.count(),
-            })
-
-        # Real stats
-        all_course_lessons = Lesson.objects.filter(module__course__enrollment__student=user)
-        total_completed = LessonProgress.objects.filter(student=user, is_completed=True).count()
-        total_course_lessons = all_course_lessons.count()
-        overall_progress = int((total_completed / total_course_lessons) * 100) if total_course_lessons > 0 else 0
-
-        last_quiz = QuizAttempt.objects.filter(student=user).order_by('-timestamp').first()
-        avg_score = int(QuizAttempt.objects.filter(student=user).aggregate(avg=models.Avg('score'))['avg'] or 0)
-
-        my_certificates = Certificate.objects.filter(student=user).select_related('course')
-
-        # Real leaderboard — based on completed lessons + quiz scores
-        from django.db.models import Count, Avg
-        all_students = User.objects.filter(is_staff=False)
-        leaderboard = []
-        for s in all_students:
-            lessons_done = LessonProgress.objects.filter(student=s, is_completed=True).count()
-            avg_quiz = QuizAttempt.objects.filter(student=s).aggregate(avg=models.Avg('score'))['avg'] or 0
-            xp = (lessons_done * 50) + int(avg_quiz * 10)
-            leaderboard.append({
-                'username': s.username,
-                'initials': s.username[:2].upper(),
-                'xp': xp,
-                'is_me': s.id == user.id,
-            })
-        leaderboard.sort(key=lambda x: x['xp'], reverse=True)
-        # Find current user rank
-        my_rank = next((i+1 for i, s in enumerate(leaderboard) if s['is_me']), 0)
-
-        # Real activity feed
-        recent_lessons = LessonProgress.objects.filter(
-            student=user, is_completed=True
-        ).select_related('lesson__module__course').order_by('-updated_at')[:8]
-
-        recent_quizzes = QuizAttempt.objects.filter(
-            student=user
-        ).select_related('quiz__lesson__module__course').order_by('-timestamp')[:5]
-
-        # Merge and sort activity
-        activity = []
-        for lp in recent_lessons:
-            activity.append({
-                'type': 'lesson',
-                'text': f'Completed <strong>{lp.lesson.title}</strong>',
-                'course': lp.lesson.module.course.program,
-                'time': lp.updated_at,
-                'icon': '✅',
-                'color': '#d1fae5',
-            })
-        for qa in recent_quizzes:
-            activity.append({
-                'type': 'quiz',
-                'text': f'Scored <strong>{int(qa.score)}%</strong> on {qa.quiz.title}',
-                'course': qa.quiz.lesson.module.course.program,
-                'time': qa.timestamp,
-                'icon': '📝',
-                'color': '#e8f0fe',
-            })
-        activity.sort(key=lambda x: x['time'], reverse=True)
-        activity = activity[:8]
-
-        # Streak data
-        streak, _ = StudentStreak.objects.get_or_create(student=user)
-
-        # Courses eligible for review (completed but not yet reviewed)
-        reviewable_courses = []
-        for e in enrollments:
-            if e['progress_percentage'] >= 100:
-                already_reviewed = CourseReview.objects.filter(student=user, course=e['course']).exists()
-                if not already_reviewed:
-                    reviewable_courses.append(e['course'])
-
-        pending_course_id = request.session.get('pending_course_id', '')
-        has_paid = Subscription.objects.filter(student=user, status='active').exists()
-        # Course hours tracking
-        from lms.models import LessonTimeLog
-        from django.db.models import Sum
-        course_hours_data = []
-        for enrollment in Enrollment.objects.filter(student=user).select_related('course'):
-            total_secs = LessonTimeLog.objects.filter(
-                student=user, lesson__module__course=enrollment.course
-            ).aggregate(total=Sum('seconds_spent'))['total'] or 0
-            total_hours = round(total_secs / 3600, 2)
-            req_hours = enrollment.course.required_hours
-            if req_hours > 0:
-                course_hours_data.append({
-                    'course': enrollment.course,
-                    'total_hours': total_hours,
-                    'required_hours': req_hours,
-                    'pct': min(100, round((total_hours / req_hours) * 100))
-                })
-        active_sub = Subscription.objects.filter(student=user, status__in=['active','suspended']).first()
-        context = {
-            'user': user,
-            'enrollments': enrollments,
-            'has_paid': has_paid,
-            'active_sub': active_sub,
-            'overall_progress': overall_progress,
-            'avg_score': avg_score,
-            'total_completed': total_completed,
-            'my_certificates': my_certificates,
-            'activity': activity,
-            'announcements': Announcement.objects.filter(is_active=True)[:3],
-            'leaderboard': leaderboard[:10],
-            'my_rank': my_rank,
-            'pending_course_id': pending_course_id,
-            'streak': streak,
-            'reviewable_courses': reviewable_courses,
-            'page': 'lms_student_dashboard'
-        }
-        return render(request, 'lms/dashboard.html', context)
-
-
-# =========================================================================
-# 3. INTERACTIVE LEARNING ENVIRONMENT CLASSROOM INTERFACES
-# =========================================================================
-
-@login_required(login_url='lms_login')
-def course_classroom(request, course_id):
-    # Allow staff to preview any course
-    if request.user.is_staff:
-        enrollment = Enrollment.objects.filter(course_id=course_id).first()
-        if not enrollment:
-            # Create a temporary enrollment object for preview
-            course_obj = get_object_or_404(Course, id=course_id)
-            class FakeEnrollment:
-                course = course_obj
-                student = request.user
-            enrollment = FakeEnrollment()
-    else:
-        enrollment = get_object_or_404(Enrollment, course_id=course_id, student=request.user)
-        # Payment gate — must have active subscription
-        sub_check = Subscription.objects.filter(student=request.user, status__in=['active','suspended']).first()
-        if not sub_check:
-            messages.warning(request, 'Please complete your payment to access course content.')
-            return redirect('enroll_page', course_id=course_id)
-        if sub_check.access_blocked:
-            messages.warning(request, f'Your access has been suspended. Please pay outstanding balance to restore access.')
-            return redirect('lms_dashboard')
-    modules = Module.objects.filter(course_id=course_id).order_by('order').prefetch_related(Prefetch('lessons', queryset=Lesson.objects.order_by('order')))
-    course_lessons = Lesson.objects.filter(module__course_id=course_id)
-    total = course_lessons.count()
-    completed = LessonProgress.objects.filter(
-        student=request.user, lesson__in=course_lessons, is_completed=True
-    ).count()
-    progress = int((completed / total) * 100) if total > 0 else 0
-
-    context = {
-        'enrollment': enrollment,
-        'course': enrollment.course,
-        'modules': modules,
-        'progress_percentage': progress,
-        'completed': completed,
-        'total': total,
-        'page': 'lms_classroom'
-    }
-    return render(request, 'lms/classroom.html', context)
-
-# Add this to lms/views.py
-@login_required(login_url='lms_login')
-@login_required(login_url='lms_login')
-def quiz_view(request, quiz_id):
-    quiz = get_object_or_404(Quiz, id=quiz_id)
-    # Staff can always access
-    if not request.user.is_staff:
-        # Check payment
-        has_paid = Subscription.objects.filter(student=request.user, status='active').exists()
-        if not has_paid:
-            messages.warning(request, 'Please complete your payment to access assessments.')
-            return redirect('enroll_page', course_id=quiz.lesson.module.course_id)
-        # Check enrollment
-        from lms.models import Enrollment as Enroll2
-        enrolled = Enroll2.objects.filter(student=request.user, course=quiz.lesson.module.course).exists()
-        if not enrolled:
-            messages.warning(request, 'Please enroll in this course to access assessments.')
-            return redirect('lms_dashboard')
-        # Block final exam until required hours met
-        if quiz.is_final_exam:
-            course = quiz.lesson.module.course
-            if course.required_hours > 0:
-                from lms.models import LessonTimeLog
-                from django.db.models import Sum
-                total_secs = LessonTimeLog.objects.filter(
-                    student=request.user, lesson__module__course=course
-                ).aggregate(total=Sum('seconds_spent'))['total'] or 0
-                total_hours = round(total_secs / 3600, 2)
-                if total_hours < course.required_hours:
-                    remaining = round(course.required_hours - total_hours, 1)
-                    messages.warning(request, f'You need {remaining} more hours of study before taking the final exam. You have logged {total_hours} of {course.required_hours} required hours.')
-                    return redirect('course_classroom', course_id=course.id)
-    return render(request, 'lms/quiz.html', {'quiz': quiz})
-@login_required(login_url='lms_login')
-def submit_quiz(request, quiz_id):
-    if request.method == 'POST':
-        quiz = get_object_or_404(Quiz, id=quiz_id)
-        score = 0
-        total = quiz.questions.count()
-        results = []
-
-        for question in quiz.questions.all():
-            selected = request.POST.get(f'q{question.id}')
-
-            if question.question_type == 'drag_drop_match':
-                # selected is a JSON array like ["0","1","2"] - position i should equal i if correct
-                correct = False
-                try:
-                    answer_list = json.loads(selected) if selected else []
-                    pairs_count = len(question.match_data.get('pairs', []))
-                    correct = (
-                        len(answer_list) == pairs_count and
-                        all(str(i) == str(answer_list[i]) for i in range(pairs_count))
-                    )
-                except Exception:
-                    correct = False
-            else:
-                correct = selected == question.correct_answer
-
-            if correct:
-                score += 1
-            results.append({
-                'question': question,
-                'selected': selected,
-                'correct': correct,
-            })
-
-        percentage = int((score / total) * 100) if total > 0 else 0
-        passed = percentage >= quiz.passing_score
-
-        attempt = QuizAttempt.objects.create(
-            student=request.user,
-            quiz=quiz,
-            score=percentage,
-            passed=passed
-        )
-
-        # Log quiz activity
-        StudentActivity.objects.create(
-            student=request.user,
-            activity_type='quiz_pass' if passed else 'quiz_fail',
-            description=f'{"Passed" if passed else "Failed"} "{quiz.title}" with {int(percentage)}%',
-            course=quiz.lesson.module.course,
-            lesson=quiz.lesson
-        )
-
-        request.session[f'quiz_results_{attempt.id}'] = {
-            'score': percentage,
-            'passed': passed,
-            'total': total,
-            'correct': score,
-            'results': [
-                {
-                    'text': r['question'].text,
-                    'option_a': r['question'].option_a,
-                    'option_b': r['question'].option_b,
-                    'option_c': r['question'].option_c,
-                    'option_d': r['question'].option_d,
-                    'correct_answer': r['question'].correct_answer,
-                    'selected': r['selected'],
-                    'correct': r['correct'],
-                }
-                for r in results
-            ]
-        }
-        return redirect('quiz_results', attempt_id=attempt.id)
-
-    return redirect('quiz_view', quiz_id=quiz_id)
-
-
-@login_required(login_url='lms_login')
-def quiz_results(request, attempt_id):
-    attempt = get_object_or_404(QuizAttempt, id=attempt_id, student=request.user)
-    results_data = request.session.get(f'quiz_results_{attempt_id}', None)
-    lesson = attempt.quiz.lesson
-    course = lesson.module.course
-
-    # Check if this is the last regular (non-final) lesson with a quiz
-    final_exam_lesson_ids = list(Quiz.objects.filter(
-        is_final_exam=True, lesson__module__course=course
-    ).values_list('lesson_id', flat=True))
-
-    # Get next lesson - skip final exam lessons
-    next_lesson = Lesson.objects.filter(
-        module__course=course,
-        order__gt=lesson.order,
-        module__order__gte=lesson.module.order
-    ).exclude(id__in=final_exam_lesson_ids).order_by('module__order', 'order').first()
-
-    if not next_lesson:
-        next_lesson = Lesson.objects.filter(
-            module__course=course,
-            module__order__gt=lesson.module.order
-        ).exclude(id__in=final_exam_lesson_ids).order_by('module__order', 'order').first()
-
-    # If no more regular lessons and student passed - redirect to final exam
-    final_exam_lesson = None
-    if not next_lesson and attempt.passed and final_exam_lesson_ids:
-        final_exam_lesson = Lesson.objects.filter(
-            id__in=final_exam_lesson_ids,
-            module__course=course
-        ).order_by('module__order', 'order').first()
-    context = {
-        'attempt': attempt,
-        'quiz': attempt.quiz,
-        'results_data': results_data,
-        'lesson': lesson,
-        'next_lesson': next_lesson,
-        'final_exam_lesson': final_exam_lesson,
-    }
-    return render(request, 'lms/quiz_results.html', context)
-
-
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
-from .models import Course, Module, Lesson, ContentItem, Quiz, QuizAttempt, LessonProgress
-
-def lms_video_helper(url):
-    """Extracts YouTube video ID and returns clean embed URL."""
-    if not url: return ""
-    import re
-    # Extract video ID from any YouTube URL format
-    patterns = [
-        r'youtube\.com/watch\?v=([a-zA-Z0-9_-]{11})',
-        r'youtu\.be/([a-zA-Z0-9_-]{11})',
-        r'youtube\.com/embed/([a-zA-Z0-9_-]{11})',
-        r'youtube\.com/live/([a-zA-Z0-9_-]{11})',
-        r'youtube\.com/shorts/([a-zA-Z0-9_-]{11})',
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, url)
-        if match:
-            video_id = match.group(1)
-            return f"https://www.youtube.com/embed/{video_id}?rel=0&modestbranding=1"
-    return url
-
-@login_required(login_url='lms_login')
-def lesson_view(request, lesson_id):
-    # Redirect final exam lessons to dedicated final exam page
-    from lms.models import Quiz as QuizModel
-    try:
-        lquiz = QuizModel.objects.get(lesson_id=lesson_id)
-        if lquiz.is_final_exam:
-            course_id = lquiz.lesson.module.course_id
-            return redirect(f'/lms/course/{course_id}/final-exam/?quiz={lquiz.id}')
-    except QuizModel.DoesNotExist:
-        pass
-
-    # Payment gate — staff can always preview
-    if not request.user.is_staff:
-        has_paid = Subscription.objects.filter(student=request.user, status='active').exists()
-        if not has_paid:
-            lesson = get_object_or_404(Lesson, id=lesson_id)
-            course_id = lesson.module.course_id
-            messages.warning(request, 'Please complete your payment to access course content.')
-            return redirect('enroll_page', course_id=course_id)
-    # Track journey: course started
-    try:
-        from lms.models import StudentJourney
-        StudentJourney.objects.get_or_create(
-            student_email=request.user.email,
-            stage='course_started',
-            defaults={'metadata': {'lesson_id': lesson_id}}
-        )
-    except Exception:
-        pass
-    lesson = get_object_or_404(Lesson, id=lesson_id)
-
-    # Check enrollment
-    course = lesson.module.course
-    if not request.user.is_staff:
-        enrolled = Enrollment.objects.filter(student=request.user, course=course).exists()
-        if not enrolled:
-            return redirect('lms_dashboard')
-
-    # Get all lessons in order
-    all_lessons = Lesson.objects.filter(
-        module__course=course
-    ).order_by('module__order', 'order')
-    all_lessons_list = list(all_lessons)
-    current_idx = next((i for i, l in enumerate(all_lessons_list) if l.id == lesson.id), 0)
-
-    # Enforce lesson order — check previous lesson is completed
-    if not request.user.is_staff and current_idx > 0:
-        prev = all_lessons_list[current_idx - 1]
-        prev_done = LessonProgress.objects.filter(
-            student=request.user, lesson=prev, is_completed=True
-        ).exists()
-        if not prev_done:
-            messages.warning(request, f'Please complete "{prev.title}" first.')
-            return redirect('lesson_view', lesson_id=prev.id)
-
-    # Check for final exams in this course
-    final_exam_quizzes = Quiz.objects.filter(
-        lesson__module__course=course,
-        is_final_exam=True
-    ).order_by('id')
-    final_exam_lesson_ids = list(final_exam_quizzes.values_list('lesson_id', flat=True))
-    # Find modules that ONLY contain final exam lessons (should be hidden)
-    from lms.models import Module as ModuleModel
-    hidden_module_ids = []
-    for m in ModuleModel.objects.filter(course=course):
-        lesson_ids = list(m.lessons.values_list('id', flat=True))
-        if lesson_ids and all(lid in final_exam_lesson_ids for lid in lesson_ids):
-            hidden_module_ids.append(m.id)
-
-    content_payloads = ContentItem.objects.filter(lesson=lesson)
-    for item in content_payloads:
-        if item.content_type == 'youtube':
-            item.video_url = lms_video_helper(item.video_url)
-
-    # Get completed lessons for sidebar
-    completed_ids = set(LessonProgress.objects.filter(
-        student=request.user, is_completed=True,
-        lesson__module__course=course
-    ).values_list('lesson_id', flat=True))
-
-    prev_lesson = all_lessons_list[current_idx - 1] if current_idx > 0 else None
-    
-    # Get next lesson - exclude final exam lessons
-    next_lesson = None
-    for l in all_lessons_list[current_idx + 1:]:
-        if l.id not in final_exam_lesson_ids:
-            next_lesson = l
-            break
-    
-    # If no more regular lessons, point to final exam
-    redirect_to_final = False
-    if not next_lesson and final_exam_lesson_ids:
-        redirect_to_final = True
-        next_lesson = Lesson.objects.filter(id__in=final_exam_lesson_ids).order_by('module__order', 'order').first()
-    
-    # Check if current lesson has an unpassed quiz - force quiz before next lesson
-    lesson_quizzes = Quiz.objects.filter(lesson=lesson, is_final_exam=False)
-    quiz_passed = False
-    if lesson_quizzes.exists() and not request.user.is_staff:
-        from lms.models import QuizAttempt
-        quiz_passed = QuizAttempt.objects.filter(
-            student=request.user, quiz__in=lesson_quizzes, passed=True
-        ).exists()
-    elif not lesson_quizzes.exists():
-        quiz_passed = True  # no quiz required
-
-    # Log lesson view activity
-    if not request.user.is_staff:
-        StudentActivity.objects.create(
-            student=request.user,
-            activity_type='lesson_view',
-            description=f'Viewing: {lesson.title}',
-            course=course,
-            lesson=lesson
-        )
-
-    interactive_elements = InteractiveElement.objects.filter(lesson=lesson).order_by('order')
-    for elem in interactive_elements:
-        elem.data_json = json.dumps(elem.data)
-
-    attached_elements = [e for e in interactive_elements if e.attached_to_id]
-    standalone_elements = [e for e in interactive_elements if not e.attached_to_id]
-    completed_element_ids = set()
-    if not request.user.is_staff:
-        completed_element_ids = set(InteractiveCompletion.objects.filter(
-            student=request.user, element__lesson=lesson
-        ).values_list('element_id', flat=True))
-
-    context = {
-        'lesson': lesson,
-        'content_payloads': content_payloads,
-        'completed_content_ids': [str(item.id) for item in content_payloads if request.session.get(f'content_done_{item.id}')],
-        'final_exam_quizzes': final_exam_quizzes,
-        'final_exam_lesson_ids': final_exam_lesson_ids,
-        'hidden_module_ids': hidden_module_ids,
-        'quizzes': Quiz.objects.filter(lesson=lesson),
-        'prev_lesson': prev_lesson,
-        'next_lesson': next_lesson,
-        'lesson_number': current_idx + 1,
-        'total_lessons': len(all_lessons_list),
-        'course_required_hours': course.required_hours,
-        'completed_ids': completed_ids,
-        'discussions': Discussion.objects.filter(lesson=lesson, parent=None).prefetch_related('replies__user').select_related('user'),
-        'interactive_elements': standalone_elements,
-        'attached_elements': attached_elements,
-        'completed_element_ids': completed_element_ids,
-        'page': 'lms_lesson'
-    }
-    return render(request, 'lms/lesson.html', context)
-
-
-@login_required(login_url='lms_login')
-@csrf_exempt
-def log_lesson_time(request, lesson_id):
-    from django.http import JsonResponse
-    from lms.models import LessonTimeLog, Lesson
-    if request.method == 'GET':
-        lesson = get_object_or_404(Lesson, id=lesson_id)
-        course = lesson.module.course
-        from django.db.models import Sum
-        total_secs = LessonTimeLog.objects.filter(
-            student=request.user, lesson__module__course=course
-        ).aggregate(total=Sum('seconds_spent'))['total'] or 0
-        total_hours = round(total_secs / 3600, 2)
-        return JsonResponse({'ok': True, 'total_hours': total_hours, 'required_hours': course.required_hours})
-    if request.method != 'POST':
-        return JsonResponse({'ok': False})
-    import json
-    data = json.loads(request.body)
-    seconds = int(data.get('seconds', 0))
-    if seconds <= 0:
-        return JsonResponse({'ok': False})
-    lesson = get_object_or_404(Lesson, id=lesson_id)
-    log, _ = LessonTimeLog.objects.get_or_create(student=request.user, lesson=lesson)
-    log.seconds_spent += seconds
-    log.save()
-    # Check total course hours
-    course = lesson.module.course
-    from django.db.models import Sum
-    total_seconds = LessonTimeLog.objects.filter(
-        student=request.user, lesson__module__course=course
-    ).aggregate(total=Sum('seconds_spent'))['total'] or 0
-    total_hours = round(total_seconds / 3600, 2)
-    return JsonResponse({'ok': True, 'total_hours': total_hours, 'required_hours': course.required_hours})
-
-@login_required(login_url='lms_login')
-@csrf_exempt
-def save_content_progress(request, content_id):
-    from django.http import JsonResponse
-    from lms.models import ContentItem
-    if request.method == 'GET':
-        done = request.session.get(f'content_done_{content_id}', False)
-        return JsonResponse({'done': done})
-    if request.method != 'POST':
-        return JsonResponse({'ok': False})
-    item = get_object_or_404(ContentItem, id=content_id)
-    # Save progress to student session
-    key = f'content_done_{content_id}'
-    request.session[key] = True
-    request.session.modified = True
-    return JsonResponse({'ok': True})
-
-@login_required(login_url='lms_login')
-def complete_lesson(request, lesson_id):
-    lesson = get_object_or_404(Lesson, id=lesson_id)
-
-    progress_obj, created = LessonProgress.objects.get_or_create(
-        student=request.user,
-        lesson=lesson,
-        defaults={'is_completed': True}
-    )
-    if not created and not progress_obj.is_completed:
-        progress_obj.is_completed = True
-        progress_obj.save()
-
-    # Log completion activity
-    StudentActivity.objects.create(
-        student=request.user,
-        activity_type='lesson_complete',
-        description=f'Completed: {lesson.title}',
-        course=lesson.module.course,
-        lesson=lesson
-    )
-
-    # Check if entire course is now complete
-    course = lesson.module.course
-    total = Lesson.objects.filter(module__course=course).count()
-    completed = LessonProgress.objects.filter(
-        student=request.user,
-        lesson__module__course=course,
-        is_completed=True
-    ).count()
-
-    cert_issued = False
-    if total > 0 and completed >= total:
-        # Auto-issue certificate
-        code = f"CERT-{course.program}-" + ''.join(random.choices(string.digits, k=6))
-        cert, created_cert = Certificate.objects.get_or_create(
-            student=request.user,
-            course=course,
-            defaults={'certificate_code': code}
-        )
-        if created_cert:
-            cert_issued = True
-
-    return JsonResponse({
-        'status': 'success',
-        'cert_issued': cert_issued,
-        'course_title': course.title if cert_issued else ''
+    return render(request, 'core/home.html', {
+        'programs': featured_programs,
+        'use_db': use_db,
+        'testimonials': TESTIMONIALS,
+        'latest_posts': latest_posts,
+        'upcoming_events': upcoming_events,
+        'continue_lesson': continue_lesson,
+        'continue_course': continue_course,
+        'page': 'home',
     })
 
 
-
-
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
-from django.contrib import messages
-
-@login_required
-def account_settings(request):
-    from lms.models import LessonProgress, Enrollment, Certificate
-    if request.method == 'POST':
-        user = request.user
-        user.username = request.POST.get('username', user.username)
-        user.email = request.POST.get('email', user.email)
-        user.first_name = request.POST.get('first_name', user.first_name)
-        user.last_name = request.POST.get('last_name', user.last_name)
-        user.save()
-        messages.success(request, "Profile updated successfully!")
-        return redirect('account_settings')
-
-    total_completed = LessonProgress.objects.filter(student=request.user, is_completed=True).count()
-    total_enrolled = Enrollment.objects.filter(student=request.user).count()
-    total_certs = Certificate.objects.filter(student=request.user).count()
-
-    context = {
-        'total_completed': total_completed,
-        'total_enrolled': total_enrolled,
-        'total_certs': total_certs,
-    }
-    return render(request, 'lms/settings.html', context)
-
-
-
-
-
-
-# ── Add this view to lms/views.py ─────────────────────────────────────────
-
-@login_required(login_url='lms_login')
-def course_builder(request):
-    """The Course Builder page — create or edit a course."""
-    if not request.user.is_staff:
-        return redirect('lms_dashboard')
-
-    import json as _json
-    edit_id = request.GET.get('edit')
-    edit_course = None
-    edit_structure = '[]'
-
-    if edit_id:
-        edit_course = get_object_or_404(Course, id=edit_id)
-        structure = []
-        for module in edit_course.modules.all().order_by('order'):
-            lessons = [{'title': l.title} for l in module.lessons.all().order_by('order')]
-            structure.append({'title': module.title, 'lessons': lessons})
-        edit_structure = _json.dumps(structure)
-
-    students_profiles = []
-    for s in User.objects.filter(is_staff=False):
-        students_profiles.append({'user_obj': s})
-
-    context = {
-        'students_profiles': students_profiles,
-        'page': 'course_builder',
-        'edit_course': edit_course,
-        'edit_structure': edit_structure,
-    }
-    return render(request, 'lms/course_builder.html', context)
-
-# ── Add this action inside lms_dashboard_view, inside the if user.is_staff block ──
-# Find the section: # --- BASE CURRICULUM STRUCTURAL DATA BLOCKS ---
-# Add this AFTER the existing create_course / create_module / create_lesson actions:
-
-
-
-
-
-# ══════════════════════════════════════════════════════════════
-# ADD TO TOP OF lms/views.py (with other imports)
-# ══════════════════════════════════════════════════════════════
-
-
-import os
-import mimetypes
-from django.http import HttpResponse, Http404, StreamingHttpResponse, JsonResponse
-from django.conf import settings
-
-@login_required(login_url='lms_login')
-def serve_protected_content(request, content_id):
-    content = get_object_or_404(ContentItem, id=content_id)
-    if not request.user.is_staff:
-        course = content.lesson.module.course
-        if not Enrollment.objects.filter(student=request.user, course=course).exists():
-            raise Http404
-    if not content.file_attachment:
-        raise Http404
-    file_path = content.file_attachment.path
-    if not os.path.exists(file_path):
-        raise Http404
-    mime_type, _ = mimetypes.guess_type(file_path)
-    if not mime_type:
-        mime_type = 'application/octet-stream'
-    file_size = os.path.getsize(file_path)
-    range_header = request.META.get('HTTP_RANGE', '').strip()
-    if range_header:
-        range_match = re.match(r'bytes=(\d+)-(\d*)', range_header)
-        if range_match:
-            first_byte = int(range_match.group(1))
-            last_byte = int(range_match.group(2)) if range_match.group(2) else file_size - 1
-            last_byte = min(last_byte, file_size - 1)
-            length = last_byte - first_byte + 1
-            def range_iterator(path, start, length, chunk=65536):
-                with open(path, 'rb') as f:
-                    f.seek(start)
-                    remaining = length
-                    while remaining > 0:
-                        chunk_data = f.read(min(chunk, remaining))
-                        if not chunk_data:
-                            break
-                        remaining -= len(chunk_data)
-                        yield chunk_data
-            response = StreamingHttpResponse(range_iterator(file_path, first_byte, length),
-                                           status=206, content_type=mime_type)
-            response['Content-Range'] = f'bytes {first_byte}-{last_byte}/{file_size}'
-            response['Content-Length'] = str(length)
-        else:
-            response = StreamingHttpResponse(open(file_path, 'rb'), content_type=mime_type)
-            response['Content-Length'] = str(file_size)
-    else:
-        def file_iterator(path, chunk_size=65536):
-            with open(path, 'rb') as f:
-                while True:
-                    chunk = f.read(chunk_size)
-                    if not chunk:
-                        break
-                    yield chunk
-        response = StreamingHttpResponse(file_iterator(file_path), content_type=mime_type)
-        response['Content-Length'] = str(file_size)
-    response['Accept-Ranges'] = 'bytes'
-    response['Content-Disposition'] = 'inline'
-    response['Cache-Control'] = 'private, max-age=3600'
-    response['X-Frame-Options'] = 'SAMEORIGIN'
-    return response
-
-@login_required(login_url='lms_login')
-def serve_slide(request, content_id, slide_index):
-    content = get_object_or_404(ContentItem, id=content_id)
-    if not request.user.is_staff:
-        course = content.lesson.module.course
-        if not Enrollment.objects.filter(student=request.user, course=course).exists():
-            raise Http404
-    slide_path = os.path.join(
-        settings.MEDIA_ROOT, 'slides', str(content_id), f'slide_{slide_index}.png'
-    )
-    if not os.path.exists(slide_path):
-        raise Http404
-    with open(slide_path, 'rb') as f:
-        response = HttpResponse(f.read(), content_type='image/png')
-        response['Content-Disposition'] = 'inline'
-        response['Cache-Control'] = 'private, max-age=3600'
-        response['X-Frame-Options'] = 'SAMEORIGIN'
-        return response
-
-
-@login_required(login_url='lms_login')
-def get_slide_count(request, content_id):
-    content = get_object_or_404(ContentItem, id=content_id)
-    slides_dir = os.path.join(settings.MEDIA_ROOT, 'slides', str(content_id))
-    if not os.path.exists(slides_dir):
-        return JsonResponse({'count': 0})
-    count = len([f for f in os.listdir(slides_dir) if f.endswith('.png')])
-    return JsonResponse({'count': count})
-
-
-def convert_ppt_to_images(content_item):
-    """
-    Converts PPT/PPTX to PNG images using LibreOffice.
-    Full fidelity — preserves backgrounds, images, fonts, colors.
-    """
-    import subprocess
-    import shutil
-    from pdf2image import convert_from_path
-
-    file_path = content_item.file_attachment.path
-    slides_dir = os.path.join(settings.MEDIA_ROOT, 'slides', str(content_item.id))
-    os.makedirs(slides_dir, exist_ok=True)
-
-    # Step 1: Convert PPT to PDF using LibreOffice
-    tmp_dir = os.path.join(settings.MEDIA_ROOT, 'tmp_convert')
-    os.makedirs(tmp_dir, exist_ok=True)
-
-    result = subprocess.run([
-        'soffice',
-        '--headless',
-        '--convert-to', 'pdf',
-        '--outdir', tmp_dir,
-        file_path
-    ], capture_output=True, text=True, timeout=120)
-
-    # Find the generated PDF
-    base_name = os.path.splitext(os.path.basename(file_path))[0]
-    pdf_path = os.path.join(tmp_dir, base_name + '.pdf')
-
-    if not os.path.exists(pdf_path):
-        raise Exception(f"LibreOffice conversion failed: {result.stderr}")
-
-    # Step 2: Convert PDF pages to PNG images
-    images = convert_from_path(pdf_path, dpi=150, fmt='png')
-
-    for i, img in enumerate(images):
-        slide_path = os.path.join(slides_dir, f'slide_{i}.png')
-        img.save(slide_path, 'PNG', quality=95)
-
-    # Cleanup temp PDF
-    os.remove(pdf_path)
-
-    return len(images)
-
-
-@login_required(login_url='lms_login')
-def check_quiz_pass(request, quiz_id):
-    """Check if student has passed a quiz — used by lesson completion lock."""
-    passed = QuizAttempt.objects.filter(
-        student=request.user, quiz_id=quiz_id, passed=True
-    ).exists()
-    return JsonResponse({'passed': passed})
-
-
-@login_required(login_url='lms_login')
-def download_certificate(request, cert_id):
-    """Generates and serves a professional PDF certificate."""
-    from reportlab.pdfgen import canvas
-    from reportlab.lib.pagesizes import landscape, A4
-    from reportlab.lib.colors import HexColor
-    from reportlab.lib.units import inch
-    from django.http import HttpResponse
-    import io
-
-    cert = get_object_or_404(Certificate, id=cert_id, student=request.user)
-
-    buffer = io.BytesIO()
-    w, h = landscape(A4)
-    c = canvas.Canvas(buffer, pagesize=landscape(A4))
-
-    # Background
-    c.setFillColor(HexColor('#0f172a'))
-    c.rect(0, 0, w, h, fill=1, stroke=0)
-
-    # Gold border
-    c.setStrokeColor(HexColor('#d97706'))
-    c.setLineWidth(3)
-    c.rect(30, 30, w-60, h-60, fill=0, stroke=1)
-    c.setLineWidth(1)
-    c.rect(38, 38, w-76, h-76, fill=0, stroke=1)
-
-    # Header — Glory Nursing
-    c.setFillColor(HexColor('#d97706'))
-    c.setFont('Helvetica-Bold', 13)
-    c.drawCentredString(w/2, h-80, 'GLORY NURSING HEALTHCARE TRAINING SCHOOL')
-
-    c.setFillColor(HexColor('#94a3b8'))
-    c.setFont('Helvetica', 10)
-    c.drawCentredString(w/2, h-98, 'Oklahoma City, Oklahoma · State-Approved Vocational Institution')
-
-    # Divider
-    c.setStrokeColor(HexColor('#d97706'))
-    c.setLineWidth(0.5)
-    c.line(w/2-180, h-112, w/2+180, h-112)
-
-    # Certificate of Completion
-    c.setFillColor(HexColor('#ffffff'))
-    c.setFont('Helvetica', 11)
-    c.drawCentredString(w/2, h-140, 'CERTIFICATE OF COMPLETION')
-
-    # Student name
-    c.setFillColor(HexColor('#f8fafc'))
-    c.setFont('Helvetica-Bold', 38)
-    c.drawCentredString(w/2, h-195, cert.student.get_full_name() or cert.student.username)
-
-    # Line under name
-    c.setStrokeColor(HexColor('#334155'))
-    c.setLineWidth(1)
-    c.line(w/2-220, h-205, w/2+220, h-205)
-
-    # Body text
-    c.setFillColor(HexColor('#94a3b8'))
-    c.setFont('Helvetica', 11)
-    c.drawCentredString(w/2, h-228, 'has successfully completed all requirements for the program')
-
-    # Course name
-    c.setFillColor(HexColor('#d97706'))
-    c.setFont('Helvetica-Bold', 22)
-    c.drawCentredString(w/2, h-262, cert.course.title.upper())
-
-    # Program badge
-    c.setFillColor(HexColor('#1e3a5f'))
-    c.roundRect(w/2-40, h-292, 80, 22, 5, fill=1, stroke=0)
-    c.setFillColor(HexColor('#60a5fa'))
-    c.setFont('Helvetica-Bold', 10)
-    c.drawCentredString(w/2, h-283, cert.course.program)
-
-    # Date and cert ID
-    from datetime import date
-    c.setFillColor(HexColor('#64748b'))
-    c.setFont('Helvetica', 10)
-    c.drawCentredString(w/2, h-318, f'Issued: {date.today().strftime("%B %d, %Y")}  ·  Certificate ID: {cert.certificate_code}')
-
-    # Signature lines
-    sig_y = 95
-    sig_gap = 160
-    for label, title in [('Charles Mensah', 'Co-Founder & Director'), ('Binui Mensah', 'Co-Founder & Administrator')]:
-        x = w/2 - sig_gap if label == 'Charles Mensah' else w/2 + sig_gap
-        c.setStrokeColor(HexColor('#334155'))
-        c.setLineWidth(0.8)
-        c.line(x-70, sig_y+18, x+70, sig_y+18)
-        c.setFillColor(HexColor('#f1f5f9'))
-        c.setFont('Helvetica-Bold', 10)
-        c.drawCentredString(x, sig_y+6, label)
-        c.setFillColor(HexColor('#64748b'))
-        c.setFont('Helvetica', 9)
-        c.drawCentredString(x, sig_y-6, title)
-
-    # Seal
-    c.setFillColor(HexColor('#d97706'))
-    c.circle(w/2, sig_y+10, 28, fill=1, stroke=0)
-    c.setFillColor(HexColor('#0f172a'))
-    c.circle(w/2, sig_y+10, 24, fill=1, stroke=0)
-    c.setFillColor(HexColor('#d97706'))
-    c.setFont('Helvetica-Bold', 7)
-    c.drawCentredString(w/2, sig_y+14, 'GLORY')
-    c.drawCentredString(w/2, sig_y+6, 'NURSING')
-    c.setFont('Helvetica', 6)
-    c.drawCentredString(w/2, sig_y-2, '✦ CERTIFIED ✦')
-
-    c.save()
-    buffer.seek(0)
-
-    response = HttpResponse(buffer, content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="certificate_{cert.certificate_code}.pdf"'
-    return response
-
-
-@login_required(login_url='lms_login')
-def lms_search(request):
-    query = request.GET.get('q', '').strip()
-    results = {'lessons': [], 'courses': []}
-
-    if query:
-        # Search lessons
-        from django.db.models import Q
-        lessons = Lesson.objects.filter(
-            Q(title__icontains=query) | Q(module__title__icontains=query),
-            module__course__enrollment__student=request.user
-        ).select_related('module__course').distinct()[:10]
-
-        courses = Course.objects.filter(
-            Q(title__icontains=query) | Q(program__icontains=query),
-            enrollment__student=request.user
-        ).distinct()[:5]
-
-        results['lessons'] = lessons
-        results['courses'] = courses
-
-    return render(request, 'lms/search_results.html', {
-        'query': query,
-        'results': results,
-    })
-
-
-@login_required(login_url='lms_login')
-def lesson_discussions_json(request, lesson_id):
-    from django.http import JsonResponse
-    from lms.models import Discussion
-    lesson = get_object_or_404(Lesson, id=lesson_id)
-    discs = Discussion.objects.filter(lesson=lesson, parent=None).prefetch_related('replies__user').select_related('user').order_by('created_at')
-    data = []
-    for d in discs:
-        replies = []
-        for r in d.replies.all():
-            replies.append({
-                'message': r.message,
-                'is_staff': r.user.is_staff,
-                'username': r.user.username,
-                'full_name': r.user.get_full_name() or r.user.username,
-                'time': r.created_at.strftime('%H:%M'),
-            })
-        data.append({
-            'id': d.id,
-            'message': d.message,
-            'username': d.user.username,
-            'full_name': d.user.get_full_name() or d.user.username,
-            'time': d.created_at.strftime('%H:%M'),
-            'replies': replies,
+def programs(request):
+    from .models import Program
+    db_programs = Program.objects.filter(is_active=True)
+    if db_programs.exists():
+        return render(request, 'core/programs.html', {
+            'programs': db_programs,
+            'use_db': True,
+            'page': 'programs',
         })
-    return JsonResponse({'discussions': data, 'count': len(data)})
+    return render(request, 'core/programs.html', {
+        'programs': PROGRAMS,
+        'use_db': False,
+        'page': 'programs',
+    })
 
 
-@login_required(login_url='lms_login')
-def lesson_discussion(request, lesson_id):
-    """AJAX — post a discussion message or reply."""
-    lesson = get_object_or_404(Lesson, id=lesson_id)
-    if request.method == 'POST':
-        message = request.POST.get('message', '').strip()
-        parent_id = request.POST.get('parent_id')
-        if message:
-            parent = None
-            if parent_id:
-                try:
-                    parent = Discussion.objects.get(id=parent_id)
-                except Discussion.DoesNotExist:
-                    pass
-            Discussion.objects.create(
-                lesson=lesson,
-                user=request.user,
-                message=message,
-                parent=parent
-            )
-    return redirect('lesson_view', lesson_id=lesson_id)
+def program_detail(request, slug):
+    from .models import Program
+    from lms.models import Course, CourseReview
+    from django.db.models import Avg
 
+    # Get approved reviews matching this program code (e.g. "CNA", "CMA")
+    program_code = slug.upper()
+    reviews = CourseReview.objects.filter(
+        is_approved=True,
+        course__program=program_code
+    ).select_related('student', 'course').order_by('-created_at')[:10]
 
-# ══════════════════════════════════════════════════════════════
-# SQUARE PAYMENT FLOW
-# ══════════════════════════════════════════════════════════════
+    avg_rating = reviews.aggregate(avg=Avg('rating'))['avg'] if reviews else None
+    review_count = CourseReview.objects.filter(is_approved=True, course__program=program_code).count()
 
-@login_required(login_url='lms_login')
-def student_preview(request):
-    """Admin preview of the student dashboard."""
-    if not request.user.is_staff:
-        return redirect('lms_dashboard')
-    from lms.models import Course, Enrollment, Subscription
-    from django.contrib.auth.models import User as AuthUser
-    # Allow picking a specific student via ?student_id=
-    student_id = request.GET.get('student_id')
-    if student_id:
-        sample_student = AuthUser.objects.filter(id=student_id, is_staff=False).first()
-    else:
-        # Get a paid student for best preview experience
-        paid_ids = Subscription.objects.filter(status='active').values_list('student_id', flat=True)
-        sample_student = AuthUser.objects.filter(id__in=paid_ids, is_staff=False).first()
-        if not sample_student:
-            sample_student = AuthUser.objects.filter(is_staff=False).first()
-    if sample_student:
-        enrollments_qs = Enrollment.objects.filter(student=sample_student).select_related('course')
-        has_paid = True  # Admin preview always shows full course access
-    else:
-        enrollments_qs = Enrollment.objects.none()
-        has_paid = True
-
-    enrollments = []
-    for enrollment in enrollments_qs:
-        enrollments.append({
-            'course': enrollment.course,
-            'progress_percentage': 0,
-            'completed_count': 0,
-            'total_lessons': enrollment.course.modules.count(),
-            'next_lesson': None,
-            'module_count': enrollment.course.modules.count(),
+    db_program = Program.objects.filter(slug=slug, is_active=True).first()
+    if db_program:
+        from .models import ClassSchedule
+        from django.utils import timezone
+        upcoming_schedules = ClassSchedule.objects.filter(
+            program=db_program,
+            start_date__gte=timezone.now().date(),
+            is_active=True
+        ).order_by('start_date')[:5]
+        return render(request, 'core/program_detail.html', {
+            'program': db_program,
+            'use_db': True,
+            'page': 'programs',
+            'reviews': reviews,
+            'upcoming_schedules': upcoming_schedules,
+            'avg_rating': avg_rating,
+            'review_count': review_count,
         })
-
-    context = {
-        'user': sample_student or request.user,
-        'enrollments': enrollments,
-        'has_paid': has_paid,
-        'overall_progress': 0,
-        'avg_score': 0,
-        'total_completed': 0,
-        'my_certificates': [],
-        'activity': [],
-        'announcements': Announcement.objects.filter(is_active=True)[:3],
-        'leaderboard': [],
-        'my_rank': 1,
-        'pending_course_id': '',
-        'streak': None,
-        'reviewable_courses': [],
-        'page': 'lms_student_dashboard',
-        'is_admin_preview': True,
-    }
-    return render(request, 'lms/dashboard.html', context)
-
-
-@login_required(login_url='lms_login')
-def final_exam(request, course_id):
-    course = get_object_or_404(Course, id=course_id)
-    # Staff can preview without enrollment
-    if not request.user.is_staff:
-        enrollment = get_object_or_404(Enrollment, course=course, student=request.user)
-        has_paid = Subscription.objects.filter(student=request.user, status='active').exists()
-        if not has_paid:
-            return redirect('enroll_page', course_id=course_id)
-
-    # Get final exam quiz
-    quiz = Quiz.objects.filter(lesson__module__course=course, is_final_exam=True).first()
-    if not quiz:
-        messages.warning(request, 'No final exam configured for this course.')
-        return redirect('course_classroom', course_id=course_id)
-
-    # Check if all lessons completed
-    total_lessons = Lesson.objects.filter(module__course=course).exclude(
-        quiz__is_final_exam=True).count()
-    completed = LessonProgress.objects.filter(
-        student=request.user, lesson__module__course=course, is_completed=True).count()
-    can_take = request.user.is_staff or completed >= total_lessons
-
-    questions = quiz.questions.all().order_by('?')  # randomize
-    processed = []
-    for q in questions:
-        opts = []
-        if q.option_a: opts.append(('A', q.option_a))
-        if q.option_b: opts.append(('B', q.option_b))
-        if q.option_c: opts.append(('C', q.option_c))
-        if q.option_d: opts.append(('D', q.option_d))
-        processed.append({'id': q.id, 'text': q.text, 'options': opts})
-
-    return render(request, 'lms/final_exam.html', {
-        'course': course,
-        'quiz': quiz,
-        'questions': processed,
-        'can_take': can_take,
-        'completed': completed,
-        'total_lessons': total_lessons,
+    program = next((p for p in PROGRAMS if p['slug'] == slug), None)
+    if not program:
+        from django.http import Http404
+        raise Http404
+    return render(request, 'core/program_detail.html', {
+        'program': program,
+        'use_db': False,
+        'page': 'programs',
+        'reviews': reviews,
+        'avg_rating': avg_rating,
+        'review_count': review_count,
     })
 
 
-@login_required(login_url='lms_login')
-def download_application(request, journey_id):
-    if not request.user.is_staff:
-        return redirect('lms_dashboard')
-    from lms.models import StudentJourney
-    from django.http import HttpResponse
-    import os
-    journey = get_object_or_404(StudentJourney, id=journey_id)
-    pdf_file = journey.metadata.get('pdf_file')
-    if pdf_file:
-        pdf_path = f'/var/www/glorynursing/media/applications/{pdf_file}'
-        if os.path.exists(pdf_path):
-            with open(pdf_path, 'rb') as f:
-                response = HttpResponse(f.read(), content_type='application/pdf')
-                response['Content-Disposition'] = f'inline; filename="{pdf_file}"'
-                return response
-    # Fallback: generate summary PDF
-    import io
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import colors
-    from reportlab.lib.units import cm
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.enums import TA_CENTER
-    meta = journey.metadata
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4,
-        rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
-    styles = getSampleStyleSheet()
-    navy = colors.HexColor('#16213e')
-    elements = []
-    title_style = ParagraphStyle('title', fontSize=16, fontName='Helvetica-Bold',
-        textColor=navy, alignment=TA_CENTER, spaceAfter=4)
-    sub_style = ParagraphStyle('sub', fontSize=9, fontName='Helvetica',
-        textColor=colors.HexColor('#64748b'), alignment=TA_CENTER, spaceAfter=16)
-    elements.append(Paragraph('GLORY NURSING HEALTHCARE TRAINING SCHOOL', title_style))
-    elements.append(Paragraph('Application Submission Summary', sub_style))
-    fields = [
-        ['Field', 'Value'],
-        ['Full Name', meta.get('full_name', '—')],
-        ['Email', meta.get('email', journey.student_email)],
-        ['Phone', meta.get('phone', '—')],
-        ['Date of Birth', meta.get('dob', '—')],
-        ['Address', f"{meta.get('street', '')} {meta.get('city', '')} {meta.get('state', '')} {meta.get('zip', '')}".strip()],
-        ['Course Applied', meta.get('course_applied', journey.program or '—')],
-        ['How Heard', meta.get('how_heard', '—')],
-        ['Submitted', meta.get('submitted_at', str(journey.updated_at))[:19]],
-    ]
-    table = Table(fields, colWidths=[5*cm, 12*cm])
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), navy),
-        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0,0), (-1,-1), 10),
-        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.HexColor('#f8fafc'), colors.white]),
-        ('PADDING', (0,0), (-1,-1), 8),
-        ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor('#e2e8f0')),
-    ]))
-    elements.append(table)
-    doc.build(elements)
-    buffer.seek(0)
-    name = meta.get('full_name', journey.student_email).replace(' ', '_')
-    response = HttpResponse(buffer, content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="Application_{name}.pdf"'
-    return response
+def admissions(request):
+    return render(request, 'core/admissions.html', {'page': 'admissions'})
 
 
-def verify_receipt(request, receipt_code):
-    from lms.models import Subscription
-    sub = Subscription.objects.filter(receipt_code=receipt_code).select_related('student').first()
-    if not sub:
-        return render(request, 'lms/verify_receipt.html', {'valid': False, 'code': receipt_code})
-    return render(request, 'lms/verify_receipt.html', {
-        'valid': True,
-        'code': receipt_code,
-        'student': sub.student.get_full_name(),
-        'program': sub.tier_name,
-        'amount': sub.amount_paid,
-        'date': sub.started_at,
-        'status': sub.status,
-    })
+def about(request):
+    return render(request, 'core/about.html', {'page': 'about'})
 
 
-@login_required(login_url='lms_login')
-def student_receipt(request, student_id, course_id):
-    if not request.user.is_staff:
-        return redirect('lms_dashboard')
-    from django.contrib.auth.models import User as AuthUser
-    student = get_object_or_404(AuthUser, id=student_id)
-    course = get_object_or_404(Course, id=course_id)
-    subs = Subscription.objects.filter(student=student)
-    amount_paid = float(sum(s.amount_paid for s in subs))
-    # Use total charged (including fees) as amount due if breakdown exists
-    last_sub = subs.order_by('-started_at').first()
-    if last_sub and last_sub.breakdown and last_sub.breakdown.get('total'):
-        amount_due = float(last_sub.breakdown['total'])
-    else:
-        amount_due = float(course.price)
-    balance = amount_due - amount_paid
-    context = {
-        'student': student,
-        'course': course,
-        'amount_paid': amount_paid,
-        'amount_due': amount_due,
-        'balance': balance,
-        'payments': subs,
-    }
-    # Generate PDF if requested
-    if request.GET.get('pdf'):
-        return generate_receipt_pdf(student, course, subs, amount_paid, amount_due, balance)
-    return render(request, 'lms/student_receipt.html', context)
-
-
-def generate_receipt_pdf(student, course, subs, amount_paid, amount_due, balance):
-    import io
-    import secrets
-    import qrcode
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import colors
-    from reportlab.lib.units import cm
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
-    from django.http import HttpResponse
-
-    # Get or create receipt code
-    last_sub = subs.order_by('-started_at').first()
-    if last_sub and not last_sub.receipt_code:
-        last_sub.receipt_code = 'GN-' + secrets.token_hex(6).upper()
-        last_sub.save()
-    receipt_code = last_sub.receipt_code if last_sub else 'GN-UNKNOWN'
-
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4,
-        rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
-
-    styles = getSampleStyleSheet()
-    navy = colors.HexColor('#16213e')
-    green = colors.HexColor('#059669')
-    gray = colors.HexColor('#64748b')
-    red = colors.HexColor('#dc2626')
-
-    elements = []
-
-    # Header
-    header_style = ParagraphStyle('header', fontSize=18, fontName='Helvetica-Bold',
-        textColor=colors.white, alignment=TA_CENTER, spaceAfter=4)
-    sub_style = ParagraphStyle('sub', fontSize=9, fontName='Helvetica',
-        textColor=colors.HexColor('#94a3b8'), alignment=TA_CENTER)
-
-    # Header table with navy background
-    header_data = [[
-        Paragraph('GLORY NURSING HEALTHCARE TRAINING SCHOOL', header_style),
-    ], [
-        Paragraph('12032 N. Pennsylvania Ave, Oklahoma City, OK 73120 | (405) 968-5004 | glorynursing@yahoo.com', sub_style),
-    ]]
-    header_table = Table(header_data, colWidths=[17*cm])
-    header_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), navy),
-        ('PADDING', (0,0), (-1,-1), 14),
-        ('BOTTOMPADDING', (0,1), (-1,1), 16),
-    ]))
-    elements.append(header_table)
-    elements.append(Spacer(1, 0.5*cm))
-
-    # Receipt title
-    title_style = ParagraphStyle('title', fontSize=14, fontName='Helvetica-Bold',
-        textColor=navy, alignment=TA_CENTER, spaceAfter=4)
-    code_style = ParagraphStyle('code', fontSize=10, fontName='Helvetica',
-        textColor=gray, alignment=TA_CENTER, spaceAfter=12)
-    elements.append(Paragraph('OFFICIAL PAYMENT RECEIPT', title_style))
-    elements.append(Paragraph(f'Receipt No: {receipt_code}', code_style))
-
-    # QR Code
-    verify_url = f'https://glorynursingok.com/lms/verify/{receipt_code}/'
-    qr = qrcode.QRCode(version=1, box_size=4, border=2)
-    qr.add_data(verify_url)
-    qr.make(fit=True)
-    qr_img = qr.make_image(fill_color='black', back_color='white')
-    qr_buffer = io.BytesIO()
-    qr_img.save(qr_buffer, format='PNG')
-    qr_buffer.seek(0)
-    qr_image = Image(qr_buffer, width=3*cm, height=3*cm)
-
-    # Student info + QR side by side
-    info_style = ParagraphStyle('info', fontSize=10, fontName='Helvetica', spaceAfter=4)
-    bold_style = ParagraphStyle('bold', fontSize=10, fontName='Helvetica-Bold', spaceAfter=4)
-
-    from datetime import datetime
-    info_data = [
-        [Paragraph('<b>Student Name:</b>', info_style), Paragraph(student.get_full_name(), bold_style), '', qr_image],
-        [Paragraph('<b>Email:</b>', info_style), Paragraph(student.email, info_style), '', ''],
-        [Paragraph('<b>Program:</b>', info_style), Paragraph(course.title, info_style), '', ''],
-        [Paragraph('<b>Date:</b>', info_style), Paragraph(last_sub.started_at.strftime('%B %d, %Y') if last_sub else '', info_style), '', ''],
-        [Paragraph('<b>Receipt Code:</b>', info_style), Paragraph(receipt_code, bold_style), '', ''],
-    ]
-    info_table = Table(info_data, colWidths=[4*cm, 9*cm, 0.5*cm, 3.5*cm])
-    info_table.setStyle(TableStyle([
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('SPAN', (3,0), (3,4)),
-        ('ALIGN', (3,0), (3,4), 'CENTER'),
-        ('ROWBACKGROUNDS', (0,0), (1,-1), [colors.HexColor('#f8fafc'), colors.white]),
-        ('PADDING', (0,0), (-1,-1), 6),
-        ('LINEBELOW', (0,-1), (1,-1), 0.5, colors.HexColor('#e2e8f0')),
-    ]))
-    elements.append(info_table)
-    elements.append(Spacer(1, 0.5*cm))
-
-    # Payment summary
-    elements.append(Paragraph('PAYMENT SUMMARY', ParagraphStyle('section',
-        fontSize=10, fontName='Helvetica-Bold', textColor=gray,
-        spaceAfter=8, spaceBefore=8)))
-
-    breakdown = last_sub.breakdown if last_sub and last_sub.breakdown else {}
-    payment_rows = [
-        ['Description', 'Amount'],
-        ['Course Tuition', f"${breakdown.get('tuition', float(course.price)):.2f}"],
-    ]
-    if breakdown.get('state_exam'):
-        payment_rows.append(['State Exam Fee', f"${breakdown['state_exam']:.2f}"])
-    if breakdown.get('tb_test'):
-        payment_rows.append(['TB Test', f"${breakdown['tb_test']:.2f}"])
-    if breakdown.get('background_check'):
-        payment_rows.append(['Background Check', f"${breakdown['background_check']:.2f}"])
-    if breakdown.get('processing_fee'):
-        payment_rows.append(['Processing Fee (3.7%)', f"${breakdown['processing_fee']:.2f}"])
-    payment_rows.append(['TOTAL CHARGED', f"${amount_due:.2f}"])
-    payment_rows.append(['AMOUNT PAID', f"${amount_paid:.2f}"])
-    payment_rows.append(['BALANCE DUE', f"${balance:.2f}"])
-
-    pay_table = Table(payment_rows, colWidths=[12*cm, 5*cm])
-    pay_style = [
-        ('BACKGROUND', (0,0), (-1,0), navy),
-        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0,0), (-1,-1), 10),
-        ('ALIGN', (1,0), (1,-1), 'RIGHT'),
-        ('ROWBACKGROUNDS', (0,1), (-1,-4), [colors.HexColor('#f8fafc'), colors.white]),
-        ('PADDING', (0,0), (-1,-1), 8),
-        ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor('#e2e8f0')),
-        ('FONTNAME', (0,-3), (-1,-1), 'Helvetica-Bold'),
-        ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor('#f0fdf4') if balance <= 0 else colors.HexColor('#fee2e2')),
-        ('TEXTCOLOR', (1,-1), (1,-1), green if balance <= 0 else red),
-    ]
-    pay_table.setStyle(TableStyle(pay_style))
-    elements.append(pay_table)
-    elements.append(Spacer(1, 0.5*cm))
-
-    # Status badge
-    status_text = '✓ FULLY PAID' if balance <= 0 else f'⚠ BALANCE OUTSTANDING: ${balance:.2f}'
-    status_color = green if balance <= 0 else red
-    status_style = ParagraphStyle('status', fontSize=12, fontName='Helvetica-Bold',
-        textColor=status_color, alignment=TA_CENTER, spaceAfter=8)
-    elements.append(Paragraph(status_text, status_style))
-
-    # Verify note
-    verify_style = ParagraphStyle('verify', fontSize=8, fontName='Helvetica',
-        textColor=gray, alignment=TA_CENTER, spaceAfter=4)
-    elements.append(Paragraph(
-        f'Verify this receipt at: glorynursingok.com/lms/verify/{receipt_code}/', verify_style))
-    elements.append(Paragraph(
-        'This is an official receipt issued by Glory Nursing Healthcare Training School. '
-        'Scan the QR code or visit the verification URL to confirm authenticity.',
-        verify_style))
-
-    # Watermark function
-    def add_watermark(canvas, doc):
-        canvas.saveState()
-        canvas.setFont('Helvetica-Bold', 60)
-        canvas.setFillColor(colors.HexColor('#16213e'))
-        canvas.setFillAlpha(0.04)
-        canvas.translate(A4[0]/2, A4[1]/2)
-        canvas.rotate(45)
-        canvas.drawCentredString(0, 0, 'GLORY NURSING')
-        canvas.restoreState()
-
-    doc.build(elements, onFirstPage=add_watermark, onLaterPages=add_watermark)
-    buffer.seek(0)
-
-    response = HttpResponse(buffer, content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="Receipt_{receipt_code}.pdf"'
-    return response
-
-
-@login_required(login_url='lms_login')
-def final_exam(request, course_id):
-    course = get_object_or_404(Course, id=course_id)
-    if not request.user.is_staff:
-        enrollment = get_object_or_404(Enrollment, course=course, student=request.user)
-
-    # Check payment
-    if not request.user.is_staff:
-        has_paid = Subscription.objects.filter(student=request.user, status='active').exists()
-        if not has_paid:
-            return redirect('enroll_page', course_id=course_id)
-
-    # Get final exam quiz
-    quiz = Quiz.objects.filter(lesson__module__course=course, is_final_exam=True).first()
-    if not quiz:
-        messages.warning(request, 'No final exam configured for this course.')
-        return redirect('course_classroom', course_id=course_id)
-
-    # Check if all lessons completed
-    total_lessons = Lesson.objects.filter(module__course=course).exclude(
-        quiz__is_final_exam=True).count()
-    completed = LessonProgress.objects.filter(
-        student=request.user, lesson__module__course=course, is_completed=True).count()
-    can_take = request.user.is_staff or completed >= total_lessons
-
-    questions = quiz.questions.all().order_by('?')  # randomize
-    processed = []
-    for q in questions:
-        opts = []
-        if q.option_a: opts.append(('A', q.option_a))
-        if q.option_b: opts.append(('B', q.option_b))
-        if q.option_c: opts.append(('C', q.option_c))
-        if q.option_d: opts.append(('D', q.option_d))
-        processed.append({'id': q.id, 'text': q.text, 'options': opts})
-
-    return render(request, 'lms/final_exam.html', {
-        'course': course,
-        'quiz': quiz,
-        'questions': processed,
-        'can_take': can_take,
-        'completed': completed,
-        'total_lessons': total_lessons,
-    })
-
-
-@login_required(login_url='lms_login')
-def download_application(request, journey_id):
-    if not request.user.is_staff:
-        return redirect('lms_dashboard')
-    from lms.models import StudentJourney
-    from django.http import HttpResponse
-    import os
-    journey = get_object_or_404(StudentJourney, id=journey_id)
-    pdf_file = journey.metadata.get('pdf_file')
-    if pdf_file:
-        pdf_path = f'/var/www/glorynursing/media/applications/{pdf_file}'
-        if os.path.exists(pdf_path):
-            with open(pdf_path, 'rb') as f:
-                response = HttpResponse(f.read(), content_type='application/pdf')
-                response['Content-Disposition'] = f'inline; filename="{pdf_file}"'
-                return response
-    # Fallback: generate summary PDF
-    import io
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import colors
-    from reportlab.lib.units import cm
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.enums import TA_CENTER
-    meta = journey.metadata
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4,
-        rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
-    styles = getSampleStyleSheet()
-    navy = colors.HexColor('#16213e')
-    elements = []
-    title_style = ParagraphStyle('title', fontSize=16, fontName='Helvetica-Bold',
-        textColor=navy, alignment=TA_CENTER, spaceAfter=4)
-    sub_style = ParagraphStyle('sub', fontSize=9, fontName='Helvetica',
-        textColor=colors.HexColor('#64748b'), alignment=TA_CENTER, spaceAfter=16)
-    elements.append(Paragraph('GLORY NURSING HEALTHCARE TRAINING SCHOOL', title_style))
-    elements.append(Paragraph('Application Submission Summary', sub_style))
-    fields = [
-        ['Field', 'Value'],
-        ['Full Name', meta.get('full_name', '—')],
-        ['Email', meta.get('email', journey.student_email)],
-        ['Phone', meta.get('phone', '—')],
-        ['Date of Birth', meta.get('dob', '—')],
-        ['Address', f"{meta.get('street', '')} {meta.get('city', '')} {meta.get('state', '')} {meta.get('zip', '')}".strip()],
-        ['Course Applied', meta.get('course_applied', journey.program or '—')],
-        ['How Heard', meta.get('how_heard', '—')],
-        ['Submitted', meta.get('submitted_at', str(journey.updated_at))[:19]],
-    ]
-    table = Table(fields, colWidths=[5*cm, 12*cm])
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), navy),
-        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0,0), (-1,-1), 10),
-        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.HexColor('#f8fafc'), colors.white]),
-        ('PADDING', (0,0), (-1,-1), 8),
-        ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor('#e2e8f0')),
-    ]))
-    elements.append(table)
-    doc.build(elements)
-    buffer.seek(0)
-    name = meta.get('full_name', journey.student_email).replace(' ', '_')
-    response = HttpResponse(buffer, content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="Application_{name}.pdf"'
-    return response
-
-
-def verify_receipt(request, receipt_code):
-    from lms.models import Subscription
-    sub = Subscription.objects.filter(receipt_code=receipt_code).select_related('student').first()
-    if not sub:
-        return render(request, 'lms/verify_receipt.html', {'valid': False, 'code': receipt_code})
-    return render(request, 'lms/verify_receipt.html', {
-        'valid': True,
-        'code': receipt_code,
-        'student': sub.student.get_full_name(),
-        'program': sub.tier_name,
-        'amount': sub.amount_paid,
-        'date': sub.started_at,
-        'status': sub.status,
-    })
-
-
-@login_required(login_url='lms_login')
-def student_receipt(request, student_id, course_id):
-    if not request.user.is_staff:
-        return redirect('lms_dashboard')
-    from django.contrib.auth.models import User as AuthUser
-    student = get_object_or_404(AuthUser, id=student_id)
-    course = get_object_or_404(Course, id=course_id)
-    subs = Subscription.objects.filter(student=student)
-    amount_paid = float(sum(s.amount_paid for s in subs))
-    # Use total charged (including fees) as amount due if breakdown exists
-    last_sub = subs.order_by('-started_at').first()
-    if last_sub and last_sub.breakdown and last_sub.breakdown.get('total'):
-        amount_due = float(last_sub.breakdown['total'])
-    else:
-        amount_due = float(course.price)
-    balance = amount_due - amount_paid
-    context = {
-        'student': student,
-        'course': course,
-        'amount_paid': amount_paid,
-        'amount_due': amount_due,
-        'balance': balance,
-        'payments': subs,
-    }
-    # Generate PDF if requested
-    if request.GET.get('pdf'):
-        return generate_receipt_pdf(student, course, subs, amount_paid, amount_due, balance)
-    return render(request, 'lms/student_receipt.html', context)
-
-
-def generate_receipt_pdf(student, course, subs, amount_paid, amount_due, balance):
-    import io
-    import secrets
-    import qrcode
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import colors
-    from reportlab.lib.units import cm
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
-    from django.http import HttpResponse
-
-    # Get or create receipt code
-    last_sub = subs.order_by('-started_at').first()
-    if last_sub and not last_sub.receipt_code:
-        last_sub.receipt_code = 'GN-' + secrets.token_hex(6).upper()
-        last_sub.save()
-    receipt_code = last_sub.receipt_code if last_sub else 'GN-UNKNOWN'
-
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4,
-        rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
-
-    styles = getSampleStyleSheet()
-    navy = colors.HexColor('#16213e')
-    green = colors.HexColor('#059669')
-    gray = colors.HexColor('#64748b')
-    red = colors.HexColor('#dc2626')
-
-    elements = []
-
-    # Header
-    header_style = ParagraphStyle('header', fontSize=18, fontName='Helvetica-Bold',
-        textColor=colors.white, alignment=TA_CENTER, spaceAfter=4)
-    sub_style = ParagraphStyle('sub', fontSize=9, fontName='Helvetica',
-        textColor=colors.HexColor('#94a3b8'), alignment=TA_CENTER)
-
-    # Header table with navy background
-    header_data = [[
-        Paragraph('GLORY NURSING HEALTHCARE TRAINING SCHOOL', header_style),
-    ], [
-        Paragraph('12032 N. Pennsylvania Ave, Oklahoma City, OK 73120 | (405) 968-5004 | glorynursing@yahoo.com', sub_style),
-    ]]
-    header_table = Table(header_data, colWidths=[17*cm])
-    header_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), navy),
-        ('PADDING', (0,0), (-1,-1), 14),
-        ('BOTTOMPADDING', (0,1), (-1,1), 16),
-    ]))
-    elements.append(header_table)
-    elements.append(Spacer(1, 0.5*cm))
-
-    # Receipt title
-    title_style = ParagraphStyle('title', fontSize=14, fontName='Helvetica-Bold',
-        textColor=navy, alignment=TA_CENTER, spaceAfter=4)
-    code_style = ParagraphStyle('code', fontSize=10, fontName='Helvetica',
-        textColor=gray, alignment=TA_CENTER, spaceAfter=12)
-    elements.append(Paragraph('OFFICIAL PAYMENT RECEIPT', title_style))
-    elements.append(Paragraph(f'Receipt No: {receipt_code}', code_style))
-
-    # QR Code
-    verify_url = f'https://glorynursingok.com/lms/verify/{receipt_code}/'
-    qr = qrcode.QRCode(version=1, box_size=4, border=2)
-    qr.add_data(verify_url)
-    qr.make(fit=True)
-    qr_img = qr.make_image(fill_color='black', back_color='white')
-    qr_buffer = io.BytesIO()
-    qr_img.save(qr_buffer, format='PNG')
-    qr_buffer.seek(0)
-    qr_image = Image(qr_buffer, width=3*cm, height=3*cm)
-
-    # Student info + QR side by side
-    info_style = ParagraphStyle('info', fontSize=10, fontName='Helvetica', spaceAfter=4)
-    bold_style = ParagraphStyle('bold', fontSize=10, fontName='Helvetica-Bold', spaceAfter=4)
-
-    from datetime import datetime
-    info_data = [
-        [Paragraph('<b>Student Name:</b>', info_style), Paragraph(student.get_full_name(), bold_style), '', qr_image],
-        [Paragraph('<b>Email:</b>', info_style), Paragraph(student.email, info_style), '', ''],
-        [Paragraph('<b>Program:</b>', info_style), Paragraph(course.title, info_style), '', ''],
-        [Paragraph('<b>Date:</b>', info_style), Paragraph(last_sub.started_at.strftime('%B %d, %Y') if last_sub else '', info_style), '', ''],
-        [Paragraph('<b>Receipt Code:</b>', info_style), Paragraph(receipt_code, bold_style), '', ''],
-    ]
-    info_table = Table(info_data, colWidths=[4*cm, 9*cm, 0.5*cm, 3.5*cm])
-    info_table.setStyle(TableStyle([
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('SPAN', (3,0), (3,4)),
-        ('ALIGN', (3,0), (3,4), 'CENTER'),
-        ('ROWBACKGROUNDS', (0,0), (1,-1), [colors.HexColor('#f8fafc'), colors.white]),
-        ('PADDING', (0,0), (-1,-1), 6),
-        ('LINEBELOW', (0,-1), (1,-1), 0.5, colors.HexColor('#e2e8f0')),
-    ]))
-    elements.append(info_table)
-    elements.append(Spacer(1, 0.5*cm))
-
-    # Payment summary
-    elements.append(Paragraph('PAYMENT SUMMARY', ParagraphStyle('section',
-        fontSize=10, fontName='Helvetica-Bold', textColor=gray,
-        spaceAfter=8, spaceBefore=8)))
-
-    breakdown = last_sub.breakdown if last_sub and last_sub.breakdown else {}
-    payment_rows = [
-        ['Description', 'Amount'],
-        ['Course Tuition', f"${breakdown.get('tuition', float(course.price)):.2f}"],
-    ]
-    if breakdown.get('state_exam'):
-        payment_rows.append(['State Exam Fee', f"${breakdown['state_exam']:.2f}"])
-    if breakdown.get('tb_test'):
-        payment_rows.append(['TB Test', f"${breakdown['tb_test']:.2f}"])
-    if breakdown.get('background_check'):
-        payment_rows.append(['Background Check', f"${breakdown['background_check']:.2f}"])
-    if breakdown.get('processing_fee'):
-        payment_rows.append(['Processing Fee (3.7%)', f"${breakdown['processing_fee']:.2f}"])
-    payment_rows.append(['TOTAL CHARGED', f"${amount_due:.2f}"])
-    payment_rows.append(['AMOUNT PAID', f"${amount_paid:.2f}"])
-    payment_rows.append(['BALANCE DUE', f"${balance:.2f}"])
-
-    pay_table = Table(payment_rows, colWidths=[12*cm, 5*cm])
-    pay_style = [
-        ('BACKGROUND', (0,0), (-1,0), navy),
-        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0,0), (-1,-1), 10),
-        ('ALIGN', (1,0), (1,-1), 'RIGHT'),
-        ('ROWBACKGROUNDS', (0,1), (-1,-4), [colors.HexColor('#f8fafc'), colors.white]),
-        ('PADDING', (0,0), (-1,-1), 8),
-        ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor('#e2e8f0')),
-        ('FONTNAME', (0,-3), (-1,-1), 'Helvetica-Bold'),
-        ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor('#f0fdf4') if balance <= 0 else colors.HexColor('#fee2e2')),
-        ('TEXTCOLOR', (1,-1), (1,-1), green if balance <= 0 else red),
-    ]
-    pay_table.setStyle(TableStyle(pay_style))
-    elements.append(pay_table)
-    elements.append(Spacer(1, 0.5*cm))
-
-    # Status badge
-    status_text = '✓ FULLY PAID' if balance <= 0 else f'⚠ BALANCE OUTSTANDING: ${balance:.2f}'
-    status_color = green if balance <= 0 else red
-    status_style = ParagraphStyle('status', fontSize=12, fontName='Helvetica-Bold',
-        textColor=status_color, alignment=TA_CENTER, spaceAfter=8)
-    elements.append(Paragraph(status_text, status_style))
-
-    # Verify note
-    verify_style = ParagraphStyle('verify', fontSize=8, fontName='Helvetica',
-        textColor=gray, alignment=TA_CENTER, spaceAfter=4)
-    elements.append(Paragraph(
-        f'Verify this receipt at: glorynursingok.com/lms/verify/{receipt_code}/', verify_style))
-    elements.append(Paragraph(
-        'This is an official receipt issued by Glory Nursing Healthcare Training School. '
-        'Scan the QR code or visit the verification URL to confirm authenticity.',
-        verify_style))
-
-    # Watermark function
-    def add_watermark(canvas, doc):
-        canvas.saveState()
-        canvas.setFont('Helvetica-Bold', 60)
-        canvas.setFillColor(colors.HexColor('#16213e'))
-        canvas.setFillAlpha(0.04)
-        canvas.translate(A4[0]/2, A4[1]/2)
-        canvas.rotate(45)
-        canvas.drawCentredString(0, 0, 'GLORY NURSING')
-        canvas.restoreState()
-
-    doc.build(elements, onFirstPage=add_watermark, onLaterPages=add_watermark)
-    buffer.seek(0)
-
-    response = HttpResponse(buffer, content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="Receipt_{receipt_code}.pdf"'
-    return response
-
-
-def generic_payment(request):
-    """Generic payment page — collect name, email, amount, reason and process payment."""
-    from dotenv import load_dotenv
-    load_dotenv()
+def contact(request):
     if request.method == 'POST':
-        import uuid
-        nonce = request.POST.get('nonce', '').strip()
-        first_name = request.POST.get('first_name', '').strip()
-        last_name = request.POST.get('last_name', '').strip()
-        email = request.POST.get('email', '').strip()
-        phone = request.POST.get('phone', '').strip()
-        amount_str = request.POST.get('amount', '0').strip()
-        reason = request.POST.get('reason', '').strip()
-
-        if not all([nonce, first_name, email, amount_str, reason]):
-            messages.error(request, 'Please fill in all required fields.')
-            return redirect('generic_payment')
-
+        name = request.POST.get('name', '')
+        email = request.POST.get('email', '')
+        phone = request.POST.get('phone', '')
+        subject = request.POST.get('subject', 'Contact Form Message')
+        message = request.POST.get('message', '')
         try:
-            amount = int(float(amount_str) * 100)
-            if amount < 100:
-                messages.error(request, 'Minimum payment is $1.00.')
-                return redirect('generic_payment')
-        except ValueError:
-            messages.error(request, 'Invalid amount.')
-            return redirect('generic_payment')
+            from django.core.mail import send_mail
+            send_mail(
+                subject=f'Contact Form: {subject} — {name}',
+                message=f"""New message from the Glory Nursing contact form.
 
-        try:
-            from square import Square
-            from square.environment import SquareEnvironment
-            env = os.environ.get('SQUARE_ENVIRONMENT', 'sandbox')
-            sq_env = SquareEnvironment.SANDBOX if env == 'sandbox' else SquareEnvironment.PRODUCTION
-            client = Square(token=os.environ.get('SQUARE_ACCESS_TOKEN'), environment=sq_env)
-
-            result = client.payments.create(
-                source_id=nonce,
-                idempotency_key=str(uuid.uuid4()),
-                amount_money={'amount': amount, 'currency': 'USD'},
-                location_id=os.environ.get('SQUARE_LOCATION_ID'),
-                buyer_email_address=email,
-                note=f"Payment from {first_name} {last_name} — {reason}",
-            )
-
-            payment = getattr(result, 'payment', None)
-            success = (payment and hasattr(payment, 'id')) or (not (hasattr(result, 'errors') and result.errors))
-
-            if success:
-                # Send confirmation email to payer
-                try:
-                    from django.core.mail import EmailMessage
-                    EmailMessage(
-                        subject='Payment Received — Glory Nursing',
-                        body=f"""Hi {first_name},
-
-Your payment of ${float(amount_str):.2f} has been received successfully.
-
-Payment Details:
-- Name: {first_name} {last_name}
-- Email: {email}
-- Amount: ${float(amount_str):.2f}
-- Reason: {reason}
-
-Thank you for your payment. If you have any questions, contact us at glorynursing@yahoo.com or (405) 968-5004.
-
-Glory Nursing Healthcare Training School""",
-                        from_email=None,
-                        to=[email],
-                    ).send()
-                    EmailMessage(
-                        subject=f'New Payment Received — {first_name} {last_name}',
-                        body=f"""A payment has been received through the Glory Nursing website.
-
-Name: {first_name} {last_name}
+Name: {name}
 Email: {email}
 Phone: {phone}
-Amount: ${float(amount_str):.2f}
-Reason: {reason}
+Subject: {subject}
+
+Message:
+{message}
 
 Glory Nursing Online Portal""",
-                        from_email=None,
-                        to=['glorynursing@yahoo.com'],
-                    ).send()
-                except Exception as e:
-                    print(f"Email error: {e}")
-
-                messages.success(request, f'Payment of ${float(amount_str):.2f} received successfully! A confirmation has been sent to {email}.')
-                return redirect('generic_payment_success')
-            else:
-                errors = getattr(result, 'errors', [])
-                error_msg = errors[0].detail if errors else 'Payment failed. Please try again.'
-                messages.error(request, error_msg)
-                return redirect('generic_payment')
-
-        except Exception as e:
-            messages.error(request, f'Payment error: {str(e)}')
-            return redirect('generic_payment')
-
-    context = {
-        'square_app_id': os.environ.get('SQUARE_APP_ID', ''),
-        'location_id': os.environ.get('SQUARE_LOCATION_ID', ''),
-        'square_env': os.environ.get('SQUARE_ENVIRONMENT', 'sandbox'),
-        'prefill_reason': request.GET.get('reason', ''),
-        'prefill_name': request.GET.get('name', ''),
-        'prefill_email': request.GET.get('email', ''),
-        'prefill_amount': request.GET.get('amount', ''),
-        'prefill_first': request.GET.get('name', '').split(' ')[0],
-        'prefill_last': ' '.join(request.GET.get('name', '').split(' ')[1:]),
-    }
-    return render(request, 'lms/generic_payment.html', context)
-
-
-def generic_payment_success(request):
-    return render(request, 'lms/generic_payment_success.html')
-
-
-def enroll_page(request, course_id):
-    """Public enrollment page — student enters details and pays."""
-    # Allow logged-in students with existing enrollment to proceed directly
-    if not request.session.get('application_submitted'):
-        if request.user.is_authenticated and not request.user.is_staff:
-            # Check if student has a pending enrollment for this course
-            if Enrollment.objects.filter(student=request.user, course_id=course_id).exists():
-                pass  # Allow through
-            else:
-                messages.warning(request, 'Please submit your application form first.')
-                return redirect('programs')
-        elif not request.user.is_authenticated:
-            messages.warning(request, 'Please log in to complete your enrollment.')
-            return redirect('lms_login')
-    from dotenv import load_dotenv
-    load_dotenv()
-    course = get_object_or_404(Course, id=course_id, is_published=True)
-    # Track journey: payment page visited
-    if request.user.is_authenticated and not request.user.is_staff:
-        try:
-            from lms.models import StudentJourney
-            StudentJourney.objects.update_or_create(
-                student_email=request.user.email,
-                stage='payment_page',
-                defaults={'program': course.title, 'metadata': {'course_id': course.id}}
+                from_email=None,
+                recipient_list=['glorynursing@yahoo.com'],
+                fail_silently=True,
             )
         except Exception:
             pass
-
-    context = {
-        'course': course,
-        'square_app_id': os.environ.get('SQUARE_APP_ID', ''),
-        'location_id': os.environ.get('SQUARE_LOCATION_ID', ''),
-        'square_env': os.environ.get('SQUARE_ENVIRONMENT', 'sandbox'),
-    }
-    return render(request, 'lms/enroll.html', context)
+        messages.success(request, 'Thank you! Your message has been received. We will contact you shortly.')
+    return render(request, 'core/contact.html', {'page': 'contact'})
 
 
-def process_payment(request, course_id):
-    """Processes Square payment, creates account, enrolls student."""
+def apply(request):
+    if request.method == 'POST':
+        messages.success(request, 'Application submitted! Our admissions team will reach out within 1–2 business days.')
+    programs = Program.objects.filter(is_active=True)
+    return render(request, 'core/apply.html', {'page': 'apply', 'programs': programs})
+
+
+
+def admissions(request):
+    programs = Program.objects.filter(is_active=True)
+
+    return render(request, 'core/admissions.html', {
+        'page': 'admissions',
+        'programs': programs,
+    })
+
+
+def admissions_tuition(request):
+    programs = Program.objects.filter(is_active=True)
+
+    return render(request, 'core/admissions_tuition.html', {
+        'page': 'admissions',
+        'programs': programs,
+    })
+ 
+def admissions_financial_aid(request):
+    """Financial Aid subpage."""
+    return render(request, 'core/admissions_financial_aid.html', {
+        'page': 'admissions',
+    })
+ 
+ 
+def admissions_requirements(request):
+    """Requirements subpage."""
+    return render(request, 'core/admissions_requirements.html', {
+        'page': 'admissions',
+    })
+ 
+ 
+def admissions_faq(request):
+    """FAQ subpage."""
+    return render(request, 'core/admissions_faq.html', {
+        'page': 'admissions',
+    })
+ 
+ 
+
+def about_mission(request):
+    return render(request, 'core/about/mission.html', {'page': 'about', 'about_page': 'mission'})
+ 
+ 
+def about_team(request):
+    return render(request, 'core/about/team.html', {'page': 'about', 'about_page': 'team'})
+ 
+ 
+def about_accreditations(request):
+    return render(request, 'core/about/accreditations.html', {'page': 'about', 'about_page': 'accreditations'})
+ 
+ 
+def about_careers(request):
+    if request.method == 'POST':
+        messages.success(request, 'Thank you for your interest! We will be in touch soon.')
+    return render(request, 'core/about/careers.html', {'page': 'about', 'about_page': 'careers'})
+ 
+ 
+
+
+
+
+
+
+
+
+
+# ── Add these imports at the top of views.py ──────────────────────────────────
+from django.http import HttpResponse
+from .pdf_prefill import prefill_cna_pdf, prefill_cma_pdf
+
+
+# ── Replace apply_cna with this ───────────────────────────────────────────────
+def apply_cna(request):
+    from lms.models import Course as LMSCourse
+    from core.models import Program as CoreProgram
+    program_slug = request.GET.get('program', '') or request.session.get('apply_program_slug', '')
+    if request.GET.get('program'):
+        request.session['apply_program_slug'] = request.GET.get('program')
+    selected_program = None
+    program_course = None
+    cna_slugs = ['cna', 'cna-day-class', 'cna-evening-class', 'weekend-certified-nursing-assistant-class', 'onlinehybrid-certified-nursing-assistant']
+    if program_slug and program_slug not in cna_slugs:
+        selected_program = CoreProgram.objects.filter(slug=program_slug, is_active=True).first()
+        if selected_program and selected_program.course:
+            program_course = selected_program.course
+    if program_course:
+        request.session['apply_enroll_id'] = program_course.id
+    elif not program_slug or program_slug in cna_slugs:
+        request.session.pop('apply_enroll_id', None)
+    cna_courses = LMSCourse.objects.filter(program__icontains='CNA', is_published=True).exclude(program__icontains='HHA').order_by('price')
+    if request.method == 'POST':
+        # Collect all form data into session so the download view can use it
+        data = {
+            'last_name':                request.POST.get('last_name', ''),
+            'first_name':               request.POST.get('first_name', ''),
+            'middle_initial':           request.POST.get('middle_initial', ''),
+            'dob':                      request.POST.get('dob', ''),
+            'ssn':                      request.POST.get('ssn', ''),
+            'phone':                    request.POST.get('phone', ''),
+            'email':                    request.POST.get('email', ''),
+            'street':                   request.POST.get('street', ''),
+            'apt':                      request.POST.get('apt', ''),
+            'city':                     request.POST.get('city', ''),
+            'state':                    request.POST.get('state', 'OK'),
+            'zip':                      request.POST.get('zip', ''),
+            'schedule':                 request.POST.get('schedule', ''),
+            'referral':                 request.POST.get('referral', ''),
+            'emergency_name':           request.POST.get('emergency_name', ''),
+            'emergency_phone':          request.POST.get('emergency_phone', ''),
+            'emergency_relationship':   request.POST.get('emergency_relationship', ''),
+            'emergency_address':        request.POST.get('emergency_address', ''),
+            'hs_name':                  request.POST.get('hs_name', ''),
+            'hs_address':               request.POST.get('hs_address', ''),
+            'hs_from':                  request.POST.get('hs_from', ''),
+            'hs_to':                    request.POST.get('hs_to', ''),
+            'hs_graduated':             request.POST.get('hs_graduated', ''),
+            'hs_diploma':               request.POST.get('hs_diploma', ''),
+            'college_name':             request.POST.get('college_name', ''),
+            'college_address':          request.POST.get('college_address', ''),
+            'college_from':             request.POST.get('college_from', ''),
+            'college_to':               request.POST.get('college_to', ''),
+            'college_graduated':        request.POST.get('college_graduated', ''),
+            'college_degree':           request.POST.get('college_degree', ''),
+            'background_check':         request.POST.get('background_check', ''),
+            'lawful_presence':          request.POST.get('lawful_presence', ''),
+            'alien_number':             request.POST.get('alien_number', ''),
+            'photo_release':            request.POST.get('photo_release', ''),
+            'notes':                    request.POST.get('notes', ''),
+            'signature_data':           request.POST.get('signature_data', ''),
+        }
+        request.session['cna_application_data'] = data
+        messages.success(request, '✅ CNA Application submitted! Your pre-filled documents are ready to download, sign, and return.')
+        return redirect('apply_cna')
+    return render(request, 'core/apply_cna.html', {'page': 'apply', 'cna_courses': cna_courses, 'selected_program': selected_program, 'program_course': program_course})
+
+
+def download_cna_pdf(request):
+    """Serve the pre-filled CNA application PDF."""
+    data = request.session.get('cna_application_data', {})
+    pdf_bytes = prefill_cna_pdf(data)
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    last = data.get('last_name', 'Application')
+    response['Content-Disposition'] = f'attachment; filename="CNA_Application_{last}.pdf"'
+    return response
+
+
+# ── Replace apply_cma with this ───────────────────────────────────────────────
+def apply_cma(request):
+    if request.method == 'POST':
+        data = {
+            'last_name':                request.POST.get('last_name', ''),
+            'first_name':               request.POST.get('first_name', ''),
+            'middle_initial':           request.POST.get('middle_initial', ''),
+            'dob':                      request.POST.get('dob', ''),
+            'ssn':                      request.POST.get('ssn', ''),
+            'phone':                    request.POST.get('phone', ''),
+            'email':                    request.POST.get('email', ''),
+            'street':                   request.POST.get('street', ''),
+            'apt':                      request.POST.get('apt', ''),
+            'city':                     request.POST.get('city', ''),
+            'state':                    request.POST.get('state', 'OK'),
+            'zip':                      request.POST.get('zip', ''),
+            'cna_cert_number':          request.POST.get('cna_cert_number', ''),
+            'cna_cert_expiry':          request.POST.get('cna_cert_expiry', ''),
+            'cna_months_experience':    request.POST.get('cna_months_experience', ''),
+            'cna_employer':             request.POST.get('cna_employer', ''),
+            'schedule':                 request.POST.get('schedule', ''),
+            'referral':                 request.POST.get('referral', ''),
+            'emergency_name':           request.POST.get('emergency_name', ''),
+            'emergency_phone':          request.POST.get('emergency_phone', ''),
+            'emergency_relationship':   request.POST.get('emergency_relationship', ''),
+            'emergency_address':        request.POST.get('emergency_address', ''),
+            'lawful_presence':          request.POST.get('lawful_presence', ''),
+            'alien_number':             request.POST.get('alien_number', ''),
+            'background_check':         request.POST.get('background_check', 'no'),
+            'photo_release':            request.POST.get('photo_release', ''),
+            'notes':                    request.POST.get('notes', ''),
+            'signature_data':           request.POST.get('signature_data', ''),
+        }
+        request.session['cma_application_data'] = data
+        messages.success(request, '✅ CMA Application submitted! Your pre-filled documents are ready to download, sign, and return.')
+        return redirect('apply_cma')
+    from lms.models import Course as LMSCourse
+    cma_courses = LMSCourse.objects.filter(program__icontains='CMA', is_published=True).order_by('price')
+    return render(request, 'core/apply_cma.html', {'page': 'apply', 'cma_courses': cma_courses})
+
+
+def download_cma_pdf(request):
+    """Serve the pre-filled CMA application PDF."""
+    data = request.session.get('cma_application_data', {})
+    pdf_bytes = prefill_cma_pdf(data)
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    last = data.get('last_name', 'Application')
+    response['Content-Disposition'] = f'attachment; filename="CMA_Application_{last}.pdf"'
+    return response
+
+import json
+import base64
+from django.views.decorators.csrf import csrf_exempt
+
+def _get_pdf_page_count(pdf_path):
+    from pypdf import PdfReader
+    return len(PdfReader(pdf_path).pages)
+
+def _render_page_as_base64(pdf_path, page_num, dpi=120):
+    from pdf2image import convert_from_path
+    imgs = convert_from_path(pdf_path, dpi=dpi, first_page=page_num, last_page=page_num)
+    buf = io.BytesIO()
+    imgs[0].save(buf, format='PNG')
+    return base64.b64encode(buf.getvalue()).decode(), imgs[0].size
+
+def fill_pdf_cna(request):
+    import os
+    pdf_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            'static', 'core', 'documents', 'CNA_app.pdf')
+    from pypdf import PdfReader
+    page_count = len(PdfReader(pdf_path).pages)
+    enroll_id = request.session.get('apply_enroll_id', 1)
+    back_url = f'/apply/cna/?program={program_slug}' if program_slug else '/apply/cna/'
+    return render(request, 'core/fill_pdf.html', {
+        'pdf_name': 'CNA',
+        'page_count': page_count,
+        'render_url': '/apply/cna/render-page/',
+        'save_url': '/apply/cna/save/',
+        'back_url': back_url,
+        'enroll_id': enroll_id,
+    })
+
+
+
+@csrf_exempt
+def save_form_progress(request):
+    import json
+    from django.http import JsonResponse
+    from lms.models import StudentJourney
     if request.method != 'POST':
-        return redirect('enroll_page', course_id=course_id)
+        return JsonResponse({'ok': False})
+    try:
+        data = json.loads(request.body)
+        email = data.get('student_email', '').strip()
+        if not email:
+            return JsonResponse({'ok': False})
+        section = int(data.get('_section', 0))
+        section_names = {
+            0: 'Email Entry', 1: 'Personal Info', 2: 'Emergency Contact',
+            3: 'Education', 4: 'Affidavit of Lawful Presence',
+            5: 'Clinical Tasks', 6: 'Media Release',
+            7: 'Background Check', 8: 'Grievance Policy',
+            9: 'NAR Rules', 10: 'Final Signature'
+        }
+        StudentJourney.objects.update_or_create(
+            student_email=email,
+            stage='form_started',
+            defaults={
+                'program': data.get('course_applied', ''),
+                'metadata': {
+                    'section': section,
+                    'section_name': section_names.get(section, f'Section {section}'),
+                    'first_name': data.get('first_name', ''),
+                    'last_name': data.get('last_name', ''),
+                    'total_sections': 11,
+                    'percent': round((section / 11) * 100),
+                }
+            }
+        )
+        return JsonResponse({'ok': True})
+    except Exception as e:
+        print(f"save_form_progress error: {e}")
+        return JsonResponse({'ok': False})
 
-    course = get_object_or_404(Course, id=course_id)
-    nonce = request.POST.get('nonce')
-    first_name = request.POST.get('first_name', '').strip()
-    last_name = request.POST.get('last_name', '').strip()
-    email = request.POST.get('email', '').strip()
-    phone = request.POST.get('phone', '').strip()
+def fill_form_cna(request):
+    from lms.models import Course as LMSCourse
+    from core.models import Program as CoreProgram
+    enroll_id = request.session.get('apply_enroll_id', 1)
+    program_slug = request.GET.get('program', '') or request.session.get('apply_program_slug', '')
+    back_url = f'/apply/cna/?program={program_slug}' if program_slug else '/apply/cna/'
+    
+    # Get the specific program they're applying for
+    selected_program = CoreProgram.objects.filter(slug=program_slug).first() if program_slug else None
+    
+    # If physical program, pre-select its title; if online, show dropdown
+    if selected_program and not selected_program.is_online:
+        # Physical program - use program title as course_applied
+        cna_courses = [type('obj', (object,), {'title': selected_program.title, 'id': 0})]
+        preselected_course = selected_program.title
+    else:
+        cna_courses = LMSCourse.objects.filter(program__icontains='CNA', is_published=True).exclude(program__icontains='HHA').order_by('price')
+        preselected_course = cna_courses.first().title if cna_courses.exists() else ''
+    # Get upcoming schedules for this program
+    from core.models import ClassSchedule
+    from django.utils import timezone as tz3
+    cna_upcoming = []
+    if selected_program:
+        cna_upcoming = list(ClassSchedule.objects.filter(
+            program=selected_program,
+            start_date__gte=tz3.now().date(),
+            is_active=True
+        ).order_by('start_date').values('start_date', 'days', 'start_time')[:3])
+        # Convert dates to strings for JSON
+        for s in cna_upcoming:
+            s['start_date'] = str(s['start_date'])
+            s['start_time'] = str(s['start_time']) if s['start_time'] else ''
 
-    if not all([nonce, first_name, email]):
-        messages.error(request, "Please fill in all required fields.")
-        return redirect('enroll_page', course_id=course_id)
+    import json
+    return render(request, 'core/fill_form_cna.html', {
+        'enroll_id': enroll_id,
+        'back_url': back_url,
+        'cna_courses': cna_courses,
+        'selected_program': selected_program,
+        'preselected_course': preselected_course,
+        'cna_upcoming_json': json.dumps(cna_upcoming),
+    })
 
-    # Check if email already registered — allow if user is already logged in
-    if not request.user.is_authenticated and User.objects.filter(email=email).exists():
-        messages.error(request, "An account with this email already exists. Please log in.")
-        return redirect('lms_login')
+
+@csrf_exempt
+def submit_form_cna(request):
+    import json
+    import io
+    import base64
+    from django.http import JsonResponse
+    from django.core.mail import EmailMessage
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.units import inch
+    from reportlab.lib.colors import HexColor
+    from reportlab.pdfgen import canvas as rl_canvas
+    from reportlab.lib.utils import ImageReader
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=400)
 
     try:
-        from dotenv import load_dotenv
-        load_dotenv()
-        from square import Square
-        from square.environment import SquareEnvironment
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'error': 'Invalid data'}, status=400)
 
-        env = os.environ.get('SQUARE_ENVIRONMENT', 'sandbox')
-        sq_env = SquareEnvironment.SANDBOX if env == 'sandbox' else SquareEnvironment.PRODUCTION
+    print('DEBUG course_applied:', data.get('course_applied', 'MISSING'), 'program_price:', data.get('program_price', 'MISSING'))
+    student_email = data.get('student_email', '').strip()
+    if not student_email:
+        return JsonResponse({'error': 'Email is required'}, status=400)
 
-        client = Square(
-            token=os.environ.get('SQUARE_ACCESS_TOKEN'),
-            environment=sq_env
-        )
-        addon_total = float(request.POST.get("addon_total", 0) or 0)
-        pay_amount = float(request.POST.get("pay_amount", 0) or 0)
-        payment_plan = request.POST.get("payment_plan", "full")
-        # Use pay_amount if provided, otherwise fall back to full price + addon
-        if pay_amount > 0:
-            amount = int(pay_amount * 100)  # Convert to cents
-        else:
-            amount = int((float(course.price) + addon_total) * 100)
+    def get(key, default=''):
+        v = data.get(key, default)
+        return v if v else default
 
-        result = client.payments.create(
-            source_id=nonce,
-            idempotency_key=f"{email}-{course_id}-{random.randint(10000,99999)}",
-            amount_money={
-                'amount': amount,
-                'currency': 'USD'
-            },
-            location_id=os.environ.get('SQUARE_LOCATION_ID'),
-            buyer_email_address=email,
-            note=f"Enrollment: {course.title} - {first_name} {last_name}",
-        )
-
-        # New Square SDK returns response directly, check for payment object
-        payment = getattr(result, 'payment', None)
-        if payment and hasattr(payment, 'id'):
-            result_success = True
-        elif hasattr(result, 'errors') and result.errors:
-            result_success = False
-        else:
-            result_success = True
-
-        if result_success:
-            # Payment successful — create student account
-            username = email.split('@')[0] + str(random.randint(100, 999))
-            while User.objects.filter(username=username).exists():
-                username = email.split('@')[0] + str(random.randint(100, 999))
-
-            pwd = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
-            new_user = User.objects.create_user(
-                username=username,
-                email=email,
-                password=pwd,
-                first_name=first_name,
-                last_name=last_name
-            )
-
-            # Enroll in course
-            Enrollment.objects.create(student=new_user, course=course)
-
-            # Create subscription record
-            addon_exam = float(request.POST.get('addon_exam') or 0)
-            addon_tb = float(request.POST.get('addon_tb') or 0)
-            addon_bg = float(request.POST.get('addon_bg') or 0)
-            tuition = float(course.price)
-            subtotal = float(amount)/100 / 1.037  # Remove processing fee
-            proc_fee = float(amount)/100 - subtotal
-            Subscription.objects.create(
-                student=new_user,
-                tier_name=course.title,
-                amount_paid=float(amount)/100,
-                status='active',
-                breakdown={
-                    'tuition': tuition,
-                    'state_exam': addon_exam,
-                    'tb_test': addon_tb,
-                    'background_check': addon_bg,
-                    'processing_fee': round(proc_fee, 2),
-                    'total': float(amount)/100,
-                }
-            )
-
-            # Notify Glory Nursing of new enrollment
+    def draw_sig(c, key, x, y, w, h):
+        img_data = data.get(key, '')
+        if img_data and img_data.startswith('data:image'):
             try:
-                from django.core.mail import send_mail
-                send_mail(
-                    subject=f'New Enrollment: {first_name} {last_name} — {course.title}',
-                    message=f"""A new student has enrolled and paid through the website.
-
-Student Details:
-Name: {first_name} {last_name}
-Email: {email}
-Phone: {phone}
-Course: {course.title} ({course.program})
-Amount Paid: ${pay_amount if pay_amount > 0 else course.price} ({payment_plan} payment plan)
-Username: {username}
-
-Login to the admin dashboard to view their enrollment:
-https://glorynursingok.com/lms/dashboard/
-
-Glory Nursing Online Portal""",
-                    from_email=None,
-                    recipient_list=['glorynursing@yahoo.com'],
-                    fail_silently=True,
-                )
+                header, b64 = img_data.split(',', 1)
+                img_bytes = base64.b64decode(b64)
+                img_reader = ImageReader(io.BytesIO(img_bytes))
+                c.drawImage(img_reader, x, y, width=w, height=h, mask='auto')
             except Exception:
                 pass
 
-            # Send credentials email
-            try:
-                from django.core.mail import send_mail
-                send_mail(
-                    subject=f'Welcome to Glory Nursing — Your Login Credentials',
-                    message=f"""Hi {first_name},
+    import os as _os
+    from urllib.parse import quote as url_quote
+    full_name = f"{get('first_name')} {get('last_name')}".strip() or 'Applicant'
+    # Get program price for payment link
+    try:
+        program_price = data.get('program_price', '') or ''
+        if not program_price:
+            from core.models import Program as CoreProg
+            _slug = data.get('program_slug', '') or request.session.get('apply_program_slug', '')
+            _prog = CoreProg.objects.filter(slug=_slug).first() if _slug else None
+            if not _prog:
+                _ca = get('course_applied') or ''
+                _prog = CoreProg.objects.filter(title__icontains=_ca[:25]).first() if _ca else None
+            program_price = str(float(_prog.price)) if _prog and _prog.price else ''
+    except:
+        program_price = ''
+    # Fallback price from course name
+    if not program_price:
+        _ca = get('course_applied') or ''
+        if 'Evening' in _ca: program_price = '700'
+        elif 'Weekend' in _ca: program_price = '850'
+        elif 'HHA' in _ca: program_price = '200'
+        else: program_price = '600'
+    # Build safe payment URL
+    pay_reason = url_quote(get('course_applied') or 'CNA Program')
+    pay_name = url_quote(full_name)
+    pay_email = url_quote(student_email)
+    pay_amount = url_quote(str(program_price))
+    payment_link = f"https://glorynursingok.com/lms/pay/?name={pay_name}&email={pay_email}&reason={pay_reason}&amount={pay_amount}" 
+    buf = io.BytesIO()
+    c = rl_canvas.Canvas(buf, pagesize=letter)
+    width, height = letter
 
-Welcome to Glory Nursing Healthcare Training School!
+    logo_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'static', 'core', 'images', 'glorylogo.png')
 
-Your payment was successful. Here are your login details:
+    def header(title):
+        c.setFillColor(HexColor('#ffffff'))
+        c.rect(0, height - 75, width, 75, fill=1, stroke=0)
+        try:
+            if _os.path.exists(logo_path):
+                c.drawImage(logo_path, 40, height - 68, width=160, height=58, mask='auto', preserveAspectRatio=True)
+        except Exception:
+            pass
+        c.setFillColor(HexColor('#0f172a'))
+        c.setFont('Helvetica', 9)
+        c.drawRightString(width - 40, height - 22, '12032 N Pennsylvania Ave')
+        c.drawRightString(width - 40, height - 34, 'Oklahoma City, OK 73120')
+        c.drawRightString(width - 40, height - 46, 'Call/text: 405-968-5004')
+        c.drawRightString(width - 40, height - 58, 'Email: glorynursing@yahoo.com')
+        c.setStrokeColor(HexColor('#1a56db'))
+        c.setLineWidth(2)
+        c.line(40, height - 78, width - 40, height - 78)
+        c.setFillColor(HexColor('#0f172a'))
+        c.setFont('Helvetica-Bold', 14)
+        c.drawString(40, height - 100, title)
+        c.setStrokeColor(HexColor('#e2e8f0'))
+        c.setLineWidth(1)
+        c.line(40, height - 107, width - 40, height - 107)
 
-Course: {course.title}
-Username: {username}
-Password: {pwd}
+    def field_line(label, value, x, y, label_w=140):
+        c.setFont('Helvetica-Bold', 9)
+        c.setFillColor(HexColor('#475569'))
+        c.drawString(x, y, label)
+        c.setFont('Helvetica', 10)
+        c.setFillColor(HexColor('#0f172a'))
+        c.drawString(x + label_w, y, str(value))
 
-Login at: https://glorynursingok.com/lms/login/
+    def wrap_text(text, font='Helvetica', size=9.5, max_width=520):
+        from reportlab.pdfbase.pdfmetrics import stringWidth
+        lines = []
+        for paragraph in text.split('\n'):
+            if not paragraph.strip():
+                lines.append('')
+                continue
+            words = paragraph.split(' ')
+            cur = ''
+            for word in words:
+                test = (cur + ' ' + word).strip()
+                if stringWidth(test, font, size) <= max_width:
+                    cur = test
+                else:
+                    if cur:
+                        lines.append(cur)
+                    cur = word
+            if cur:
+                lines.append(cur)
+        return lines
 
-Please change your password after your first login.
+    def draw_paragraph(text, x, y, max_width=520, size=9.5, line_height=13):
+        lines = wrap_text(text, size=size, max_width=max_width)
+        c.setFont('Helvetica', size)
+        c.setFillColor(HexColor('#334155'))
+        for line in lines:
+            if y < 60:
+                c.showPage()
+                y = height - 50
+                c.setFont('Helvetica', size)
+                c.setFillColor(HexColor('#334155'))
+            c.drawString(x, y, line)
+            y -= line_height
+        return y
+
+    # PAGE 1 — Application Information
+    header('CNA Enrollment Application')
+    y = height - 130
+    field_line('Last Name:', get('last_name'), 40, y); field_line('First Name:', get('first_name'), 310, y)
+    y -= 22
+    field_line('M.I.:', get('middle_initial'), 40, y); field_line('Date of Birth:', get('dob'), 310, y)
+    y -= 22
+    field_line('SSN:', get('ssn'), 40, y); field_line('Phone:', get('phone'), 310, y)
+    y -= 22
+    field_line('Street Address:', get('street'), 40, y)
+    y -= 22
+    field_line('City:', get('city'), 40, y); field_line('State:', get('state'), 310, y)
+    y -= 22
+    field_line('Zip:', get('zip'), 40, y); field_line('How heard:', get('how_heard'), 310, y)
+    y -= 22
+    field_line('Course Applied For:', get('course_applied'), 40, y, label_w=150)
+    y -= 35
+
+    c.setFont('Helvetica-Bold', 12)
+    c.setFillColor(HexColor('#1a56db'))
+    c.drawString(40, y, 'Emergency Contact')
+    y -= 20
+    field_line('Contact Name:', get('emergency_name'), 40, y); field_line('Phone:', get('emergency_phone'), 310, y)
+    y -= 22
+    field_line('Address:', get('emergency_address'), 40, y); field_line('Relationship:', get('emergency_relationship'), 310, y)
+    y -= 35
+
+    c.setFont('Helvetica-Bold', 12)
+    c.setFillColor(HexColor('#1a56db'))
+    c.drawString(40, y, 'Education')
+    y -= 20
+    field_line('High School:', get('hs_name'), 40, y); field_line('Address:', get('hs_address'), 310, y)
+    y -= 22
+    field_line('Years:', f"{get('hs_from')} - {get('hs_to')}", 40, y)
+    field_line('Graduated:', get('hs_graduated'), 310, y)
+    y -= 22
+    field_line('Diploma/GED:', get('hs_diploma'), 40, y)
+    y -= 30
+    field_line('College/Other:', get('college_name'), 40, y); field_line('Address:', get('college_address'), 310, y)
+    y -= 22
+    field_line('Years:', f"{get('college_from')} - {get('college_to')}", 40, y)
+    field_line('Graduated:', get('college_graduated'), 310, y)
+    y -= 22
+    field_line('Degree:', get('degree'), 40, y)
+
+    c.showPage()
+
+    # PAGE 2 — Affidavit of Lawful Presence
+    header('Affidavit of Lawful Presence')
+    y = height - 130
+    presence = 'United States Citizen' if get('lawful_presence') == 'us_citizen' else 'Qualified Alien Lawfully Present'
+    field_line('Status:', presence, 40, y, label_w=110)
+    y -= 22
+    if get('alien_number'):
+        field_line('Alien/Admission #:', get('alien_number'), 40, y, label_w=150)
+    c.showPage()
+
+    # PAGE 3 — Clinical Tasks Policy
+    header('Authorized Tasks at Clinical Sites')
+    y = height - 125
+    clinical_text = '''As a student enrolled in the Certified Nursing Assistant (CNA) program, your education and safety, as well as the safety of patients, are of utmost importance. Therefore, students are only permitted to perform tasks and procedures at clinical sites that have been explicitly taught and practiced during classroom and lab training at Glory Nursing CNA School.
+
+Important Guidelines
+
+1. No Unapproved Tasks: Under no circumstances should you attempt or perform any clinical task or procedure that has not been covered in your coursework. This includes tasks that you may observe staff or other healthcare professionals performing. If you are asked to perform such tasks, respectfully inform the staff that it is outside your current scope of training.
+
+2. Supervised Tasks: All tasks performed at the clinical site must be done under the supervision of a qualified preceptor. This ensures both the correct application of skills and adherence to patient safety standards.
+
+3. Ask for Clarification: If you are ever unsure whether a task is within your scope of training, do not hesitate to ask your clinical instructor for clarification. It is better to seek confirmation than to risk patient safety or your own performance.
+
+4. Student Responsibility: Students are expected to always demonstrate professionalism and ethical responsibility. Engaging in unauthorized tasks could result in disciplinary action and may impact your standing in the program.
+
+Consequences of Non-Compliance
+
+Any student found performing unauthorized tasks will be subject to the following disciplinary actions:
+- Immediate suspension from the clinical site
+- Review of the incident by school administration
+- Possible removal from the CNA program
+
+Commitment to Safety and Learning
+
+The clinical experience is designed to complement your education and provide a safe learning environment for practical application. Adhering to the tasks you have been taught ensures that you develop skills progressively and in a manner that protects the well-being of all involved.
+
+Please remember that patient safety, as well as your professional integrity, depend on your adherence to these guidelines.'''
+    y = draw_paragraph(clinical_text, 40, y)
+    y -= 20
+    if y < 110:
+        c.showPage()
+        header('Authorized Tasks at Clinical Sites - Acknowledgment')
+        y = height - 130
+    c.setFont('Helvetica-Bold', 11)
+    c.setFillColor(HexColor('#1a56db'))
+    c.drawString(40, y, 'Acknowledgment of Policy')
+    y -= 18
+    field_line('Agreement:', 'I have read and agree to follow this policy.' if get('agree_clinical_tasks') else 'Not agreed', 40, y, label_w=110)
+    y -= 50
+    c.setFont('Helvetica-Bold', 9)
+    c.setFillColor(HexColor('#475569'))
+    c.drawString(40, y, 'Signature:')
+    draw_sig(c, 'sig_clinical_tasks', 40, y - 60, 220, 50)
+    c.showPage()
+
+    # PAGE 4 — Media Release
+    header('Photograph and Media Release Waiver')
+    y = height - 125
+    field_line('Student Name:', full_name_placeholder if False else f"{get('first_name')} {get('last_name')}", 40, y, label_w=110)
+    y -= 18
+    field_line('Date of Birth:', get('dob'), 40, y, label_w=110)
+    y -= 18
+    field_line('Phone Number:', get('phone'), 40, y, label_w=110)
+    y -= 18
+    field_line('Email:', student_email, 40, y, label_w=110)
+    y -= 25
+    media_text = '''As a student at Glory Nursing CNA School, I understand that photographs, videos, and other forms of media may be taken during my time at the school for educational, promotional, and marketing purposes. These images may be used in various formats including, but not limited to: websites and social media platforms (e.g., Facebook, Instagram), print and digital advertising materials, newsletters, brochures, and other promotional materials, and training materials and educational presentations.
+
+I Consent: I, the undersigned, grant permission to Glory Nursing CNA School to use photographs, video recordings, and/or other media that may include my image, voice, or likeness for the purposes outlined above. I understand that these images may be used without compensation and will remain the property of Glory Nursing CNA School.
+
+I Decline: I, the undersigned, do not grant permission to Glory Nursing CNA School to use photographs, video recordings, and/or other media that may include my image, voice, or likeness. I understand that if I decline, every effort will be made to exclude me from media content, and my decision will not affect my participation in school activities.
+
+I understand that:
+1. My participation is voluntary, and I may revoke or modify this consent at any time by providing written notice to the school.
+2. My personal information (e.g., name, contact details) will not be disclosed in the use of such materials unless explicitly permitted by me.'''
+    y = draw_paragraph(media_text, 40, y)
+    y -= 15
+    if y < 110:
+        c.showPage()
+        header('Photograph and Media Release Waiver (continued)')
+        y = height - 130
+    consent_label = 'I Consent' if get('media_consent') == 'Yes' else ('I Decline' if get('media_consent') == 'No' else 'Not specified')
+    field_line('Selection:', consent_label, 40, y, label_w=110)
+    y -= 50
+    c.setFont('Helvetica-Bold', 9)
+    c.setFillColor(HexColor('#475569'))
+    c.drawString(40, y, 'Signature:')
+    draw_sig(c, 'sig_media_release', 40, y - 60, 220, 50)
+    c.showPage()
+
+    # PAGE 5 — Background Check
+    header('Background Check Requirement')
+    y = height - 125
+    bg_text = '''All students enrolled in the Certified Nursing Assistant (CNA) program at Glory Nursing CNA School are required to undergo a criminal background check before participating in clinical training or graduating from the program. This background check is mandated to ensure compliance with healthcare facility policies and state regulations.
+
+By signing this waiver, you acknowledge and agree to the following:
+
+1. Clean Background Requirement: In order to qualify for clinical placement and graduation, students must pass a criminal background check per state and facility requirements.
+
+5. Background Check Process:
+- The background check will be conducted by an authorized third-party agency. You will be responsible for submitting all necessary information and payment for the background check as part of the enrollment process.
+- You will be notified of the results, and any disqualifying findings may result in removal from the program.
+
+Acknowledgment of Policy: By signing below, you acknowledge that you understand and agree to the terms of this waiver, including the requirement for a clean background check and the lack of any guarantee of employment after program completion.'''
+    y = draw_paragraph(bg_text, 40, y)
+    y -= 15
+    if y < 110:
+        c.showPage()
+        header('Background Check Requirement (continued)')
+        y = height - 130
+    bg = 'Yes - Glory Nursing will conduct my background check' if get('background_check') == 'glory_conducts' else 'No - I will provide my own background check'
+    field_line('Preference:', bg, 40, y, label_w=110)
+    y -= 50
+    c.setFont('Helvetica-Bold', 9)
+    c.setFillColor(HexColor('#475569'))
+    c.drawString(40, y, 'Signature:')
+    draw_sig(c, 'sig_background_check', 40, y - 60, 220, 50)
+    c.showPage()
+
+    # PAGE 6 — Grievance & Refund Policy
+    header('Grievance & Refund Policy')
+    y = height - 125
+    refund_text = '''At Glory Nursing, we are committed to fostering a supportive and fair learning environment. Students who have concerns or complaints related to any aspect of their experience at the school are encouraged to follow the grievance process.
+
+No Refund Policy
+
+1. Tuition and Fees: All payments made for tuition, registration fees, materials, and any other associated costs are non-refundable.
+
+2. Course Withdrawals or Cancellations: Payments will not be refunded under the following circumstances: voluntary withdrawal by the student, dismissal for academic or behavioral reasons, or schedule changes or conflicts. In the event of medical or serious family reasons, Glory Nursing will work with students to make up lost classes by joining the next available classes.
+
+3. Non-Attendance: Failure to attend classes does not entitle the student to a refund. Students are encouraged to assess their availability before enrolling.
+
+4. Payment Plans: Students enrolled in a payment plan are required to complete all scheduled payments, regardless of course completion or attendance.
+
+5. Course Cancellations by Glory Nursing: If a course is canceled, students will be offered the option to reschedule or apply their payments toward another program. No refunds will be issued.
+
+6. Disputes: All disputes regarding payments or the no-refund policy must be submitted in writing to the school administration within 30 days of the payment in question.
+
+7. Acknowledgment: By enrolling in Glory Nursing CNA School, you acknowledge and agree to the terms of this No Refund Policy. Your enrollment and payment of tuition or fees serve as confirmation of your understanding and acceptance of this policy.'''
+    y = draw_paragraph(refund_text, 40, y)
+    y -= 15
+    if y < 110:
+        c.showPage()
+        header('Grievance & Refund Policy (continued)')
+        y = height - 130
+    field_line('Agreement:', 'I have read and agree to the No Refund Policy.' if get('agree_refund_policy') else 'Not agreed', 40, y, label_w=110)
+    y -= 50
+    c.setFont('Helvetica-Bold', 9)
+    c.setFillColor(HexColor('#475569'))
+    c.drawString(40, y, 'Signature:')
+    draw_sig(c, 'sig_refund_policy', 40, y - 60, 220, 50)
+    c.showPage()
+
+    # PAGE 7 — NAR Rules
+    header('OSDH / Nurse Aide Registry Rules - Acknowledgment')
+    y = height - 130
+    c.setFont('Helvetica-Bold', 9)
+    c.setFillColor(HexColor('#475569'))
+    c.drawString(40, y, 'Signature:')
+    draw_sig(c, 'sig_nar_rules', 40, y - 60, 220, 50)
+    c.showPage()
+
+    # PAGE 8 — Final Signature
+    header('Final Acknowledgment & Signature')
+    y = height - 130
+    c.setFont('Helvetica', 10)
+    c.setFillColor(HexColor('#334155'))
+    c.drawString(40, y, 'I confirm that all information provided in this application is true and accurate,')
+    y -= 14
+    c.drawString(40, y, 'and that I agree to all policies outlined in this application.')
+    y -= 50
+    c.setFont('Helvetica-Bold', 9)
+    c.setFillColor(HexColor('#475569'))
+    c.drawString(40, y, 'Final Signature:')
+    draw_sig(c, 'sig_final', 40, y - 60, 220, 50)
+    field_line('Date:', get('signature_date'), 320, y, label_w=50)
+    c.showPage()
+
+    c.save()
+    buf.seek(0)
+
+    # Merge in original state-issued pages (Affidavit + Nurse Aide Registry) with signature overlay
+    from pypdf import PdfReader, PdfWriter
+    import os as _os
+
+    generated_reader = PdfReader(buf)
+    original_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'static', 'core', 'documents', 'CNA_app.pdf')
+    original_reader = PdfReader(original_path)
+
+    writer = PdfWriter()
+
+    # Page 1 of generated = our Enrollment Application
+    writer.add_page(generated_reader.pages[0])
+
+    # State page: Affidavit of Lawful Presence (original page index 1) — overlay status/date/signature
+    affidavit_page = original_reader.pages[1]
+    overlay_buf = io.BytesIO()
+    oc = rl_canvas.Canvas(overlay_buf, pagesize=(float(affidavit_page.mediabox[2]), float(affidavit_page.mediabox[3])))
+    ph = float(affidavit_page.mediabox[3])
+    oc.setFont('Helvetica-Bold', 11)
+    oc.setFillColor(HexColor('#000000'))
+    if get('lawful_presence') == 'us_citizen':
+        oc.setFont('Helvetica-Bold', 13)
+        oc.drawString(44, ph - 182, '\u2713')
+    elif get('lawful_presence') == 'qualified_alien':
+        oc.setFont('Helvetica-Bold', 13)
+        oc.drawString(44, ph - 202, '\u2713')
+    if get('alien_number'):
+        oc.setFont('Helvetica', 10)
+        oc.drawString(195, ph - 230, get('alien_number'))
+    oc.setFont('Helvetica', 10)
+    oc.drawString(72, ph - 305, get('signature_date'))
+    draw_sig(oc, 'sig_final', 335, ph - 308, 170, 18)
+    oc.drawString(100, ph - 332, f"{get('city')}, {get('state')}")
+    oc.drawString(375, ph - 332, full_name)
+    if get('renewal_number'):
+        oc.setFont('Helvetica', 10)
+        oc.drawString(395, ph - 364, get('renewal_number'))
+    oc.save()
+    overlay_buf.seek(0)
+    overlay_reader = PdfReader(overlay_buf)
+    affidavit_page.merge_page(overlay_reader.pages[0])
+    writer.add_page(affidavit_page)
+
+    # Glory pages 2-7 of generated (Clinical Tasks, Media Release, Background Check, Grievance/Refund)
+    for i in range(1, 6):
+        if i < len(generated_reader.pages):
+            writer.add_page(generated_reader.pages[i])
+
+    # State pages: Nurse Aide Registry (original page indices 6-13, 8 pages of regulations)
+    for i in range(6, 14):
+        nar_page = original_reader.pages[i]
+        if i == 13:
+            # Page 14 has the signature/date/printed name/training program section
+            nar_overlay_buf = io.BytesIO()
+            noc = rl_canvas.Canvas(nar_overlay_buf, pagesize=(float(nar_page.mediabox[2]), float(nar_page.mediabox[3])))
+            nph = float(nar_page.mediabox[3])
+            noc.setFont('Helvetica', 10)
+            noc.setFillColor(HexColor('#000000'))
+            draw_sig(noc, 'sig_nar_rules', 17, nph - 478, 160, 18)
+            noc.drawString(266, nph - 472, get('signature_date'))
+            noc.drawString(365, nph - 472, full_name)
+            noc.drawString(25, nph - 503, get('course_applied') or 'Certified Nursing Assistant (CNA)')
+            noc.save()
+            nar_overlay_buf.seek(0)
+            nar_overlay_reader = PdfReader(nar_overlay_buf)
+            nar_page.merge_page(nar_overlay_reader.pages[0])
+        writer.add_page(nar_page)
+
+    # Glory final page (Final Signature)
+    if len(generated_reader.pages) > 6:
+        writer.add_page(generated_reader.pages[6])
+
+    final_buf = io.BytesIO()
+    writer.write(final_buf)
+    final_buf.seek(0)
+    pdf_bytes = final_buf.read()
+
+
+    email_error = None
+    try:
+        msg = EmailMessage(
+            subject=f'New CNA Application Received - {full_name}',
+            body=f'''A student has submitted their CNA application through the Glory Nursing website.
+
+Student: {full_name}
+Email: {student_email}
+Phone: {get("phone")}
+
+The completed application is attached.
+
+Glory Nursing Online Portal''',
+            from_email=None,
+            to=['glorynursing@yahoo.com'],
+        )
+        msg.attach('CNA_Application.pdf', pdf_bytes, 'application/pdf')
+        msg.send()
+
+        EmailMessage(
+            subject='Your Glory Nursing CNA Application Received',
+            body=f'''Thank you for submitting your CNA application to Glory Nursing!
+
+We have received your completed application. Our admissions team will review it and contact you within 1-2 business days.
+
+Complete your payment here:
+{payment_link}
+
+Questions? Call us at (405) 968-5004 or email glorynursing@yahoo.com
 
 Glory Nursing Healthcare Training School
-Oklahoma City, Oklahoma""",
+12032 N Pennsylvania Ave, Oklahoma City, OK 73120''',
+            from_email=None,
+            to=[student_email],
+        ).send()
+    except Exception as e:
+        email_error = str(e)
+        print(f"Email error: {e}")
+
+    # Auto-create student account (only for online programs)
+    from django.contrib.auth.models import User as AuthUser
+    import secrets, string
+    account_created = False
+    temp_password = None
+    # Check if this is an online program
+    from core.models import Program as CoreProg6
+    _pslug6 = data.get('program_slug', '')
+    _pprog6 = CoreProg6.objects.filter(slug=_pslug6).first() if _pslug6 else None
+    is_online_program = _pprog6.is_online if _pprog6 else True  # default True for safety
+    try:
+        if is_online_program and not AuthUser.objects.filter(email=student_email).exists():
+            username = student_email.split('@')[0].lower().replace('.','_')[:30]
+            base_username = username
+            counter = 1
+            while AuthUser.objects.filter(username=username).exists():
+                username = f"{base_username}{counter}"
+                counter += 1
+            alphabet = string.ascii_letters + string.digits
+            temp_password = ''.join(secrets.choice(alphabet) for _ in range(10))
+            new_user = AuthUser.objects.create_user(
+                username=username,
+                email=student_email,
+                password=temp_password,
+                first_name=get('first_name'),
+                last_name=get('last_name'),
+            )
+            account_created = True
+            # Store pending course in user's first_name field as fallback
+            # Create a pending enrollment so dashboard knows which course to pay for
+            try:
+                from lms.models import Course as LMSCourse2, Enrollment
+                course_title = get('course_applied') or ''
+                pending_c = LMSCourse2.objects.filter(title=course_title, is_published=True).first()
+                if not pending_c:
+                    pending_c = LMSCourse2.objects.filter(
+                        program__icontains='CNA', is_published=True
+                    ).exclude(program__icontains='HHA').order_by('price').first()
+                if pending_c:
+                    Enrollment.objects.get_or_create(
+                        student=new_user,
+                        course=pending_c,
+                    )
+            except Exception as enroll_err:
+                print(f"Pending enrollment error: {enroll_err}")
+            # Send credentials email
+            try:
+                EmailMessage(
+                    subject='Your Glory Nursing Account Has Been Created',
+                    body=f'''Welcome to Glory Nursing Healthcare Training School!
+
+Your application has been received and your student account has been created.
+
+Login Details:
+Website: https://glorynursingok.com/lms/login/
+Username: {username}
+Password: {temp_password}
+
+💳 Complete your payment here:
+{payment_link}
+
+Or login to your account and pay from your dashboard:
+https://glorynursingok.com/lms/login/
+
+Questions? Call us at (405) 968-5004 or email glorynursing@yahoo.com
+
+Glory Nursing Healthcare Training School
+12032 N Pennsylvania Ave, Oklahoma City, OK 73120''',
                     from_email=None,
-                    recipient_list=[email],
-                    fail_silently=True,
-                )
+                    to=[student_email],
+                ).send()
+            except Exception as e:
+                print(f"Credentials email error: {e}")
+            # Create pending enrollment only for online programs
+            try:
+                from lms.models import Course as LMSCourse2, Enrollment
+                from core.models import Program as CoreProg5
+                _pslug = data.get('program_slug', '')
+                _pprog = CoreProg5.objects.filter(slug=_pslug).first() if _pslug else None
+                if _pprog and _pprog.is_online and _pprog.course:
+                    Enrollment.objects.get_or_create(student=new_user, course=_pprog.course)
+                elif not _pprog:
+                    # Fallback: try to find course by title for online programs
+                    course_title = data.get('course_applied', '').strip()
+                    if course_title:
+                        pending_c = LMSCourse2.objects.filter(title=course_title, is_published=True).first()
+                        if pending_c:
+                            Enrollment.objects.get_or_create(student=new_user, course=pending_c)
+            except Exception as enroll_err:
+                print(f"Pending enrollment error: {enroll_err}")
+    except Exception as e:
+        print(f"Account creation error: {e}")
+
+    # Track journey: form submitted
+    try:
+        from lms.models import StudentJourney
+        journey = StudentJourney.objects.filter(student_email=student_email).first()
+        if journey:
+            journey.stage = 'form_submitted'
+            journey.program = get('course_applied')
+            journey.metadata = {'full_name': full_name}
+            journey.save()
+        else:
+            StudentJourney.objects.create(
+                student_email=student_email,
+                stage='form_submitted',
+                program=get('course_applied'),
+                metadata={'full_name': full_name}
+            )
+    except Exception as e:
+        print(f"Journey update error: {e}")
+
+    # Save PDF to server for admin download
+    try:
+        import os
+        apps_dir = '/var/www/glorynursing/media/applications'
+        os.makedirs(apps_dir, exist_ok=True)
+        safe_name = full_name.replace(' ', '_').replace('/', '_')
+        pdf_filename = f"CNA_{safe_name}_{student_email.split('@')[0]}.pdf"
+        pdf_path = os.path.join(apps_dir, pdf_filename)
+        with open(pdf_path, 'wb') as pf:
+            pf.write(pdf_bytes)
+        # Save path to journey metadata
+        from lms.models import StudentJourney
+        StudentJourney.objects.update_or_create(
+            student_email=student_email,
+            stage='form_submitted',
+            defaults={
+                'program': get('course_applied'),
+                'metadata': {
+                    'full_name': full_name,
+                    'first_name': get('first_name'),
+                    'last_name': get('last_name'),
+                    'email': student_email,
+                    'phone': get('phone'),
+                    'dob': get('dob'),
+                    'street': get('street'),
+                    'city': get('city'),
+                    'state': get('state'),
+                    'zip': get('zip'),
+                    'course_applied': get('course_applied'),
+                    'how_heard': get('how_heard'),
+                    'lawful_presence': get('lawful_presence'),
+                    'pdf_file': pdf_filename,
+                }
+            }
+        )
+    except Exception as e:
+        print(f"PDF save error: {e}")
+
+    request.session['application_submitted'] = True
+    # Store pending course for payment redirect - use actual program applied for
+    try:
+        from lms.models import Course as LMSCourse
+        from core.models import Program as CoreProg4
+        _pslug = data.get('program_slug', '')
+        _pprog = CoreProg4.objects.filter(slug=_pslug).first() if _pslug else None
+        if _pprog and _pprog.course:
+            request.session['pending_course_id'] = _pprog.course.id
+        else:
+            # fallback to course by title
+            _ca = get('course_applied') or ''
+            pending_course = LMSCourse.objects.filter(title__icontains=_ca[:20], is_published=True).first()
+            if not pending_course:
+                pending_course = LMSCourse.objects.filter(program__icontains='CNA', is_published=True).exclude(program__icontains='HHA').order_by('price').first()
+            if pending_course:
+                request.session['pending_course_id'] = pending_course.id
+    except:
+        pass
+
+    # Save PDF to media folder
+    import uuid
+    import os
+    pdf_dir = os.path.join(settings.MEDIA_ROOT, 'applications')
+    os.makedirs(pdf_dir, exist_ok=True)
+    pdf_filename = f"CNA_{student_email}_{uuid.uuid4().hex[:8]}.pdf"
+    pdf_path = os.path.join(pdf_dir, pdf_filename)
+    with open(pdf_path, 'wb') as pf:
+        pf.write(pdf_bytes)
+
+    # Save application record
+    from core.models import ApplicationRecord
+    try:
+        ApplicationRecord.objects.create(
+            student_email=student_email,
+            full_name=full_name,
+            program=get('course_applied') or 'CNA',
+            pdf_file=f'applications/{pdf_filename}'
+        )
+    except Exception as ar_err:
+        print(f"ApplicationRecord error: {ar_err}")
+
+    from django.http import HttpResponse
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="CNA_Application_{full_name.replace(" ", "_")}.pdf"'
+    if email_error:
+        response['X-Email-Error'] = email_error[:200]
+    return response
+
+def fill_pdf_cma(request):
+    import os
+    pdf_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            'static', 'core', 'documents', 'CMA_app.pdf')
+    from pypdf import PdfReader
+    page_count = len(PdfReader(pdf_path).pages)
+    return render(request, 'core/fill_pdf.html', {
+        'pdf_name': 'CMA',
+        'page_count': page_count,
+        'render_url': '/apply/cma/render-page/',
+        'save_url': '/apply/cma/save/',
+        'back_url': '/apply/cma/',
+        'enroll_id': 2,
+    })
+
+
+def fill_form_simple(request, program_code):
+    from lms.models import Course as LMSCourse
+    program_names = {
+        'BLS': 'Basic Life Support (BLS) / CPR',
+        'HHA': 'Home Health Aide (HHA)',
+        'PHLEBOTOMY': 'Phlebotomy Technician',
+        'EKG': 'EKG Technician',
+        'CCMA': 'Certified Clinical Medical Assistant (CCMA)',
+        'ACMA': 'Advanced Certified Medication Aide (ACMA) - Insulin',
+        'ACMA TRADITIONAL': 'Advanced Certified Medication Aide Traditional (Insulin)',
+        'CMA RENEWAL': 'Certified Medication Aide Renewal',
+        'CMA TRADITIONAL': 'Certified Medication Aide Traditional',
+        'CNA TO HHA ADD ON': 'CNA to HHA Deeming Add-On',
+    }
+    program_name = program_names.get(program_code.upper(), program_code)
+    course = LMSCourse.objects.filter(program__iexact=program_code, is_published=True).order_by('price').first()
+    course_id = course.id if course else ''
+    # Check if online based on program slug parameter
+    program_slug = request.GET.get('program', '')
+    # Override program_name with actual program title from database
+    if program_slug:
+        from core.models import Program as _CP
+        _p = _CP.objects.filter(slug=program_slug).first()
+        if _p:
+            program_name = _p.title
+    # Check from database
+    from core.models import Program as CoreProgram2, ClassSchedule
+    from django.utils import timezone as tz_now
+    prog_obj = CoreProgram2.objects.filter(slug=program_slug).first() if program_slug else None
+    if prog_obj:
+        is_online = prog_obj.is_online
+        upcoming = ClassSchedule.objects.filter(
+            program=prog_obj,
+            start_date__gte=tz_now.now().date(),
+            is_active=True
+        ).order_by('start_date')[:3]
+    else:
+        online_programs = ['BLS']
+        is_online = program_code.upper() in online_programs
+        upcoming = []
+    return render(request, 'core/fill_form_simple.html', {
+        'program_name': program_name,
+        'program_code': program_code.upper(),
+        'course_id': course_id,
+        'is_online': is_online,
+        'upcoming_schedules': upcoming,
+        'back_url': '/contact/',
+        'submit_url': f'/apply/simple/{program_code}/submit/?program={program_slug}',
+    })
+
+
+@csrf_exempt
+def submit_form_simple(request, program_code):
+    import json
+    from django.http import JsonResponse
+    from django.core.mail import EmailMessage
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=400)
+
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'error': 'Invalid data'}, status=400)
+
+    student_email = data.get('student_email', '').strip()
+    if not student_email:
+        return JsonResponse({'error': 'Email is required'}, status=400)
+
+    full_name = f"{data.get('first_name','')} {data.get('last_name','')}".strip() or 'Applicant'
+    program_name = data.get('program_name', program_code)
+
+    try:
+        msg = EmailMessage(
+            subject=f'New {program_name} Application Received - {full_name}',
+            body=f"""A student has submitted an application for {program_name} through the Glory Nursing website.
+
+Name: {full_name}
+Email: {student_email}
+Phone: {data.get('phone','')}
+DOB: {data.get('dob','')}
+SSN: {data.get('ssn','')}
+Address: {data.get('street','')}, {data.get('city','')}, {data.get('state','')} {data.get('zip','')}
+How heard: {data.get('how_heard','')}
+
+Glory Nursing Online Portal""",
+            from_email=None,
+            to=['glorynursing@yahoo.com'],
+        )
+        msg.send()
+
+        # Get program price
+        from core.models import Program as CoreProg3
+        _pslug = request.GET.get('program', '') or data.get('program_slug', '')
+        _pprog = CoreProg3.objects.filter(slug=_pslug).first() if _pslug else None
+        simple_price = str(float(_pprog.price)) if _pprog and _pprog.price else ''
+
+        EmailMessage(
+            subject=f'Your Glory Nursing {program_name} Application Received',
+            body=f"""Thank you for submitting your {program_name} application to Glory Nursing!
+
+We have received your application. Our admissions team will review it and contact you within 1-2 business days.
+
+Complete your payment here:
+https://glorynursingok.com/lms/pay/?name={full_name.replace(' ', '+')}&email={student_email}&reason={program_name}{f'&amount={simple_price}' if simple_price else ''}
+
+Questions? Call us at (405) 968-5004 or email glorynursing@yahoo.com
+
+Glory Nursing Healthcare Training School
+12032 N Pennsylvania Ave, Oklahoma City, OK 73120""",
+            from_email=None,
+            to=[student_email],
+        ).send()
+    except Exception as e:
+        print(f"Email error: {e}")
+
+
+    # Auto-create student account (only for online programs)
+    from django.contrib.auth.models import User as AuthUser
+    import secrets, string
+    try:
+        _pslug_s = request.GET.get("program", "")
+        _pprog_s = __import__("core.models", fromlist=["Program"]).Program.objects.filter(slug=_pslug_s).first() if _pslug_s else None
+        _is_online_s = _pprog_s.is_online if _pprog_s else True
+        if _is_online_s and not AuthUser.objects.filter(email=student_email).exists():
+            username = student_email.split('@')[0].lower().replace('.','_')[:30]
+            base_username = username
+            counter = 1
+            while AuthUser.objects.filter(username=username).exists():
+                username = f"{base_username}{counter}"
+                counter += 1
+            alphabet = string.ascii_letters + string.digits
+            temp_password = ''.join(secrets.choice(alphabet) for _ in range(10))
+            new_user = AuthUser.objects.create_user(
+                username=username,
+                email=student_email,
+                password=temp_password,
+                first_name=data.get('first_name',''),
+                last_name=data.get('last_name',''),
+            )
+            try:
+                EmailMessage(
+                    subject='Your Glory Nursing Account Has Been Created',
+                    body=f"""Welcome to Glory Nursing Healthcare Training School!
+
+Your application has been received and your student account has been created.
+
+Login Details:
+Website: https://glorynursingok.com/lms/login/
+Username: {username}
+Password: {temp_password}
+
+Please login and complete your enrollment payment to gain access to your course.
+
+Questions? Call us at (405) 968-5004 or email glorynursing@yahoo.com
+
+Glory Nursing Healthcare Training School""",
+                    from_email=None,
+                    to=[student_email],
+                ).send()
+            except Exception as e:
+                print(f"Credentials email error: {e}")
+            # Create pending enrollment only for online programs
+            try:
+                from lms.models import Course as LMSCourse2, Enrollment
+                from core.models import Program as CoreProg5
+                _pslug = data.get('program_slug', '')
+                _pprog = CoreProg5.objects.filter(slug=_pslug).first() if _pslug else None
+                if _pprog and _pprog.is_online and _pprog.course:
+                    Enrollment.objects.get_or_create(student=new_user, course=_pprog.course)
+                elif not _pprog:
+                    # Fallback: try to find course by title for online programs
+                    course_title = data.get('course_applied', '').strip()
+                    if course_title:
+                        pending_c = LMSCourse2.objects.filter(title=course_title, is_published=True).first()
+                        if pending_c:
+                            Enrollment.objects.get_or_create(student=new_user, course=pending_c)
+            except Exception as enroll_err:
+                print(f"Pending enrollment error: {enroll_err}")
+    except Exception as e:
+        print(f"Account creation error: {e}")
+
+    request.session['application_submitted'] = True
+
+    # Track journey: form submitted
+    try:
+        from lms.models import StudentJourney
+        journey = StudentJourney.objects.filter(student_email=student_email).first()
+        if journey:
+            journey.stage = 'form_submitted'
+            journey.program = program_name
+            journey.metadata = {'full_name': full_name, 'email': student_email, 'phone': data.get('phone','')}
+            journey.save()
+        else:
+            StudentJourney.objects.create(
+                student_email=student_email,
+                stage='form_submitted',
+                program=program_name,
+                metadata={'full_name': full_name, 'email': student_email}
+            )
+    except Exception as e:
+        print(f"Simple form journey error: {e}")
+
+    return JsonResponse({'success': True})
+
+
+def fill_form_cma(request):
+    from lms.models import Course as LMSCourse
+    from core.models import Program as CoreProgram
+    enroll_id = request.session.get('apply_enroll_id', 2)
+    program_slug = request.GET.get('program', '') or request.session.get('apply_program_slug', '')
+    back_url = f'/apply/cma/?program={program_slug}' if program_slug else '/apply/cma/'
+    selected_program = CoreProgram.objects.filter(slug=program_slug).first() if program_slug else None
+    cma_courses = LMSCourse.objects.filter(program__icontains='CMA', is_published=True).order_by('price')
+    return render(request, 'core/fill_form_cma.html', {
+        'enroll_id': enroll_id,
+        'back_url': back_url,
+        'cma_courses': cma_courses,
+        'selected_program': selected_program,
+    })
+
+
+@csrf_exempt
+def submit_form_cma(request):
+    import json
+    import io
+    import base64
+    from django.http import JsonResponse, HttpResponse
+    from django.core.mail import EmailMessage
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.colors import HexColor
+    from reportlab.pdfgen import canvas as rl_canvas
+    from reportlab.lib.utils import ImageReader
+    from pypdf import PdfReader, PdfWriter
+    from pypdf.generic import NameObject
+    import os as _os
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=400)
+
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'error': 'Invalid data'}, status=400)
+
+    student_email = data.get('student_email', '').strip()
+    if not student_email:
+        return JsonResponse({'error': 'Email is required'}, status=400)
+
+    def get(key, default=''):
+        v = data.get(key, default)
+        return v if v else default
+
+    def draw_sig_img(target_canvas, key, x, y, w, h):
+        img_data = data.get(key, '')
+        if img_data and img_data.startswith('data:image'):
+            try:
+                header, b64 = img_data.split(',', 1)
+                img_bytes = base64.b64decode(b64)
+                img_reader = ImageReader(io.BytesIO(img_bytes))
+                target_canvas.drawImage(img_reader, x, y, width=w, height=h, mask='auto')
             except Exception:
                 pass
 
-            # Log activity
-            StudentActivity.objects.create(
-                student=new_user,
-                activity_type='login',
-                description=f'Enrolled in {course.title} via payment',
-                course=course
-            )
+    full_name = f"{get('first_name')} {get('last_name')}".strip() or 'Applicant'
 
-            # Check if online or physical program
-            from core.models import Program as CoreProgram, ClassSchedule
-            from django.utils import timezone
-            program_obj = CoreProgram.objects.filter(course=course).first()
-            is_online = program_obj.is_online if program_obj else True
+    original_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'static', 'core', 'documents', 'CMA_app.pdf')
+    original_reader = PdfReader(original_path)
+    writer = PdfWriter()
+    writer.append(original_reader)
 
-            # Get upcoming schedules for physical programs
-            upcoming = []
-            if program_obj and not is_online:
-                upcoming_qs = ClassSchedule.objects.filter(
-                    program=program_obj,
-                    start_date__gte=timezone.now().date(),
-                    is_active=True
-                ).order_by('start_date')[:3]
-                for s in upcoming_qs:
-                    upcoming.append({
-                        'start_date': str(s.start_date),
-                        'end_date': str(s.end_date) if s.end_date else '',
-                        'start_time': s.start_time.strftime('%I:%M %p') if s.start_time else '',
-                        'end_time': s.end_time.strftime('%I:%M %p') if s.end_time else '',
-                        'days': s.days,
-                        'seats_available': s.seats_available,
-                        'notes': s.notes,
-                    })
+    # ---- Fill real AcroForm text fields ----
+    field_values = {
+        # Page 1: CMA Attestation
+        'Typed or Printed Name of Applicant': full_name,
+        'Social Security Number of Applicant': get('ssn'),
+        'Signature Field 10': '',
+        'Date of Signing 6': get('signature_date'),
 
-            # Store success info in session
-            request.session['enrollment_success'] = {
-                'name': first_name,
-                'course': course.title,
-                'username': username,
-                'email': email,
-                'is_online': is_online,
-                'program_title': program_obj.title if program_obj else course.title,
-                'upcoming_schedules': upcoming,
-            }
-            return redirect('enrollment_success')
+        # Page 7: Photograph and Media Release Waiver
+        'Text Field 28': full_name,
+        'Date Field 3': get('dob'),
+        'Number Field 1': get('phone'),
+        'Text Field 29': student_email,
+        'Date of Signing 2': get('signature_date'),
+        'Date of Signing 3': get('signature_date'),
+        'Text Field 30': full_name,
+        'Text Field 32': full_name,
+        'Date of Signing 5': get('signature_date'),
+        'Text Field 27': full_name,
+        'Date of Signing 1': get('signature_date'),
 
-        else:
-            errors = getattr(result, 'errors', None)
-            if errors:
-                error_msg = errors[0].detail if hasattr(errors[0], 'detail') else str(errors[0])
-            else:
-                error_msg = "Payment failed. Please try again."
-            messages.error(request, f"Payment failed: {error_msg}")
-            return redirect('enroll_page', course_id=course_id)
-
-    except Exception as e:
-        messages.error(request, f"Payment error: {str(e)}")
-        return redirect('enroll_page', course_id=course_id)
-
-
-def enrollment_success(request):
-    """Success page shown after payment."""
-    data = request.session.pop('enrollment_success', None)
-    if not data:
-        return redirect('lms_login')
-    return render(request, 'lms/enrollment_success.html', {'data': data})
-
-
-def get_revenue_report():
-    """Generate revenue report grouped by month and by course."""
-    from django.db.models import Sum, Count
-    from django.db.models.functions import TruncMonth
-    from datetime import datetime, timedelta
-
-    subscriptions = Subscription.objects.all()
-
-    # Total revenue
-    total_revenue = subscriptions.aggregate(total=Sum('amount_paid'))['total'] or 0
-    total_enrollments = subscriptions.count()
-
-    # Revenue by month (last 12 months)
-    monthly = (
-        subscriptions
-        .annotate(month=TruncMonth('started_at'))
-        .values('month')
-        .annotate(revenue=Sum('amount_paid'), count=Count('id'))
-        .order_by('-month')[:12]
-    )
-    monthly_data = [
-        {
-            'month': m['month'].strftime('%b %Y') if m['month'] else 'Unknown',
-            'revenue': float(m['revenue'] or 0),
-            'count': m['count'],
-        }
-        for m in monthly
-    ]
-
-    # Revenue by program/course
-    by_program = (
-        subscriptions
-        .values('tier_name')
-        .annotate(revenue=Sum('amount_paid'), count=Count('id'))
-        .order_by('-revenue')
-    )
-    program_data = [
-        {
-            'program': p['tier_name'],
-            'revenue': float(p['revenue'] or 0),
-            'count': p['count'],
-        }
-        for p in by_program
-    ]
-
-    # This month vs last month
-    now = datetime.now()
-    this_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    last_month_start = (this_month_start - timedelta(days=1)).replace(day=1)
-
-    this_month_revenue = subscriptions.filter(started_at__gte=this_month_start).aggregate(t=Sum('amount_paid'))['t'] or 0
-    last_month_revenue = subscriptions.filter(started_at__gte=last_month_start, started_at__lt=this_month_start).aggregate(t=Sum('amount_paid'))['t'] or 0
-
-    return {
-        'total_revenue': float(total_revenue),
-        'total_enrollments': total_enrollments,
-        'monthly': monthly_data,
-        'by_program': program_data,
-        'this_month': float(this_month_revenue),
-        'last_month': float(last_month_revenue),
+        # Page 4: Enrollment Application
+        'Text Field 3': get('last_name'),
+        'Text Field 1': get('first_name'),
+        'Text Field 4': get('middle_initial'),
+        'Text Field 2': get('how_heard'),
+        'Date Field 1': get('dob'),
+        'Text Field 5': get('ssn'),
+        'Text Field 6': get('street'),
+        'Text Field 11': get('phone'),
+        'Text Field 7': get('city'),
+        'Text Field 8': get('state'),
+        'Text Field 9': get('zip'),
+        'Text Field 10': student_email,
+        'Text Field 12': get('course_applied'),
+        'Text Field 13': get('emergency_name'),
+        'Text Field 14': get('emergency_phone'),
+        'Text Field 15': get('emergency_address'),
+        'Text Field 16': get('emergency_relationship'),
+        'Text Field 17': get('hs_name'),
+        'Text Field 18': get('hs_address'),
+        'Text Field 19': get('hs_from'),
+        'Text Field 20': get('hs_to'),
+        'Text Field 21': get('hs_diploma'),
+        'Text Field 23': get('college_name'),
+        'Text Field 22': get('college_address'),
+        'Text Field 24': get('college_from'),
+        'Text Field 25': get('college_to'),
+        'Text Field 26': get('degree'),
+        'Date Field 2': get('signature_date'),
     }
 
+    checkbox_values = {}
+    if get('hs_graduated_cma') == 'Yes':
+        checkbox_values['Checkbox 1'] = '/Yes'
+    elif get('hs_graduated_cma') == 'No':
+        checkbox_values['Checkbox 2'] = '/Yes'
+    if get('college_graduated') == 'Yes':
+        checkbox_values['Checkbox 6'] = '/Yes'
+    elif get('college_graduated') == 'No':
+        checkbox_values['Checkbox 5'] = '/Yes'
 
-def log_audit(request, user, action, target_model='', target_id='', target_repr='', details=''):
-    """Helper to create an audit log entry."""
+    # Note: attestation Yes/No checkboxes share field names across all 5 questions
+    # in this PDF's form design, so we cannot set them independently via AcroForm.
+    # We overlay X marks at known coordinates instead (see below).
+
+    for page in writer.pages:
+        writer.update_page_form_field_values(page, {**field_values, **checkbox_values}, auto_regenerate=False)
+
+    # Overlay attestation Yes/No marks (shared field names can't represent 5 independent answers)
+    att_page = writer.pages[0]
+    att_ph = float(original_reader.pages[0].mediabox[3])
+    att_pw = float(original_reader.pages[0].mediabox[2])
+    att_overlay_buf = io.BytesIO()
+    atc = rl_canvas.Canvas(att_overlay_buf, pagesize=(att_pw, att_ph))
+    atc.setFont('Helvetica-Bold', 10)
+    atc.setFillColor(HexColor('#000000'))
+    qy_positions = [
+        ('cma_age', 376),
+        ('cma_education', 363),
+        ('cma_experience', 345),
+        ('cma_cert', 333),
+        ('cma_capability', 320),
+    ]
+    for field_key, y_pt in qy_positions:
+        ans = get(field_key)
+        if ans == 'Yes':
+            atc.drawString(426, y_pt, '\u2713')
+        elif ans == 'No':
+            atc.drawString(480, y_pt, '\u2713')
+    atc.save()
+    att_overlay_buf.seek(0)
+    att_overlay_reader = PdfReader(att_overlay_buf)
+    att_page.merge_page(att_overlay_reader.pages[0])
+
+    # Force form field appearances to render
     try:
-        ip = request.META.get('REMOTE_ADDR', None)
-        AuditLog.objects.create(
-            user=user,
-            action=action,
-            target_model=target_model,
-            target_id=str(target_id),
-            target_repr=target_repr,
-            details=details,
-            ip_address=ip,
+        writer.set_need_appearances_writer(True)
+    except Exception:
+        pass
+
+    # ---- Overlay signatures (image-based, AcroForm text fields can't hold images) ----
+    sig_targets = [
+        (0, 'sig_cma_attestation', 321, 158, 170, 30),       # Page 1 attestation signature
+        (3, 'sig_final', 126, 114, 140, 24),                  # Page 4 enrollment signature
+        (5, 'sig_clinical_tasks', 129, 485, 200, 24),         # Page 6 clinical tasks
+        (6, 'sig_final', 186, 141, 150, 18),                  # Page 7 media release student sig (reuse final signature)
+        (15, 'sig_nar_rules', 52, 318, 200, 22),              # Page 16 NAR signature
+        (17, 'sig_refund_policy', 366, 116, 110, 18),         # Page 18 refund acknowledgment
+        (19, 'sig_background_check', 132, 246, 200, 26),      # Page 20 background check signature
+        (21, 'sig_clinical_tasks', 129, 485, 200, 24),        # Page 22 duplicate clinical tasks ack
+    ]
+    for page_idx, sig_key, x, y, w, h in sig_targets:
+        if page_idx >= len(writer.pages):
+            continue
+        if sig_key not in data or not data.get(sig_key):
+            continue
+        page = writer.pages[page_idx]
+        ph = float(page.mediabox[3])
+        pw = float(page.mediabox[2])
+        overlay_buf = io.BytesIO()
+        oc = rl_canvas.Canvas(overlay_buf, pagesize=(pw, ph))
+        draw_sig_img(oc, sig_key, x, y, w, h)
+        oc.save()
+        overlay_buf.seek(0)
+        overlay_reader = PdfReader(overlay_buf)
+        page.merge_page(overlay_reader.pages[0])
+
+    # ---- Affidavit page (page 2) — use real fields where possible, fallback overlay for checkboxes ----
+    aff_field_values = {
+        'efield68_Text1': get('alien_number'),
+        'Text2': get('authorizing_document'),
+        'Date5_af_date': get('signature_date'),
+        'Signature Field 7': '',
+        'Text7': f"{get('city')}, {get('state')}",
+        'Text8': full_name,
+        'Text9': get('renewal_number'),
+    }
+
+    bg_field_values = {
+        'Text Field 31': full_name,
+        'Date of Signing 4': get('signature_date'),
+    }
+    bg_checkbox_values = {}
+    if get('background_check') == 'glory_conducts':
+        bg_checkbox_values['Checkbox 4'] = '/Yes'
+    elif get('background_check') == 'self_provide':
+        bg_checkbox_values['Checkbox 3'] = '/Yes'
+    writer.update_page_form_field_values(writer.pages[19], {**bg_field_values, **bg_checkbox_values}, auto_regenerate=False)
+
+    nar_field_values = {
+        'Text1': f"{get('signature_date')}   {full_name}",
+        'Text4': get('course_applied'),
+    }
+    writer.update_page_form_field_values(writer.pages[15], nar_field_values, auto_regenerate=False)
+    aph = float(original_reader.pages[1].mediabox[3])
+    apw = float(original_reader.pages[1].mediabox[2])
+    writer.update_page_form_field_values(writer.pages[1], aff_field_values, auto_regenerate=False)
+    affidavit_page = writer.pages[1]
+
+    aff_overlay_buf = io.BytesIO()
+    aoc = rl_canvas.Canvas(aff_overlay_buf, pagesize=(apw, aph))
+    aoc.setFont('Helvetica-Bold', 13)
+    aoc.setFillColor(HexColor('#000000'))
+    lp_value = get('lawful_presence')
+    if lp_value == 'us_citizen':
+        aoc.drawString(36, 636, '\u2713')
+    elif lp_value == 'qualified_alien':
+        aoc.drawString(38, 597, '\u2713')
+    draw_sig_img(aoc, 'sig_final', 380, 412, 170, 18)
+    aoc.save()
+    aff_overlay_buf.seek(0)
+    aff_overlay_reader = PdfReader(aff_overlay_buf)
+    affidavit_page.merge_page(aff_overlay_reader.pages[0])
+
+    final_buf = io.BytesIO()
+    writer.write(final_buf)
+    final_buf.seek(0)
+    pdf_bytes = final_buf.read()
+
+    email_error = None
+    try:
+        msg = EmailMessage(
+            subject=f'New CMA Application Received - {full_name}',
+            body=f"""A student has submitted their CMA application through the Glory Nursing website.
+
+Student: {full_name}
+Email: {student_email}
+Phone: {get("phone")}
+
+The completed application is attached.
+
+Glory Nursing Online Portal""",
+            from_email=None,
+            to=['glorynursing@yahoo.com'],
         )
+        msg.attach('CMA_Application.pdf', pdf_bytes, 'application/pdf')
+        msg.send()
+
+        EmailMessage(
+            subject='Your Glory Nursing CMA Application Received',
+            body=f"""Thank you for submitting your CMA application to Glory Nursing!
+
+We have received your completed application. Our admissions team will review it and contact you within 1-2 business days.
+
+Complete your payment here:
+https://glorynursingok.com/lms/pay/?name={full_name.replace(' ', '+')}&email={student_email}&reason={get('course_applied') or 'CMA Program'}&amount={cma_program_price or '900'}
+
+Questions? Call us at (405) 968-5004 or email glorynursing@yahoo.com
+
+Glory Nursing Healthcare Training School
+12032 N Pennsylvania Ave, Oklahoma City, OK 73120""",
+            from_email=None,
+            to=[student_email],
+        ).send()
     except Exception as e:
-        print(f"Audit log error: {e}")
+        email_error = str(e)
+        print(f"Email error: {e}")
 
 
-@login_required(login_url='lms_login')
-def setup_2fa(request):
-    """Allow staff to enable/disable 2FA (TOTP) on their account."""
-    if not request.user.is_staff:
-        return redirect('lms_dashboard')
-
-    from django_otp.plugins.otp_totp.models import TOTPDevice
-    from django_otp import devices_for_user
-    import qrcode
-    import qrcode.image.svg
-    from io import BytesIO
-    import base64
-
-    device = TOTPDevice.objects.filter(user=request.user, name='default').first()
-
-    if request.method == 'POST':
-        action = request.POST.get('action')
-
-        if action == 'enable':
-            token = request.POST.get('token', '').strip()
-            if device and device.verify_token(token):
-                device.confirmed = True
-                device.save()
-                log_audit(request, request.user, '2fa_enabled', target_repr=f'{request.user.username} enabled 2FA')
-                return render(request, 'lms/setup_2fa.html', {'success': '2FA enabled successfully!', 'device': device, 'confirmed': True})
-            else:
-                return render(request, 'lms/setup_2fa.html', {'error': 'Invalid code. Please try again.', 'device': device, 'qr_code': _get_qr(device, request.user), 'confirmed': False})
-
-        elif action == 'disable':
-            if device:
-                device.delete()
-                log_audit(request, request.user, '2fa_disabled', target_repr=f'{request.user.username} disabled 2FA')
-            return render(request, 'lms/setup_2fa.html', {'success': '2FA disabled.', 'device': None, 'confirmed': False})
-
-    # GET request
-    if not device:
-        device = TOTPDevice.objects.create(user=request.user, name='default', confirmed=False)
-
-    if device.confirmed:
-        return render(request, 'lms/setup_2fa.html', {'device': device, 'confirmed': True})
-
-    qr_code = _get_qr(device, request.user)
-    return render(request, 'lms/setup_2fa.html', {'device': device, 'qr_code': qr_code, 'confirmed': False})
-
-
-def _get_qr(device, user):
-    import qrcode
-    from io import BytesIO
-    import base64
-    url = device.config_url
-    img = qrcode.make(url)
-    buf = BytesIO()
-    img.save(buf, format='PNG')
-    return base64.b64encode(buf.getvalue()).decode()
-
-
-@login_required(login_url='lms_login')
-def submit_review(request):
-    """Student submits a course review."""
-    if request.method == 'POST':
-        course_id = request.POST.get('course_id')
-        rating = request.POST.get('rating')
-        comment = request.POST.get('comment', '').strip()
-
-        course = Course.objects.filter(id=course_id).first()
-        if course and rating:
-            CourseReview.objects.update_or_create(
-                student=request.user,
-                course=course,
-                defaults={'rating': int(rating), 'comment': comment, 'is_approved': False}
+    # Auto-create student account (only for online programs)
+    from django.contrib.auth.models import User as AuthUser
+    import secrets, string
+    try:
+        _ca_cma = get("course_applied") or ""
+        _pprog_cma = __import__("core.models", fromlist=["Program"]).Program.objects.filter(title__icontains=_ca_cma[:20]).first() if _ca_cma else None
+        _is_online_cma = _pprog_cma.is_online if _pprog_cma else True
+        if _is_online_cma and not AuthUser.objects.filter(email=student_email).exists():
+            username = student_email.split('@')[0].lower().replace('.','_')[:30]
+            base_username = username
+            counter = 1
+            while AuthUser.objects.filter(username=username).exists():
+                username = f"{base_username}{counter}"
+                counter += 1
+            alphabet = string.ascii_letters + string.digits
+            temp_password = ''.join(secrets.choice(alphabet) for _ in range(10))
+            new_user = AuthUser.objects.create_user(
+                username=username,
+                email=student_email,
+                password=temp_password,
+                first_name=data.get('first_name',''),
+                last_name=data.get('last_name',''),
             )
-    return redirect('lms_dashboard')
+            try:
+                EmailMessage(
+                    subject='Your Glory Nursing Account Has Been Created',
+                    body=f"""Welcome to Glory Nursing Healthcare Training School!
+
+Your application has been received and your student account has been created.
+
+Login Details:
+Website: https://glorynursingok.com/lms/login/
+Username: {username}
+Password: {temp_password}
+
+Please login and complete your enrollment payment to gain access to your course.
+
+Questions? Call us at (405) 968-5004 or email glorynursing@yahoo.com
+
+Glory Nursing Healthcare Training School""",
+                    from_email=None,
+                    to=[student_email],
+                ).send()
+            except Exception as e:
+                print(f"Credentials email error: {e}")
+            # Create pending enrollment only for online programs
+            try:
+                from lms.models import Course as LMSCourse2, Enrollment
+                from core.models import Program as CoreProg5
+                _pslug = data.get('program_slug', '')
+                _pprog = CoreProg5.objects.filter(slug=_pslug).first() if _pslug else None
+                if _pprog and _pprog.is_online and _pprog.course:
+                    Enrollment.objects.get_or_create(student=new_user, course=_pprog.course)
+                elif not _pprog:
+                    # Fallback: try to find course by title for online programs
+                    course_title = data.get('course_applied', '').strip()
+                    if course_title:
+                        pending_c = LMSCourse2.objects.filter(title=course_title, is_published=True).first()
+                        if pending_c:
+                            Enrollment.objects.get_or_create(student=new_user, course=pending_c)
+            except Exception as enroll_err:
+                print(f"Pending enrollment error: {enroll_err}")
+    except Exception as e:
+        print(f"Account creation error: {e}")
+
+    request.session['application_submitted'] = True
+
+    # Track journey: form submitted
+    try:
+        from lms.models import StudentJourney
+        journey = StudentJourney.objects.filter(student_email=student_email).first()
+        if journey:
+            journey.stage = 'form_submitted'
+            journey.program = get('course_applied', 'CMA')
+            journey.metadata = {'full_name': full_name, 'email': student_email, 'phone': get('phone')}
+            journey.save()
+        else:
+            StudentJourney.objects.create(
+                student_email=student_email,
+                stage='form_submitted',
+                program=get('course_applied', 'CMA'),
+                metadata={'full_name': full_name, 'email': student_email}
+            )
+    except Exception as e:
+        print(f"CMA Journey error: {e}")
+
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="CMA_Application_{full_name.replace(" ", "_")}.pdf"'
+    if email_error:
+        response['X-Email-Error'] = email_error[:200]
+    return response
+
+def render_pdf_page(request):
+    import os
+    page_num = int(request.GET.get('page', 1))
+    dpi = int(request.GET.get('dpi', 120))
+    pdf_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            'static', 'core', 'documents', 'CNA_app.pdf')
+    img_b64, size = _render_page_as_base64(pdf_path, page_num, dpi)
+    return JsonResponse({'image': img_b64, 'width': size[0], 'height': size[1]})
+
+def render_pdf_page_cma(request):
+    import os
+    page_num = int(request.GET.get('page', 1))
+    dpi = int(request.GET.get('dpi', 120))
+    pdf_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            'static', 'core', 'documents', 'CMA_app.pdf')
+    img_b64, size = _render_page_as_base64(pdf_path, page_num, dpi)
+    return JsonResponse({'image': img_b64, 'width': size[0], 'height': size[1]})
+
+@csrf_exempt
+def save_filled_pdf(request):
+    return _save_pdf_with_annotations(request, 'CNA_app.pdf', 'CNA_Application_Filled.pdf')
+
+@csrf_exempt
+def save_filled_pdf_cma(request):
+    return _save_pdf_with_annotations(request, 'CMA_app.pdf', 'CMA_Application_Filled.pdf')
 
 
-@login_required(login_url='lms_login')
-def complete_interactive(request, element_id):
-    """Mark an interactive element as completed, award XP."""
-    if request.method == 'POST':
-        element = get_object_or_404(InteractiveElement, id=element_id)
-        data = json.loads(request.body) if request.body else {}
-        score = data.get('score', 0)
-
-        InteractiveCompletion.objects.update_or_create(
-            student=request.user,
-            element=element,
-            defaults={'score': score}
-        )
-        return JsonResponse({'status': 'success', 'points': element.points})
-    return JsonResponse({'error': 'POST required'}, status=400)
 
 
-@login_required(login_url='lms_login')
-def lesson_content_items(request, lesson_id):
-    """API: return content items for a lesson (for admin builder)."""
-    items = ContentItem.objects.filter(lesson_id=lesson_id).values('id', 'title', 'content_type')
-    return JsonResponse({'items': list(items)})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def _save_pdf_with_annotations(request, pdf_filename, output_filename):
+    import os
+    import io
+    import json
+    import base64
+    from pypdf import PdfReader, PdfWriter
+    from reportlab.pdfgen import canvas as rl_canvas
+    from reportlab.lib.utils import ImageReader
+    from django.http import HttpResponse, JsonResponse
+    from django.core.mail import EmailMessage
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=400)
+
+    data = json.loads(request.body)
+    annotations = data.get('annotations', {})  
+    render_dpi = data.get('dpi', 120)
+
+    pdf_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            'static', 'core', 'documents', pdf_filename)
+
+    reader = PdfReader(pdf_path)
+    writer = PdfWriter()
+    writer.append(reader)
+
+    # Standard scale mapping factor between high-res display pixels and raw PDF points
+    scale = 72.0 / render_dpi
+
+    for page_str, annots in annotations.items():
+        page_idx = int(page_str) - 1
+        if page_idx < 0 or page_idx >= len(writer.pages):
+            continue
+
+        page_height = float(reader.pages[page_idx].mediabox[3])
+        page_width = float(reader.pages[page_idx].mediabox[2])
+
+        overlay_buf = io.BytesIO()
+        c = rl_canvas.Canvas(overlay_buf, pagesize=(page_width, page_height))
+
+        for annot in annots:
+            # Map structural browser overlay data back to exact native vector points
+            pdf_x = annot['x'] * scale
+            pdf_y = page_height - (annot['y'] * scale)
+
+            if annot['type'] == 'text':
+                font_size = annot.get('fontSize', 12)
+                color = annot.get('color', '#000000')
+                
+                try:
+                    r = int(color[1:3], 16) / 255.0
+                    g = int(color[3:5], 16) / 255.0
+                    b = int(color[5:7], 16) / 255.0
+                except Exception:
+                    r, g, b = 0.0, 0.0, 0.0
+                
+                c.setFillColorRGB(r, g, b)
+                c.setFont("Times-Bold", font_size)
+                # Keep font text resting evenly centered on the actual structural fill line
+                c.drawString(pdf_x, pdf_y, annot.get('text', ''))
+
+            elif annot['type'] == 'sig':
+                img_data = annot.get('data', '')
+                if img_data and img_data.startswith('data:image'):
+                    try:
+                        header, b64 = img_data.split(',', 1)
+                        img_bytes = base64.b64decode(b64)
+                        img_buf = io.BytesIO(img_bytes)
+                        img_reader = ImageReader(img_buf)
+                        
+                        w = annot.get('w', 180) * scale
+                        h = annot.get('h', 50) * scale
+                        
+                        # Signatures must drop down vertically based on image rendering coordinates
+                        c.drawImage(img_reader, pdf_x, pdf_y - h, width=w, height=h, mask='auto')
+                    except Exception as e:
+                        print(f"Signature render exception: {e}")
+
+            elif annot['type'] == 'check':
+                c.setFont("Helvetica-Bold", 14)
+                c.setFillColorRGB(0, 0, 0)
+                # Aligns check glyph directly inside checkbox layout grids
+                c.drawString(pdf_x - 3, pdf_y - 4, '✓')
+
+        c.save()
+        overlay_buf.seek(0)
+        overlay_reader = PdfReader(overlay_buf)
+        writer.pages[page_idx].merge_page(overlay_reader.pages[0])
+
+    output_buf = io.BytesIO()
+    writer.write(output_buf)
+    output_buf.seek(0)
+    pdf_bytes = output_buf.read()
+
+    action = data.get('action', 'download')  
+
+    if action == 'submit':
+        try:
+            student_email = data.get('student_email', '')
+            program = data.get('program', 'Program')
+            msg = EmailMessage(
+                subject=f'New {program} Application Received',
+                body=f'A student has submitted their {program} application through the Glory Nursing website.\n\nStudent Email: {student_email if student_email else "Not provided"}\n\nGlory Nursing Online Portal',
+                from_email=None,
+                to=['glorynursing@yahoo.com'],
+            )
+            msg.attach(output_filename, pdf_bytes, 'application/pdf')
+            msg.send()
+
+            if student_email:
+                EmailMessage(
+                    subject=f'Your Glory Nursing {program} Application Received',
+                    body=f'Thank you for submitting your {program} application to Glory Nursing!\n\nWe have received your completed application.\n\nGlory Nursing School',
+                    from_email=None,
+                    to=[student_email],
+                ).send()
+        except Exception as e:
+            print(f"Email routing error: {e}")
+
+        return JsonResponse({'success': True, 'message': 'Application submitted successfully!'})
+
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{output_filename}"'
+    return response
+
+
+
+
+
+
+
+
+
+
+
+
+
+def glory_nursing_bot(msg):
+    m = msg.lower().strip()
+    if any(w in m for w in ['hi','hello','hey','howdy','good morning']):
+        return "Hello! Welcome to Glory Nursing! I can help with programs, costs, schedules, and enrollment. What would you like to know?"
+    if any(w in m for w in ['cna','nursing assistant']):
+        if any(w in m for w in ['cost','price','how much','fee','tuition']):
+            return "The CNA program costs $299."
+        if any(w in m for w in ['long','duration','weeks','hours']):
+            return "The CNA program is 2-4 weeks with 77 clock hours. We offer Weekday, Evening, Weekend, and Online Hybrid schedules."
+        if any(w in m for w in ['require','need','prerequisite','qualify']):
+            return "CNA Requirements: Age 18+, High school diploma or GED, Valid ID, Social Security card, Background check, Immunization records."
+        return "Our CNA program is $299 and takes 2-4 weeks (77 hours). Flexible schedules available. Want to know about requirements or how to enroll?"
+    if any(w in m for w in ['cma','medication aide']):
+        if any(w in m for w in ['cost','price','how much','fee','tuition']):
+            return "The CMA program costs $399."
+        if any(w in m for w in ['require','need','prerequisite','qualify']):
+            return "CMA Prerequisites: Active Oklahoma CNA certification, minimum 6 months CNA experience, no abuse notations, Age 18+, High school diploma or GED."
+        return "Our CMA program is $399 and takes 2-3 weeks (50 hours). You must be a certified CNA with 6 months experience."
+    if any(w in m for w in ['program','course','offer','available']):
+        return "Glory Nursing offers: CNA ($299, 2-4 weeks), CMA ($399, 2-3 weeks), HHA, BLS/CPR, Phlebotomy, EKG, Medical Assistant, Medical Billing. Call (405) 968-5004 for other program pricing."
+    if any(w in m for w in ['enroll','apply','sign up','register']):
+        return "To enroll: Visit glorynursing.com/apply/cna/ for CNA or /apply/cma/ for CMA. Fill and sign your application online, pay securely, and get instant LMS access by email!"
+    if any(w in m for w in ['schedule','class','timing','weekend','evening']):
+        return "We offer Weekday, Evening, Weekend, and Online Hybrid schedules. Call (405) 968-5004 for the next available start date."
+    if any(w in m for w in ['location','address','where','located']):
+        return "We are at 12032 N Pennsylvania Ave, Oklahoma City, OK 73120. Hours: Mon-Fri 8AM-6PM, Sat 9AM-2PM."
+    if any(w in m for w in ['contact','phone','call','email','reach']):
+        return "Contact us: Phone (405) 968-5004, Email glorynursing@yahoo.com, Hours Mon-Fri 8AM-6PM, Sat 9AM-2PM."
+    if any(w in m for w in ['pay','payment','card','credit','cost','price','how much']):
+        return "We accept credit/debit card payments online at enrollment. CNA is $299 and CMA is $399. We have a No Refund Policy."
+    if any(w in m for w in ['background','criminal','check']):
+        return "A background check is required before clinical placement. Glory Nursing can conduct it for $30 (optional), or you can provide your own."
+    if any(w in m for w in ['thank','thanks','appreciate']):
+        return "You are welcome! Call us at (405) 968-5004 anytime. We would love to help start your healthcare career!"
+    return "I can help with program info, costs, schedules, and enrollment. Call (405) 968-5004 or email glorynursing@yahoo.com for specific questions."
+
+def chatbot_response(request):
+    """AI chatbot powered by Claude API."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=400)
+
+    data = json.loads(request.body)
+    user_message = data.get('message', '').strip()
+    history = data.get('history', [])
+
+    if not user_message:
+        return JsonResponse({'error': 'No message'}, status=400)
+
+    import urllib.request
+    import json as json_lib
+
+    system_prompt = """You are a helpful admissions assistant for Glory Nursing Healthcare Training School in Oklahoma City, Oklahoma.
+
+SCHOOL INFORMATION:
+- Name: Glory Nursing Healthcare Training School
+- Address: 12032 N Pennsylvania Ave, Oklahoma City, OK 73120
+- Phone: (405) 968-5004
+- Email: glorynursing@yahoo.com
+- Hours: Mon-Fri 8AM-6PM, Sat 9AM-2PM
+
+PROGRAMS:
+1. CNA (Certified Nursing Assistant) - $299
+   - Duration: 2-4 weeks, 77 clock hours
+   - Requirements: 18+ years, high school diploma/GED, valid ID, SSN, background check, immunization records
+   - Schedules: Weekday, Evening, Weekend, Online Hybrid
+
+2. CMA (Certified Medication Aide) - $399
+   - Duration: 2-3 weeks, 50 clock hours
+   - Prerequisites: Active Oklahoma CNA certification, minimum 6 months CNA experience, no abuse notations
+   - Requirements: 18+, high school diploma/GED
+   - Schedules: Weekday, Evening, Weekend, Online Hybrid
+
+3. HHA (Home Health Aide) - contact for price
+   - Duration: 1 week, 16 clock hours
+   - For CNAs wanting to expand skills
+
+4. BLS/CPR - contact for price
+   - Duration: 1 day, 6 clock hours
+   - AHA-certified, initial and renewal
+
+5. Phlebotomy - contact for price
+   - Duration: 6-8 weeks, 130 clock hours
+
+6. EKG Technician - contact for price
+   - Duration: 6-8 weeks, 130 clock hours
+
+7. Medical Assistant (CCMA) - contact for price
+   - Duration: 10-12 weeks, 360 clock hours
+
+8. Medical Billing & Coding - contact for price
+   - Duration: 7-9 weeks, 160 clock hours, available fully online
+
+ENROLLMENT PROCESS:
+1. Fill and sign the application online at glorynursing.com/apply/cna/ or /apply/cma/
+2. Submit the application digitally
+3. Pay online securely via credit/debit card
+4. Receive LMS login credentials by email instantly
+5. Start learning immediately
+
+PAYMENT: Secure online payment via credit/debit card. No refunds policy.
+
+BACKGROUND CHECK: Required before clinical placement. Glory Nursing can conduct it for $30 (optional).
+
+LMS: Students get access to online learning portal with lessons, quizzes, and certificates.
+
+INSTRUCTIONS:
+- Be friendly, helpful, and professional
+- Answer questions about programs, costs, schedules, requirements
+- For questions you cannot answer, direct them to call (405) 968-5004 or email glorynursing@yahoo.com
+- Keep responses concise and helpful
+- Encourage enrollment when appropriate
+- Do not make up information not provided above"""
+
+    messages = []
+    for msg in history[-10:]:  # Keep last 10 messages for context
+        messages.append({'role': msg['role'], 'content': msg['content']})
+    messages.append({'role': 'user', 'content': user_message})
+
+    payload = json_lib.dumps({
+        'model': 'claude-sonnet-4-20250514',
+        'max_tokens': 500,
+        'system': system_prompt,
+        'messages': messages
+    }).encode()
+
+    try:
+        import os
+        # Use rule-based bot
+        reply = glory_nursing_bot(user_message)
+        return JsonResponse({'reply': reply})
+
+        # Try using requests if available
+        try:
+            import requests as req_lib
+            resp = req_lib.post(
+                'https://api.anthropic.com/v1/messages',
+                headers={
+                    'Content-Type': 'application/json',
+                    'x-api-key': api_key,
+                    'anthropic-version': '2023-06-01',
+                },
+                json={
+                    'model': 'claude-sonnet-4-5',
+                    'max_tokens': 500,
+                    'system': system_prompt,
+                    'messages': messages
+                },
+                timeout=30
+            )
+            result = resp.json()
+            reply = result['content'][0]['text']
+        except ImportError:
+            req = urllib.request.Request(
+                'https://api.anthropic.com/v1/messages',
+                data=payload,
+                headers={
+                    'Content-Type': 'application/json',
+                    'x-api-key': api_key,
+                    'anthropic-version': '2023-06-01',
+                },
+                method='POST'
+            )
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                result = json_lib.loads(resp.read())
+                reply = result['content'][0]['text']
+
+        return JsonResponse({'reply': reply})
+    except Exception as e:
+        import traceback
+        print(f"Chatbot error: {e}")
+        print(traceback.format_exc())
+        # Try to get response body
+        try:
+            print(f"Response body: {e.read()}")
+        except:
+            pass
+        return JsonResponse({'reply': "I'm sorry, I'm having trouble connecting right now. Please call us at (405) 968-5004 or email glorynursing@yahoo.com for assistance."})
+
+
+def privacy_policy(request):
+    return render(request, 'core/legal/privacy.html', {'page': 'legal'})
+
+def terms_of_service(request):
+    return render(request, 'core/legal/terms.html', {'page': 'legal'})
+
+
+@csrf_exempt
+def upload_application_document(request):
+    """AJAX endpoint — securely upload a single applicant document."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=400)
+
+    from .models import ApplicationDocument
+
+    file_obj = request.FILES.get('file')
+    doc_type = request.POST.get('document_type', 'other')
+    full_name = request.POST.get('full_name', '').strip()
+    email = request.POST.get('email', '').strip()
+    program = request.POST.get('program', '').strip()
+
+    if not file_obj:
+        return JsonResponse({'error': 'No file provided'}, status=400)
+
+    allowed_ext = ('.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx')
+    if not file_obj.name.lower().endswith(allowed_ext):
+        return JsonResponse({'error': 'File type not allowed. Use PDF, JPG, PNG, or Word.'}, status=400)
+
+    if file_obj.size > 10 * 1024 * 1024:
+        return JsonResponse({'error': 'File too large. Max 10MB.'}, status=400)
+
+    if not request.session.session_key:
+        request.session.save()
+
+    doc = ApplicationDocument.objects.create(
+        full_name=full_name,
+        email=email,
+        program=program,
+        document_type=doc_type,
+        file=file_obj,
+        session_key=request.session.session_key,
+    )
+
+    # Store uploaded doc ids in session so we know what this applicant submitted
+    uploaded = request.session.get('uploaded_doc_ids', [])
+    uploaded.append(doc.id)
+    request.session['uploaded_doc_ids'] = uploaded
+
+    return JsonResponse({
+        'success': True,
+        'id': doc.id,
+        'filename': file_obj.name,
+        'document_type': doc.get_document_type_display(),
+    })
+
+
+def delete_application_document(request, doc_id):
+    """Remove an uploaded document (only if it belongs to this session)."""
+    from .models import ApplicationDocument
+    uploaded = request.session.get('uploaded_doc_ids', [])
+    if doc_id in uploaded:
+        ApplicationDocument.objects.filter(id=doc_id).delete()
+        uploaded.remove(doc_id)
+        request.session['uploaded_doc_ids'] = uploaded
+        return JsonResponse({'success': True})
+    return JsonResponse({'error': 'Not found'}, status=404)

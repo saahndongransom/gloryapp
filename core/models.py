@@ -3,6 +3,19 @@ from django.utils.text import slugify
 from django.utils import timezone
 
 
+class ApplicationRecord(models.Model):
+    student_email = models.EmailField()
+    full_name = models.CharField(max_length=200)
+    program = models.CharField(max_length=100)
+    pdf_file = models.FileField(upload_to='applications/', blank=True, null=True)
+    submitted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-submitted_at']
+
+    def __str__(self):
+        return f"{self.full_name} - {self.program} - {self.submitted_at.strftime('%Y-%m-%d')}"
+
 class ClassSchedule(models.Model):
     program = models.ForeignKey('Program', on_delete=models.CASCADE, related_name='schedules_list')
     start_date = models.DateField()

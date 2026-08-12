@@ -1248,6 +1248,24 @@ Glory Nursing Healthcare Training School
     except:
         pass
 
+    # Save PDF to media for admin download
+    import uuid, os
+    from django.conf import settings as dj_settings
+    pdf_dir = os.path.join(dj_settings.MEDIA_ROOT, 'applications')
+    os.makedirs(pdf_dir, exist_ok=True)
+    safe_name = full_name.replace(' ', '_').replace('/', '_')
+    pdf_filename = f"CNA_{safe_name}_{uuid.uuid4().hex[:6]}.pdf"
+    with open(os.path.join(pdf_dir, pdf_filename), 'wb') as pf:
+        pf.write(pdf_bytes)
+    # Save to StudentJourney for admin access
+    try:
+        from lms.models import StudentJourney as SJ2
+        sj, _ = SJ2.objects.get_or_create(student_email=student_email, stage='form_submitted')
+        sj.pdf_file = f'applications/{pdf_filename}'
+        sj.save()
+    except Exception:
+        pass
+
     from django.http import HttpResponse
     response = HttpResponse(pdf_bytes, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="CNA_Application_{full_name.replace(" ", "_")}.pdf"'
