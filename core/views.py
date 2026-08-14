@@ -1428,6 +1428,12 @@ Glory Nursing Healthcare Training School
         ).send()
     except Exception as e:
         print(f"Email error: {e}")
+    # Save application record
+    try:
+        from core.models import ApplicationRecord
+        ApplicationRecord.objects.create(student_email=student_email, full_name=full_name, program=program_name, pdf_file="")
+    except Exception as _e:
+        print(f"ApplicationRecord error: {_e}")
 
 
     # Auto-create student account (only for online programs)
