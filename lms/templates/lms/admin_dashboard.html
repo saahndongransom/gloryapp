@@ -1476,6 +1476,30 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
           {% endif %}
         </div>
 
+        <!-- Application Records -->
+        <div class="panel" style="margin-top:20px;border-left:4px solid #7c3aed">
+          <div class="panel-title">📋 Application Records</div>
+          {% if application_records %}
+          <div style="display:flex;flex-direction:column;gap:10px">
+            {% for rec in application_records %}
+            <div style="background:#f8fafc;border-radius:8px;padding:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+              <div>
+                <div style="font-weight:600;font-size:13px">{{ rec.full_name }}</div>
+                <div style="font-size:11px;color:#64748b">{{ rec.student_email }} · {{ rec.program }} · {{ rec.submitted_at|date:"M d, Y" }}</div>
+              </div>
+              {% if rec.pdf_file %}
+              <a href="/media/{{ rec.pdf_file }}" target="_blank" style="font-size:11px;padding:6px 12px;border-radius:6px;background:#7c3aed;color:#fff;text-decoration:none">⬇ Download PDF</a>
+              {% else %}
+              <span style="font-size:11px;color:#94a3b8">No PDF saved</span>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px">No application records yet</div>
+          {% endif %}
+        </div>
+
         <!-- Abandoned Forms Alert -->
         {% if abandoned_forms %}
         <div class="panel" style="margin-top:20px;border-left:4px solid #f59e0b">
