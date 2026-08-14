@@ -1,6 +1,20 @@
 from django.contrib import admin
+from django.utils.html import format_html
 from .models import Program, BlogPost, Event
 
+
+@admin.register(ApplicationRecord)
+class ApplicationRecordAdmin(admin.ModelAdmin):
+    list_display = ('full_name', 'student_email', 'program', 'submitted_at', 'download_pdf')
+    list_filter = ('program',)
+    search_fields = ('full_name', 'student_email')
+    ordering = ('-submitted_at',)
+
+    def download_pdf(self, obj):
+        if obj.pdf_file:
+            return format_html('<a href="/media/{}" target="_blank" class="button">⬇ Download PDF</a>', obj.pdf_file)
+        return 'No PDF'
+    download_pdf.short_description = 'PDF'
 
 @admin.register(Program)
 class ProgramAdmin(admin.ModelAdmin):

@@ -2497,15 +2497,44 @@ img { max-width: 100%; display: block; }
   .apply-how-it-works { padding: 24px 20px; }
 }
 
-@media (max-width: 768px) {
-  .tuition-table-wrap { border-radius: 10px; }
-  .tuition-table { min-width: unset; font-size: 0.82rem; }
 
-  .tuition-table thead th { padding: 12px 10px; }
-  .tuition-table td { padding: 12px 10px; }
+
+
+
+@media (max-width: 768px) {
+  .tuition-table-wrap { border-radius: 10px; overflow-x: visible; box-shadow: none; border: none; }
+  .tuition-table, .tuition-table thead, .tuition-table tbody, .tuition-table tr, .tuition-table td {
+    display: block;
+    width: 100%;
+  }
+  .tuition-table { min-width: unset; }
+  .tuition-table thead { display: none; }
+  .tuition-table tbody tr {
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow-sm);
+  }
+  .tuition-table td {
+    padding: 6px 0;
+    border: none;
+  }
+  .tuition-table td:not(:first-child)::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+  }
+  .tuition-table td:last-child {
+    margin-top: 10px;
+  }
   .tuition-program-name { gap: 8px; }
   .tuition-icon { font-size: 1.1rem; }
-  .tuition-program-name strong { font-size: 0.82rem; }
+  .tuition-program-name strong { font-size: 0.9rem; }
   .payment-plans-grid { grid-template-columns: 1fr; gap: 32px; }
 }
-
