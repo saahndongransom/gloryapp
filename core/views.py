@@ -268,6 +268,27 @@ Glory Nursing Online Portal""",
     return render(request, 'core/contact.html', {'page': 'contact'})
 
 
+
+def _save_application_record(email, full_name, program, pdf_bytes):
+    try:
+        import uuid, os
+        from django.conf import settings as dj_settings
+        from core.models import ApplicationRecord
+        pdf_dir = os.path.join(dj_settings.MEDIA_ROOT, 'applications')
+        os.makedirs(pdf_dir, exist_ok=True)
+        safe_name = full_name.replace(' ', '_').replace('/', '_')[:30]
+        pdf_filename = f"{program}_{safe_name}_{uuid.uuid4().hex[:6]}.pdf"
+        with open(os.path.join(pdf_dir, pdf_filename), 'wb') as pf:
+            pf.write(pdf_bytes)
+        ApplicationRecord.objects.create(
+            student_email=email,
+            full_name=full_name,
+            program=program,
+            pdf_file=f'applications/{pdf_filename}'
+        )
+    except Exception as e:
+        print(f'_save_application_record error: {e}')
+
 def apply(request):
     if request.method == 'POST':
         messages.success(request, 'Application submitted! Our admissions team will reach out within 1–2 business days.')
@@ -1058,6 +1079,7 @@ Glory Nursing Online Portal''',
             to=['glorynursing@yahoo.com'],
         )
         msg.attach('CNA_Application.pdf', pdf_bytes, 'application/pdf')
+        _save_application_record(student_email, full_name, 'CNA', pdf_bytes)
         msg.send()
 
         EmailMessage(
@@ -1759,6 +1781,7 @@ Glory Nursing Online Portal""",
             to=['glorynursing@yahoo.com'],
         )
         msg.attach('CMA_Application.pdf', pdf_bytes, 'application/pdf')
+        _save_application_record(student_email, full_name, 'CMA', pdf_bytes)
         msg.send()
 
         EmailMessage(
