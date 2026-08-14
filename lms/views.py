@@ -764,8 +764,11 @@ def lms_dashboard_view(request):
                 app.pdf_file = ''
         unread_count = new_applications.count()
 
+        from core.models import ApplicationRecord
+        application_records = ApplicationRecord.objects.order_by('-submitted_at')[:50]
         context = {
             'all_students': raw_students,
+            'application_records': application_records,
             'new_applications': new_applications,
             'unread_count': unread_count,
             'students_profiles': students_profiles,
