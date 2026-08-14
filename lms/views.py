@@ -754,6 +754,14 @@ def lms_dashboard_view(request):
             stage='form_submitted',
             updated_at__gte=week_ago
         ).order_by('-updated_at')
+        # Attach PDF file from ApplicationRecord
+        from core.models import ApplicationRecord
+        for app in new_applications:
+            try:
+                rec = ApplicationRecord.objects.filter(student_email=app.student_email).order_by('-submitted_at').first()
+                app.pdf_file = rec.pdf_file if rec else ''
+            except Exception:
+                app.pdf_file = ''
         unread_count = new_applications.count()
 
         context = {
