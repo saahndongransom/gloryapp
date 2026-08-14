@@ -1456,7 +1456,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
                 <td style="padding:12px 16px">
                   <span style="background:#eff6ff;color:#1a56db;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700">{{ rec.program }}</span>
                 </td>
-                <td style="padding:12px 16px;font-size:12px;color:var(--muted)">{{ rec.submitted_at|date:"M d, Y" }}</td>
+                <td style="padding:12px 16px;font-size:12px;color:var(--muted)">{{ rec.submitted_at|date:"M d, Y" }}<br><span style="font-size:11px;color:#94a3b8">{{ rec.submitted_at|time:"g:i A" }}</span></td>
                 <td style="padding:12px 16px">
                   <div style="display:flex;gap:6px">
                     <a href="mailto:{{ rec.student_email }}" style="font-size:11px;padding:5px 10px;border-radius:6px;background:#eff6ff;color:#1a56db;text-decoration:none;font-weight:600">✉️ Email</a>
