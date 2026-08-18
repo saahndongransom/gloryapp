@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
                 ('student_email', models.EmailField(max_length=254)),
                 ('full_name', models.CharField(max_length=200)),
                 ('program', models.CharField(max_length=100)),
-                ('pdf_file', models.FileField(blank=True, null=True, upload_to='applications/')),
+                ('pdf_file', models.CharField(blank=True, default='', max_length=300)),
                 ('submitted_at', models.DateTimeField(auto_now_add=True)),
             ],
             options={
