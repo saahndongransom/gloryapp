@@ -7,7 +7,7 @@ class ApplicationRecord(models.Model):
     student_email = models.EmailField()
     full_name = models.CharField(max_length=200)
     program = models.CharField(max_length=100)
-    pdf_file = models.FileField(upload_to='applications/', blank=True, null=True)
+    pdf_file = models.CharField(max_length=300, blank=True, default='')
     submitted_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
