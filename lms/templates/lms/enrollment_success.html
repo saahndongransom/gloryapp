@@ -26,12 +26,17 @@ p { font-size: 14px; color: #6b7280; line-height: 1.7; margin-bottom: 8px; }
 
   <div class="credentials">
     <div class="cred-row"><span class="cred-label">Username</span><span class="cred-val">{{ data.username }}</span></div>
-    <div class="cred-row"><span class="cred-label">Password</span><span class="cred-val">Check your email</span></div>
-    <div class="cred-row"><span class="cred-label">Email sent to</span><span class="cred-val">{{ data.email }}</span></div>
+    <div class="cred-row"><span class="cred-label">Password</span><span class="cred-val">{{ data.password|default:"Check your email" }}</span></div>
+    <div class="cred-row"><span class="cred-label">Email</span><span class="cred-val">{{ data.email }}</span></div>
+    <div class="cred-row"><span class="cred-label">Amount Paid</span><span class="cred-val">${{ data.amount_paid }}</span></div>
+    {% if data.balance %}<div class="cred-row"><span class="cred-label">Balance Due</span><span class="cred-val" style="color:#dc2626">${{ data.balance }}</span></div>{% endif %}
   </div>
 
-  <p>Your login credentials have been sent to your email. Log in now to start learning!</p>
+  <p>Save these credentials — a copy has been sent to your email.</p>
   <a href="{% url 'lms_login' %}" class="login-btn"><i class="fas fa-sign-in-alt"></i> Log In Now</a>
+  {% if data.balance %}
+  <a href="/lms/pay/?name={{ data.name|urlencode }}&email={{ data.email|urlencode }}&amount={{ data.balance }}&reason=Balance+for+{{ data.course|urlencode }}" class="login-btn" style="background:#059669;margin-top:8px"><i class="fas fa-credit-card"></i> Pay Balance Now</a>
+  {% endif %}
   <p class="note">If you don't receive the email within 5 minutes, check your spam folder.</p>
 </div>
 {% endblock %}
