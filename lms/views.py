@@ -1334,8 +1334,10 @@ def lesson_view(request, lesson_id):
 
 
 @login_required(login_url='lms_login')
-@require_POST
 def send_followup_email(request):
+    if request.method != 'POST':
+        from django.http import HttpResponseNotAllowed
+        return HttpResponseNotAllowed(['POST'])
     from django.http import JsonResponse
     from django.core.mail import EmailMessage
     if not request.user.is_staff:
