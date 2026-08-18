@@ -1347,15 +1347,7 @@ def send_followup_email(request):
     try:
         EmailMessage(
             subject='Complete Your Glory Nursing Application',
-            body=f'Hi {name},
-
-We noticed you started your Glory Nursing application but did not finish. Click the link below to complete it:
-
-https://glorynursingok.com/apply/
-
-If you have any questions, please call us at (405) 968-5004 or email glorynursing@yahoo.com
-
-Glory Nursing Healthcare Training School',
+            body=f'Hi {name},\n\nWe noticed you started your Glory Nursing application but did not finish. Click the link below to complete it:\n\nhttps://glorynursingok.com/apply/\n\nIf you have any questions, please call us at (405) 968-5004 or email glorynursing@yahoo.com\n\nGlory Nursing Healthcare Training School',
             from_email=None,
             to=[email],
         ).send()
