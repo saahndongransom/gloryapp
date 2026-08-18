@@ -2710,6 +2710,25 @@ function prepareEditForm() {
     document.getElementById('editModalLessonId').value = id;
   }
 }
+
+function sendFollowUp(email, name) {
+  if (!confirm('Send follow-up email to ' + email + '?')) return;
+  var btn = event.target;
+  btn.textContent = 'Sending...';
+  btn.disabled = true;
+  var csrfToken = document.cookie.match(/csrftoken=([^;]+)/);
+  csrfToken = csrfToken ? csrfToken[1] : '';
+  var fd = new FormData();
+  fd.append('email', email);
+  fd.append('name', name);
+  fd.append('csrfmiddlewaretoken', csrfToken);
+  fetch('/lms/send-followup/', {method:'POST', body: fd})
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) { btn.textContent = '\u2713 Sent'; btn.style.background='#059669'; }
+      else { btn.textContent = '\u2717 Failed'; btn.disabled = false; alert('Error: ' + (d.error||'Unknown')); }
+    }).catch(function() { btn.textContent = '\u2717 Error'; btn.disabled = false; });
+}
 </script>
 <!-- Content Edit Modal -->
 <div id="contentEditModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center">
