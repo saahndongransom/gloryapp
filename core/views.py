@@ -1452,6 +1452,10 @@ Glory Nursing Healthcare Training School
                 counter += 1
             alphabet = string.ascii_letters + string.digits
             temp_password = ''.join(secrets.choice(alphabet) for _ in range(10))
+            created_username = username
+            created_password = temp_password
+            created_username = username
+            created_password = temp_password
             new_user = AuthUser.objects.create_user(
                 username=username,
                 email=student_email,
@@ -1522,7 +1526,7 @@ Glory Nursing Healthcare Training School""",
     except Exception as e:
         print(f"Simple form journey error: {e}")
 
-    return JsonResponse({'success': True})
+    return JsonResponse({'success': True, 'username': created_username, 'password': created_password})
 
 
 def fill_form_cma(request):
@@ -2327,5 +2331,5 @@ def delete_application_document(request, doc_id):
         ApplicationDocument.objects.filter(id=doc_id).delete()
         uploaded.remove(doc_id)
         request.session['uploaded_doc_ids'] = uploaded
-        return JsonResponse({'success': True})
+        return JsonResponse({'success': True, 'username': created_username, 'password': created_password})
     return JsonResponse({'error': 'Not found'}, status=404)
