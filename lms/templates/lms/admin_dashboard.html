@@ -1601,7 +1601,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
                 <div style="font-weight:600;font-size:13px">{{ app.student_email }}</div>
                 <div style="font-size:11px;color:#64748b">Stopped at: {{ app.metadata.section_name|default:'—' }} · {{ app.metadata.percent|default:0 }}% done · {{ app.updated_at|timesince }} ago</div>
               </div>
-              <a href="mailto:{{ app.student_email }}?subject=Complete Your Glory Nursing Application&body=Hi, we noticed you started your application but didn't finish. Click here to complete it: https://glorynursingok.com/apply/" style="font-size:11px;padding:5px 10px;border-radius:6px;background:#f59e0b;color:#fff;text-decoration:none">📧 Follow Up</a>
+              <button onclick="sendFollowUp('{{ app.student_email }}', '{{ app.student_email }}')" style="font-size:11px;padding:5px 10px;border-radius:6px;background:#f59e0b;color:#fff;border:none;cursor:pointer">📧 Follow Up</button>
             </div>
             {% endfor %}
           </div>
