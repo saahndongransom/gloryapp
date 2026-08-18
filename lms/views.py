@@ -1334,6 +1334,36 @@ def lesson_view(request, lesson_id):
 
 
 @login_required(login_url='lms_login')
+@require_POST
+def send_followup_email(request):
+    from django.http import JsonResponse
+    from django.core.mail import EmailMessage
+    if not request.user.is_staff:
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    email = request.POST.get('email', '')
+    name = request.POST.get('name', email)
+    if not email:
+        return JsonResponse({'error': 'No email'}, status=400)
+    try:
+        EmailMessage(
+            subject='Complete Your Glory Nursing Application',
+            body=f'Hi {name},
+
+We noticed you started your Glory Nursing application but did not finish. Click the link below to complete it:
+
+https://glorynursingok.com/apply/
+
+If you have any questions, please call us at (405) 968-5004 or email glorynursing@yahoo.com
+
+Glory Nursing Healthcare Training School',
+            from_email=None,
+            to=[email],
+        ).send()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required(login_url='lms_login')
 @csrf_exempt
 def log_lesson_time(request, lesson_id):
     from django.http import JsonResponse
