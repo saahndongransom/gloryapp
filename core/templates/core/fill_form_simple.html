@@ -165,7 +165,9 @@ function submitApplication() {
           + '<div style="font-size:11px;color:#64748b">Also sent to your email. Please save these credentials.</div>'
           + '</div>'
         : '';
-      var payUrl = '/lms/pay/?reason={{ program_name|urlencode }}&email=' + encodeURIComponent(email);
+      var fname = document.querySelector('[data-field="first_name"]') ? document.querySelector('[data-field="first_name"]').value : '';
+      var lname = document.querySelector('[data-field="last_name"]') ? document.querySelector('[data-field="last_name"]').value : '';
+      var payUrl = '/lms/pay/?reason={{ program_name|urlencode }}&email=' + encodeURIComponent(email) + '&name=' + encodeURIComponent(fname + ' ' + lname) + '{% if program_price %}&amount={{ program_price }}{% endif %}';
       var onlineHtml = credHtml
         + '<div style="display:flex;flex-direction:column;gap:10px;max-width:420px;width:100%">'
         + '<a href="' + payUrl + '" style="background:#059669;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:800;text-align:center">💳 Complete Payment Now</a>'

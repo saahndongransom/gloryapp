@@ -1355,6 +1355,7 @@ def fill_form_simple(request, program_code):
         upcoming = []
     return render(request, 'core/fill_form_simple.html', {
         'program_name': program_name,
+        'program_price': str(float(prog_obj.price)) if prog_obj and prog_obj.price else '',
         'program_code': program_code.upper(),
         'course_id': course_id,
         'is_online': is_online,
