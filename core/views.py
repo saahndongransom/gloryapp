@@ -1107,6 +1107,8 @@ Glory Nursing Healthcare Training School
     import secrets, string
     account_created = False
     temp_password = None
+    created_username = ''
+    created_password = ''
     # Check if this is an online program
     from core.models import Program as CoreProg6
     _pslug6 = data.get('program_slug', '')
@@ -1122,6 +1124,8 @@ Glory Nursing Healthcare Training School
                 counter += 1
             alphabet = string.ascii_letters + string.digits
             temp_password = ''.join(secrets.choice(alphabet) for _ in range(10))
+            created_username = username
+            created_password = temp_password
             new_user = AuthUser.objects.create_user(
                 username=username,
                 email=student_email,
@@ -1292,7 +1296,8 @@ Glory Nursing Healthcare Training School
 
     # Save PDF to media for download
     import uuid as _uuid
-    _pdf_dir = os.path.join(settings.MEDIA_ROOT, 'applications')
+    from django.conf import settings as _s
+    _pdf_dir = os.path.join(_s.MEDIA_ROOT, 'applications')
     os.makedirs(_pdf_dir, exist_ok=True)
     _safe = full_name.replace(' ', '_').replace('/', '_')[:30]
     _fn = f'CNA_{_safe}_{_uuid.uuid4().hex[:6]}.pdf'
