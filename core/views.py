@@ -1355,7 +1355,6 @@ def fill_form_simple(request, program_code):
         upcoming = []
     return render(request, 'core/fill_form_simple.html', {
         'program_name': program_name,
-        'program_price': str(float(prog_obj.price)) if prog_obj and prog_obj.price else '',
         'program_code': program_code.upper(),
         'course_id': course_id,
         'is_online': is_online,
@@ -1386,8 +1385,6 @@ def submit_form_simple(request, program_code):
     full_name = f"{data.get('first_name','')} {data.get('last_name','')}".strip() or 'Applicant'
     program_name = data.get('program_name', program_code)
 
-    _cred_username = ""
-    _cred_password = ""
     try:
         msg = EmailMessage(
             subject=f'New {program_name} Application Received - {full_name}',
@@ -1455,8 +1452,6 @@ Glory Nursing Healthcare Training School
                 counter += 1
             alphabet = string.ascii_letters + string.digits
             temp_password = ''.join(secrets.choice(alphabet) for _ in range(10))
-            _cred_username = username
-            _cred_password = temp_password
             new_user = AuthUser.objects.create_user(
                 username=username,
                 email=student_email,
@@ -1527,7 +1522,7 @@ Glory Nursing Healthcare Training School""",
     except Exception as e:
         print(f"Simple form journey error: {e}")
 
-    return JsonResponse({'success': True, 'username': _cred_username, 'password': _cred_password})
+    return JsonResponse({'success': True})
 
 
 def fill_form_cma(request):
