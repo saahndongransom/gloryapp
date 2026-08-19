@@ -1385,11 +1385,11 @@ def submit_form_simple(request, program_code):
     full_name = f"{data.get('first_name','')} {data.get('last_name','')}".strip() or 'Applicant'
     program_name = data.get('program_name', program_code)
 
+    _cred_username = ""
+    _cred_password = ""
     try:
         msg = EmailMessage(
             subject=f'New {program_name} Application Received - {full_name}',
-    _cred_username = ""
-    _cred_password = ""
             body=f"""A student has submitted an application for {program_name} through the Glory Nursing website.
 
 Name: {full_name}
