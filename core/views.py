@@ -1388,6 +1388,8 @@ def submit_form_simple(request, program_code):
     try:
         msg = EmailMessage(
             subject=f'New {program_name} Application Received - {full_name}',
+    _cred_username = ""
+    _cred_password = ""
             body=f"""A student has submitted an application for {program_name} through the Glory Nursing website.
 
 Name: {full_name}
@@ -1452,6 +1454,8 @@ Glory Nursing Healthcare Training School
                 counter += 1
             alphabet = string.ascii_letters + string.digits
             temp_password = ''.join(secrets.choice(alphabet) for _ in range(10))
+            _cred_username = username
+            _cred_password = temp_password
             new_user = AuthUser.objects.create_user(
                 username=username,
                 email=student_email,
@@ -1522,7 +1526,7 @@ Glory Nursing Healthcare Training School""",
     except Exception as e:
         print(f"Simple form journey error: {e}")
 
-    return JsonResponse({'success': True})
+    return JsonResponse({'success': True, 'username': _cred_username, 'password': _cred_password})
 
 
 def fill_form_cma(request):
