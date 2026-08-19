@@ -679,6 +679,13 @@ function submitApplication() {
   })
   .then(function(r) { return r.json(); })
   .then(function(d) {
+    // Auto-download PDF if available
+    if (d.pdf_url) {
+      var a = document.createElement('a');
+      a.href = d.pdf_url;
+      a.download = 'CNA_Application.pdf';
+      a.click();
+    }
     if (d.success) {
       clearProgress();
       if (!isOnlineProgram) {

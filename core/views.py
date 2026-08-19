@@ -1290,12 +1290,22 @@ Glory Nursing Healthcare Training School
     except Exception:
         pass
 
-    from django.http import HttpResponse
-    response = HttpResponse(pdf_bytes, content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="CNA_Application_{full_name.replace(" ", "_")}.pdf"'
-    if email_error:
-        response['X-Email-Error'] = email_error[:200]
-    return response
+    # Save PDF to media for download
+    import uuid as _uuid
+    _pdf_dir = os.path.join(settings.MEDIA_ROOT, 'applications')
+    os.makedirs(_pdf_dir, exist_ok=True)
+    _safe = full_name.replace(' ', '_').replace('/', '_')[:30]
+    _fn = f'CNA_{_safe}_{_uuid.uuid4().hex[:6]}.pdf'
+    with open(os.path.join(_pdf_dir, _fn), 'wb') as _pf:
+        _pf.write(pdf_bytes)
+    from django.http import JsonResponse as _JR
+    return _JR({
+        'success': True,
+        'username': created_username,
+        'password': created_password,
+        'pdf_url': f'/media/applications/{_fn}',
+        'email_error': email_error or ''
+    })
 
 def fill_pdf_cma(request):
     import os
