@@ -157,7 +157,34 @@ function submitApplication() {
   .then(function(d) {
     if (d.success) {
       var isOnlineProgram = {% if is_online %}true{% else %}false{% endif %};
-      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:24px;background:#16213e;color:#fff;padding:24px;text-align:center;"><div style="font-size:64px">🎉</div><h2 style="font-size:24px;font-weight:800">Application Submitted!</h2><div style="background:rgba(255,255,255,0.08);border-radius:14px;padding:24px;max-width:420px;text-align:left;"><p style="color:#94a3b8;font-size:14px;margin-bottom:12px">✅ Your application has been sent to Glory Nursing.</p><p style="color:#94a3b8;font-size:14px;margin-bottom:12px">✅ Your student account has been created.</p><p style="color:#34d399;font-size:14px;font-weight:700;">📧 Check your email for your login credentials.</p></div><p style="color:#64748b;font-size:13px;max-width:380px">' + (isOnlineProgram ? 'Login with your credentials, then complete your enrollment payment to get instant access to your course.</p><a href="/lms/login/" style="background:#1a56db;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:800;">Login to Your Account</a><a href="/" style="color:#64748b;font-size:13px">Return to Home</a>' : '{% if upcoming_schedules %}📅 Your class starts on {{ upcoming_schedules.0.start_date }} — {{ upcoming_schedules.0.days }}{% if upcoming_schedules.0.start_time %} at {{ upcoming_schedules.0.start_time }}{% endif %}.</p></div>{% else %}Our admissions team will contact you with your class start date within 1-2 business days.</p></div>{% endif %}<a href="/lms/pay/?reason={{ program_name|urlencode }}" style="background:#059669;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:800;">💳 Complete Payment Now</a><a href="/" style="color:#64748b;font-size:13px;margin-top:8px;display:block">Return to Home</a>') + '</div>';
+      var credHtml = (d.username && d.password)
+        ? '<div style="background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.3);border-radius:10px;padding:16px;max-width:420px;width:100%;text-align:left;margin:0 auto">'
+          + '<div style="font-size:13px;font-weight:700;color:#34d399;margin-bottom:8px">🔐 Your Login Credentials</div>'
+          + '<div style="font-size:13px;color:#e2e8f0;margin-bottom:6px">Username: <strong>' + d.username + '</strong></div>'
+          + '<div style="font-size:13px;color:#e2e8f0;margin-bottom:4px">Password: <strong>' + d.password + '</strong></div>'
+          + '<div style="font-size:11px;color:#64748b">Also sent to your email. Please save these credentials.</div>'
+          + '</div>'
+        : '';
+      var payUrl = '/lms/pay/?reason={{ program_name|urlencode }}&email=' + encodeURIComponent(email);
+      var onlineHtml = credHtml
+        + '<div style="display:flex;flex-direction:column;gap:10px;max-width:420px;width:100%">'
+        + '<a href="' + payUrl + '" style="background:#059669;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:800;text-align:center">💳 Complete Payment Now</a>'
+        + '<a href="/lms/login/" style="background:#1a56db;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:800;text-align:center">🔐 Login to Your Account</a>'
+        + '<a href="/" style="color:#64748b;font-size:13px;text-align:center">Return to Home</a>'
+        + '</div>';
+      var physicalHtml = '{% if upcoming_schedules %}<p style="color:#94a3b8;font-size:13px">📅 Your class starts on {{ upcoming_schedules.0.start_date }} — {{ upcoming_schedules.0.days }}{% if upcoming_schedules.0.start_time %} at {{ upcoming_schedules.0.start_time }}{% endif %}.</p>{% else %}<p style="color:#94a3b8;font-size:13px">Our admissions team will contact you with your class start date within 1-2 business days.</p>{% endif %}'
+        + '<a href="/lms/pay/?reason={{ program_name|urlencode }}" style="background:#059669;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:800;display:block;text-align:center">💳 Complete Payment Now</a>'
+        + '<a href="/" style="color:#64748b;font-size:13px;display:block;text-align:center;margin-top:8px">Return to Home</a>';
+      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:16px;background:#16213e;color:#fff;padding:24px;text-align:center;">'
+        + '<div style="font-size:64px">🎉</div>'
+        + '<h2 style="font-size:24px;font-weight:800">Application Submitted!</h2>'
+        + '<div style="background:rgba(255,255,255,0.08);border-radius:14px;padding:20px;max-width:420px;width:100%;text-align:left;">'
+        + '<p style="color:#94a3b8;font-size:14px;margin-bottom:8px">✅ Application sent to Glory Nursing.</p>'
+        + '<p style="color:#94a3b8;font-size:14px;margin-bottom:8px">✅ Student account created.</p>'
+        + '<p style="color:#34d399;font-size:14px;font-weight:700">📧 Check your email for confirmation.</p>'
+        + '</div>'
+        + (isOnlineProgram ? onlineHtml : physicalHtml)
+        + '</div>';
     } else {
       btn.disabled = false;
       btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Application';
