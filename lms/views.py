@@ -1334,10 +1334,8 @@ def lesson_view(request, lesson_id):
 
 
 @login_required(login_url='lms_login')
+@require_POST
 def send_followup_email(request):
-    if request.method != 'POST':
-        from django.http import HttpResponseNotAllowed
-        return HttpResponseNotAllowed(['POST'])
     from django.http import JsonResponse
     from django.core.mail import EmailMessage
     if not request.user.is_staff:
@@ -1349,7 +1347,15 @@ def send_followup_email(request):
     try:
         EmailMessage(
             subject='Complete Your Glory Nursing Application',
-            body=f'Hi {name},\n\nWe noticed you started your Glory Nursing application but did not finish. Click the link below to complete it:\n\nhttps://glorynursingok.com/apply/\n\nIf you have any questions, please call us at (405) 968-5004 or email glorynursing@yahoo.com\n\nGlory Nursing Healthcare Training School',
+            body=f'Hi {name},
+
+We noticed you started your Glory Nursing application but did not finish. Click the link below to complete it:
+
+https://glorynursingok.com/apply/
+
+If you have any questions, please call us at (405) 968-5004 or email glorynursing@yahoo.com
+
+Glory Nursing Healthcare Training School',
             from_email=None,
             to=[email],
         ).send()
@@ -2942,10 +2948,7 @@ Oklahoma City, Oklahoma""",
                 'name': first_name,
                 'course': course.title,
                 'username': username,
-                'password': pwd if pwd else '',
                 'email': email,
-                'amount_paid': round(float(amount) / 100, 2),
-                'balance': 0,
                 'is_online': is_online,
                 'program_title': program_obj.title if program_obj else course.title,
                 'upcoming_schedules': upcoming,

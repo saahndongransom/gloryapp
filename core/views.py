@@ -1107,8 +1107,6 @@ Glory Nursing Healthcare Training School
     import secrets, string
     account_created = False
     temp_password = None
-    created_username = ''
-    created_password = ''
     # Check if this is an online program
     from core.models import Program as CoreProg6
     _pslug6 = data.get('program_slug', '')
@@ -1124,8 +1122,6 @@ Glory Nursing Healthcare Training School
                 counter += 1
             alphabet = string.ascii_letters + string.digits
             temp_password = ''.join(secrets.choice(alphabet) for _ in range(10))
-            created_username = username
-            created_password = temp_password
             new_user = AuthUser.objects.create_user(
                 username=username,
                 email=student_email,
@@ -1294,23 +1290,12 @@ Glory Nursing Healthcare Training School
     except Exception:
         pass
 
-    # Save PDF to media for download
-    import uuid as _uuid
-    from django.conf import settings as _s
-    _pdf_dir = os.path.join(_s.MEDIA_ROOT, 'applications')
-    os.makedirs(_pdf_dir, exist_ok=True)
-    _safe = full_name.replace(' ', '_').replace('/', '_')[:30]
-    _fn = f'CNA_{_safe}_{_uuid.uuid4().hex[:6]}.pdf'
-    with open(os.path.join(_pdf_dir, _fn), 'wb') as _pf:
-        _pf.write(pdf_bytes)
-    from django.http import JsonResponse as _JR
-    return _JR({
-        'success': True,
-        'username': created_username,
-        'password': created_password,
-        'pdf_url': f'/media/applications/{_fn}',
-        'email_error': email_error or ''
-    })
+    from django.http import HttpResponse
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="CNA_Application_{full_name.replace(" ", "_")}.pdf"'
+    if email_error:
+        response['X-Email-Error'] = email_error[:200]
+    return response
 
 def fill_pdf_cma(request):
     import os
@@ -1467,10 +1452,6 @@ Glory Nursing Healthcare Training School
                 counter += 1
             alphabet = string.ascii_letters + string.digits
             temp_password = ''.join(secrets.choice(alphabet) for _ in range(10))
-            created_username = username
-            created_password = temp_password
-            created_username = username
-            created_password = temp_password
             new_user = AuthUser.objects.create_user(
                 username=username,
                 email=student_email,
@@ -1541,7 +1522,7 @@ Glory Nursing Healthcare Training School""",
     except Exception as e:
         print(f"Simple form journey error: {e}")
 
-    return JsonResponse({'success': True, 'username': created_username, 'password': created_password})
+    return JsonResponse({'success': True})
 
 
 def fill_form_cma(request):
@@ -2346,5 +2327,5 @@ def delete_application_document(request, doc_id):
         ApplicationDocument.objects.filter(id=doc_id).delete()
         uploaded.remove(doc_id)
         request.session['uploaded_doc_ids'] = uploaded
-        return JsonResponse({'success': True, 'username': created_username, 'password': created_password})
+        return JsonResponse({'success': True})
     return JsonResponse({'error': 'Not found'}, status=404)
