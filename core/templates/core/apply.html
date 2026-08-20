@@ -27,10 +27,20 @@
           <li><i class="fas fa-check-circle"></i> Duration: {{ program.duration }}</li>
           <li><i class="fas fa-check-circle"></i> {{ program.hours }}</li>
         </ul>
-        {% if program.slug == 'cma' %}
-        <a href="{% url 'apply_cma' %}" class="btn btn-primary btn-lg" style="width:100%;text-align:center">Apply for {{ program.short }} Program</a>
+        {% if 'cma-traditional' in program.slug or 'certified-medication-aide-onlinehybrid' in program.slug or program.slug == 'cma' %}
+        <a href="{% url 'apply_cma' %}?program={{ program.slug }}" class="btn btn-primary btn-lg" style="width:100%;text-align:center">Apply for {{ program.short }} Program</a>
+        {% elif 'cprbls' in program.slug or 'bls' in program.slug %}
+        <a href="/apply/simple/BLS/?program={{ program.slug }}" class="btn btn-primary btn-lg" style="width:100%;text-align:center">Apply for {{ program.short }} Program</a>
+        {% elif 'renewal' in program.slug %}
+        <a href="/apply/simple/CMARENEWAL/?program={{ program.slug }}" class="btn btn-primary btn-lg" style="width:100%;text-align:center">Apply for {{ program.short }} Program</a>
+        {% elif 'acma' in program.slug or 'advanced-certified' in program.slug %}
+        <a href="/apply/simple/ACMA/?program={{ program.slug }}" class="btn btn-primary btn-lg" style="width:100%;text-align:center">Apply for {{ program.short }} Program</a>
+        {% elif 'hha' in program.slug %}
+        <a href="/apply/simple/HHA/?program={{ program.slug }}" class="btn btn-primary btn-lg" style="width:100%;text-align:center">Apply for {{ program.short }} Program</a>
+        {% elif 'phlebotomy' in program.slug or 'ekg' in program.slug or 'medical-assistant' in program.slug %}
+        <a href="{% url 'contact' %}" class="btn btn-primary btn-lg" style="width:100%;text-align:center">Contact Us</a>
         {% else %}
-        <a href="{% url 'apply_cna' %}" class="btn btn-primary btn-lg" style="width:100%;text-align:center">Apply for {{ program.short }} Program</a>
+        <a href="{% url 'apply_cna' %}?program={{ program.slug }}" class="btn btn-primary btn-lg" style="width:100%;text-align:center">Apply for {{ program.short }} Program</a>
         {% endif %}
       </div>
       {% endfor %}
