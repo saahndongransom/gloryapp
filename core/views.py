@@ -1439,6 +1439,9 @@ Glory Nursing Healthcare Training School
     # Auto-create student account (only for online programs)
     from django.contrib.auth.models import User as AuthUser
     import secrets, string
+    _ret_user = ''
+    _ret_pass = ''
+    _ret_price = ''
     try:
         _pslug_s = request.GET.get("program", "")
         _pprog_s = __import__("core.models", fromlist=["Program"]).Program.objects.filter(slug=_pslug_s).first() if _pslug_s else None
@@ -1452,6 +1455,9 @@ Glory Nursing Healthcare Training School
                 counter += 1
             alphabet = string.ascii_letters + string.digits
             temp_password = ''.join(secrets.choice(alphabet) for _ in range(10))
+            _ret_user = username
+            _ret_pass = temp_password
+            _ret_price = str(float(_pprog_s.price)) if _pprog_s and _pprog_s.price else ''
             new_user = AuthUser.objects.create_user(
                 username=username,
                 email=student_email,
@@ -1522,7 +1528,7 @@ Glory Nursing Healthcare Training School""",
     except Exception as e:
         print(f"Simple form journey error: {e}")
 
-    return JsonResponse({'success': True})
+    return JsonResponse({'success': True, 'username': _ret_user, 'password': _ret_pass, 'price': _ret_price})
 
 
 def fill_form_cma(request):
