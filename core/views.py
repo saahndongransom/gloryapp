@@ -1814,6 +1814,12 @@ Glory Nursing Online Portal""",
         msg.attach('CMA_Application.pdf', pdf_bytes, 'application/pdf')
         _save_application_record(student_email, full_name, 'CMA', pdf_bytes)
         msg.send()
+        try:
+            from lms.models import Course as _CMC
+            _cma_ca = get('course_applied') or ''
+            _cma_link_course = _CMC.objects.filter(title__iexact=_cma_ca).first() if _cma_ca else None
+        except Exception:
+            _cma_link_course = None
 
         EmailMessage(
             subject='Your Glory Nursing CMA Application Received',
@@ -1822,7 +1828,7 @@ Glory Nursing Online Portal""",
 We have received your completed application. Our admissions team will review it and contact you within 1-2 business days.
 
 Complete your payment here:
-https://glorynursingok.com/lms/pay/?name={full_name.replace(' ', '+')}&email={student_email}&reason={get('course_applied') or 'CMA Program'}&amount={cma_program_price or '900'}
+{f"https://glorynursingok.com/lms/enroll/{_cma_link_course.id}/" if _cma_link_course else f"https://glorynursingok.com/lms/pay/?name={full_name.replace(' ', '+')}&email={student_email}&reason={get('course_applied') or 'CMA Program'}&amount={cma_program_price or '900'}"}
 
 Questions? Call us at (405) 968-5004 or email glorynursing@yahoo.com
 
@@ -1839,6 +1845,9 @@ Glory Nursing Healthcare Training School
     # Auto-create student account (only for online programs)
     from django.contrib.auth.models import User as AuthUser
     import secrets, string
+    _cma_user = ''
+    _cma_pass = ''
+    _cma_course = ''
     try:
         _ca_cma = get("course_applied") or ""
         _pprog_cma = __import__("core.models", fromlist=["Program"]).Program.objects.filter(title__icontains=_ca_cma[:20]).first() if _ca_cma else None
@@ -1852,6 +1861,8 @@ Glory Nursing Healthcare Training School
                 counter += 1
             alphabet = string.ascii_letters + string.digits
             temp_password = ''.join(secrets.choice(alphabet) for _ in range(10))
+            _cma_user = username
+            _cma_pass = temp_password
             new_user = AuthUser.objects.create_user(
                 username=username,
                 email=student_email,
@@ -1889,12 +1900,14 @@ Glory Nursing Healthcare Training School""",
                 _pprog = CoreProg5.objects.filter(slug=_pslug).first() if _pslug else None
                 if _pprog and _pprog.is_online and _pprog.course:
                     Enrollment.objects.get_or_create(student=new_user, course=_pprog.course)
+                    _cma_course = str(_pprog.course.id)
                 elif not _pprog:
                     # Fallback: try to find course by title for online programs
                     course_title = data.get('course_applied', '').strip()
                     if course_title:
                         pending_c = LMSCourse2.objects.filter(title=course_title, is_published=True).first()
                         if pending_c:
+                            _cma_course = str(pending_c.id)
                             Enrollment.objects.get_or_create(student=new_user, course=pending_c)
             except Exception as enroll_err:
                 print(f"Pending enrollment error: {enroll_err}")
@@ -1926,6 +1939,9 @@ Glory Nursing Healthcare Training School""",
     response['Content-Disposition'] = f'attachment; filename="CMA_Application_{full_name.replace(" ", "_")}.pdf"'
     if email_error:
         response['X-Email-Error'] = email_error[:200]
+    response['X-Login-User'] = _cma_user
+    response['X-Login-Pass'] = _cma_pass
+    response['X-Course-Id'] = _cma_course
     return response
 
 def render_pdf_page(request):
