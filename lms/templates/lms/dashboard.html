@@ -355,7 +355,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color
             </div>
           {% endfor %}
         </div>
-      {% else %}
+      {% elif not enrollments %}
         <div class="empty-state">
           <div class="empty-icon">💳</div>
           <h3>Complete Your Enrollment</h3>
