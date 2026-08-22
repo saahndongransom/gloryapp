@@ -667,6 +667,12 @@ def submit_form_cna(request):
             if not _prog:
                 _ca = get('course_applied') or ''
                 _prog = CoreProg.objects.filter(title__icontains=_ca[:25]).first() if _ca else None
+            if not _prog:
+                _ca2 = get('course_applied') or ''
+                if _ca2:
+                    from lms.models import Course as _LC
+                    _c2 = _LC.objects.filter(title__iexact=_ca2).first()
+                    _prog = CoreProg.objects.filter(course=_c2).first() if _c2 else None
             program_price = str(float(_prog.price)) if _prog and _prog.price else ''
     except:
         program_price = ''
@@ -682,7 +688,7 @@ def submit_form_cna(request):
     pay_name = url_quote(full_name)
     pay_email = url_quote(student_email)
     pay_amount = url_quote(str(program_price))
-    payment_link = f"https://glorynursingok.com/lms/pay/?name={pay_name}&email={pay_email}&reason={pay_reason}&amount={pay_amount}" 
+    payment_link = (f"https://glorynursingok.com/lms/enroll/{_prog.course.id}/" if (_prog and _prog.course) else f"https://glorynursingok.com/lms/pay/?name={pay_name}&email={pay_email}&reason={pay_reason}&amount={pay_amount}") 
     buf = io.BytesIO()
     c = rl_canvas.Canvas(buf, pagesize=letter)
     width, height = letter
@@ -1107,6 +1113,9 @@ Glory Nursing Healthcare Training School
     import secrets, string
     account_created = False
     temp_password = None
+    _cna_user = ''
+    _cna_pass = ''
+    _cna_course = ''
     # Check if this is an online program
     from core.models import Program as CoreProg6
     _pslug6 = data.get('program_slug', '')
@@ -1122,6 +1131,8 @@ Glory Nursing Healthcare Training School
                 counter += 1
             alphabet = string.ascii_letters + string.digits
             temp_password = ''.join(secrets.choice(alphabet) for _ in range(10))
+            _cna_user = username
+            _cna_pass = temp_password
             new_user = AuthUser.objects.create_user(
                 username=username,
                 email=student_email,
@@ -1261,6 +1272,7 @@ Glory Nursing Healthcare Training School
         _pprog = CoreProg4.objects.filter(slug=_pslug).first() if _pslug else None
         if _pprog and _pprog.course:
             request.session['pending_course_id'] = _pprog.course.id
+            _cna_course = str(_pprog.course.id)
         else:
             # fallback to course by title
             _ca = get('course_applied') or ''
@@ -1269,6 +1281,7 @@ Glory Nursing Healthcare Training School
                 pending_course = LMSCourse.objects.filter(program__icontains='CNA', is_published=True).exclude(program__icontains='HHA').order_by('price').first()
             if pending_course:
                 request.session['pending_course_id'] = pending_course.id
+                _cna_course = str(pending_course.id)
     except:
         pass
 
@@ -1295,6 +1308,9 @@ Glory Nursing Healthcare Training School
     response['Content-Disposition'] = f'attachment; filename="CNA_Application_{full_name.replace(" ", "_")}.pdf"'
     if email_error:
         response['X-Email-Error'] = email_error[:200]
+    response['X-Login-User'] = _cna_user
+    response['X-Login-Pass'] = _cna_pass
+    response['X-Course-Id'] = _cna_course
     return response
 
 def fill_pdf_cma(request):
