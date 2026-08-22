@@ -1417,7 +1417,7 @@ Glory Nursing Online Portal""",
 
 We have received your application. Our admissions team will review it and contact you within 1-2 business days.
 
-Complete your payment here:
+Log in with the credentials sent in your welcome email, then complete your payment here:
 {f'https://glorynursingok.com/lms/enroll/{_pprog.course.id}/' if (_pprog and _pprog.course) else f"https://glorynursingok.com/lms/pay/?name={url_quote(full_name)}&email={url_quote(student_email)}&reason={url_quote(program_name)}" + (f'&amount={simple_price}' if simple_price else '')}
 
 Questions? Call us at (405) 968-5004 or email glorynursing@yahoo.com
