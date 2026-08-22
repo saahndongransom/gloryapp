@@ -1418,7 +1418,7 @@ Glory Nursing Online Portal""",
 We have received your application. Our admissions team will review it and contact you within 1-2 business days.
 
 Complete your payment here:
-https://glorynursingok.com/lms/pay/?name={url_quote(full_name)}&email={url_quote(student_email)}&reason={url_quote(program_name)}{f'&amount={simple_price}' if simple_price else ''}
+{f'https://glorynursingok.com/lms/enroll/{_pprog.course.id}/' if (_pprog and _pprog.course) else f"https://glorynursingok.com/lms/pay/?name={url_quote(full_name)}&email={url_quote(student_email)}&reason={url_quote(program_name)}" + (f'&amount={simple_price}' if simple_price else '')}
 
 Questions? Call us at (405) 968-5004 or email glorynursing@yahoo.com
 
@@ -1443,6 +1443,7 @@ Glory Nursing Healthcare Training School
     _ret_user = ''
     _ret_pass = ''
     _ret_price = ''
+    _ret_course = ''
     try:
         _pslug_s = request.GET.get("program", "")
         _pprog_s = __import__("core.models", fromlist=["Program"]).Program.objects.filter(slug=_pslug_s).first() if _pslug_s else None
@@ -1459,6 +1460,7 @@ Glory Nursing Healthcare Training School
             _ret_user = username
             _ret_pass = temp_password
             _ret_price = str(float(_pprog_s.price)) if _pprog_s and _pprog_s.price else ''
+            _ret_course = str(_pprog_s.course.id) if _pprog_s and _pprog_s.course else ''
             new_user = AuthUser.objects.create_user(
                 username=username,
                 email=student_email,
@@ -1529,7 +1531,7 @@ Glory Nursing Healthcare Training School""",
     except Exception as e:
         print(f"Simple form journey error: {e}")
 
-    return JsonResponse({'success': True, 'username': _ret_user, 'password': _ret_pass, 'price': _ret_price})
+    return JsonResponse({'success': True, 'username': _ret_user, 'password': _ret_pass, 'price': _ret_price, 'course_id': _ret_course})
 
 
 def fill_form_cma(request):
